@@ -52,9 +52,12 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - M0 and M1 done (faux-tested). M2: T1 ops merged; T2 server next, then T3 web scaffold (Codex), T4 chat backends, T5/T6 critical screens (Sonnet).
 
 ## Open gaps
+- Gap questions are engine-worded ("What evidence supports Python?"); UI/pipeline should ask "Have you used Python?" with Yes/No/Skip.
+- Application ids use the UTC date; use the local date.
 - Personal absolute paths (/home/krishna/...) in AGENTS.md, AGENT_MEMORY.md and `.claude/skills/codex-orchestrate/` must be generalised before the public release (M5).
 
 ## Recently done
+- 2026-10-09 · first real-model run (Copilot Luna analyst/checker/ATS, Codex Sol writer) on fixtures/developer: 64 s, done in round 1, 0 lint, 8 honest gaps, no invented skills.
 - 2026-10-09 · repo created, AGPL-3.0, design draft + spec, agent instructions and Codex dispatch skill (copied from Studium).
 
 ## Log
