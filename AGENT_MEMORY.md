@@ -49,7 +49,7 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - Codex tool limits (from Studium): `rm -rf` on computed paths is rejected; put test data under a temp dir. If `apply_patch` fails, write the file with a heredoc.
 
 ## Status (2026-10-09)
-- M0, M1 done; M2 T1–T4 merged (ops, server, web scaffold, chat). Running: M2-T5 critical screens (Sonnet), then T6 polish (same Sonnet session).
+- M0, M1, M2 (T1–T5) and M3 backend (prep, templates, sync, fit) merged. Next: T6 Sonnet polish + M3 screens; M4 (researcher/GitHub MCP, IT packs, instructions/rules UI); M5 release.
 
 ## Open gaps
 - Personal absolute paths (/home/krishna/...) in AGENTS.md, AGENT_MEMORY.md and `.claude/skills/codex-orchestrate/` must be generalised before the public release (M5).
@@ -77,3 +77,5 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - 2026-10-09 · M2-T5 (Sonnet) · `web/src/pages/{jobs,workspace,me}`, popover, chat hooks · gap answers tracked in localStorage `vita:answered:<id>`; Markdown export client-side; shadcn CLI adds a stray `cn` dep — revert it · Chrome MCP unreachable here: orchestrator verified with a headless CDP driver (scratchpad `cdp.mjs`) at 1440 light / 390 dark: jobs, questions, workspace, details, Me tabs OK. Bugs for T6: nice-to-haves shown as covered without matching text; outline editor shows raw anchors.
 - 2026-10-09 · M3-T4 fit (Sol 6.1) · `core/src/fit`, `POST /api/{resumes,applications}/:id/fit` returns preview ops · 20 tests incl. 3 real PDFs.
 - 2026-10-09 · M3-T1 prep (Sol 6.1) · `core/src/prep`, interviewer role, `skills/interview-prep`, `POST/GET /api/applications/:id/prep` · unsupported STAR results become null and are flagged.
+- 2026-10-09 · M3-T2 templates (Sol 6.1) · `core/src/templates` (upload, compileOriginal, proposeAdoption, approveTemplate), template-adopter role, `skills/adopt-template`, `/api/templates/*` · previews cache in `.vita/template-previews/`; warm-up uses bundle cat.
+- 2026-10-09 · M3-T3 sync (Sol 6.1 + ops extension) · `core/src/sync` (suggestDownstream, applySuggestions, promoteBullet), `/api/sync/*`, `/api/promote`; `bullet.add` accepts `claimIds` · keep `pendingSync` next to `syncedAt` in resume meta.yaml.
