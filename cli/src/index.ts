@@ -1,13 +1,15 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import { checkCommand } from "./commands/check";
 import { importCommand } from "./commands/import";
 import { initCommand } from "./commands/init";
+import { masterCommand } from "./commands/master";
 import { renderCommand } from "./commands/render";
 import { setupCommand } from "./commands/setup";
+import { tailorCommand } from "./commands/tailor";
 
-export { checkCommand, importCommand, initCommand, renderCommand, setupCommand };
+export { checkCommand, importCommand, initCommand, masterCommand, renderCommand, setupCommand, tailorCommand };
 
 export function createProgram(): Command {
   const program = new Command().name("vita").description("A self-hosted resume studio.");
@@ -33,6 +35,23 @@ export function createProgram(): Command {
       if (!(await checkCommand(dir, opts)).ok) process.exitCode = 1;
     });
   program.command("setup").description("Warm the package cache for bundled templates.").action(setupCommand);
+  program
+    .command("master <dir>")
+    .description("Generate and check the master resume.")
+    .addOption(new Option("--faux <script.json>").hideHelp())
+    .action(async (dir, opts) => {
+      if (!(await masterCommand(dir, opts)).review.done) process.exitCode = 1;
+    });
+  program
+    .command("tailor <dir>")
+    .description("Generate and check a job resume.")
+    .requiredOption("--job <file|->")
+    .option("--base <id>")
+    .option("--slug <slug>")
+    .addOption(new Option("--faux <script.json>").hideHelp())
+    .action(async (dir, opts) => {
+      if (!(await tailorCommand(dir, opts)).review.done) process.exitCode = 1;
+    });
   return program;
 }
 

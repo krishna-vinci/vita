@@ -49,7 +49,7 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - Codex tool limits (from Studium): `rm -rf` on computed paths is rejected; put test data under a temp dir. If `apply_patch` fails, write the file with a heredoc.
 
 ## Status (2026-10-09)
-- M0 done. M1 in progress (T4 skills merged; T1 lint, T3 runtime running; T2 search next; T5 pipeline last). M2 plan written.
+- M0 and M1 done (faux-tested). M2: T1 ops merged; T2 server next, then T3 web scaffold (Codex), T4 chat backends, T5/T6 critical screens (Sonnet).
 
 ## Open gaps
 - Personal absolute paths (/home/krishna/...) in AGENTS.md, AGENT_MEMORY.md and `.claude/skills/codex-orchestrate/` must be generalised before the public release (M5).
@@ -66,3 +66,5 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - 2026-10-09 · M1-T1 (Sol 6.1 + 1 decision round) · `core/src/claims` (buildClaimIndex), `core/src/lint` (numbers, six rules), 100 tests · only explicit versions (v1.2, ES2023, IPv6, 1.2.3) and years 1950–2099 are exempt from number sourcing; "Python 3.12" needs 3.12 in claim text · none open.
 - 2026-10-09 · M1-T3 (Sol 6.1) · `core/src/agent` (models, roles, tools, prompt, run), Pi 1.1.0 + typebox 1.3.27 pinned, 25 faux tests · orchestrator fixes: the task prompt is NOT wrapped as untrusted (callers wrap embedded data with `wrapUntrusted`); Pi retry on by default (2), tests pass `retry: { enabled: false }` · open: Pi 1.1 still reparses streamed tool args (Studium patch absent) — watch writer latency on large resumes.
 - 2026-10-09 · M1-T2 (Sol 6.1) · `core/src/search` (EvidenceSearch FTS5, selectEvidence), 10 tests · evidence hits map to linked claims, variant hits to item claims; mandatory claims beat `maxClaims` · none open.
+- 2026-10-09 · M2-T1 (Sol 6.1) · `core/src/ops` (applyOps, applyResumeOps), 61 tests · user edits lock bullets; AI cannot hide/move ancestors of locked bullets; moves use final destination index · none open.
+- 2026-10-09 · M1-T5 (Sol 6.1 + 1 unblock) · `core/src/pipeline` (tailor, generateMaster, evaluateDone, persistence), shared analysis/review schemas, `vita master`/`vita tailor` with hidden `--faux <script.json>` ([{tool, arguments}]) · orchestrator: added `writeFileAtomic`; must-have coverage now searches all visible text (skills lists count); checker skill checks locked/user bullets too · gap answers stay in meta pending source approval.

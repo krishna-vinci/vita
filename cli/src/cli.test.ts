@@ -107,7 +107,15 @@ it("reports bad schemas, unknown and empty claims, but permits anchored outline 
 
 it("registers all commands and sets the CLI failure status when check finds issues", async () => {
   const program = createProgram();
-  expect(program.commands.map((command) => command.name())).toEqual(["init", "import", "render", "check", "setup"]);
+  expect(program.commands.map((command) => command.name())).toEqual([
+    "init",
+    "import",
+    "render",
+    "check",
+    "setup",
+    "master",
+    "tailor",
+  ]);
   const root = await copyProfile("developer");
   await writeFile(join(root, "resumes/master/resume.json"), "{}");
   const previous = process.exitCode;

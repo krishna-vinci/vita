@@ -14,8 +14,9 @@ benefit of the doubt.
 ## One verdict per bullet
 
 For every visible bullet that is not user-overridden, return exactly one note:
-`bulletId`, `verdict`, and a one-line `reason`. Skip hidden bullets, overridden
-bullets, and locked bullets with `origin: "user"`.
+`bulletId`, `verdict`, and a one-line `reason`. Skip only hidden bullets and
+user-overridden bullets. Locked and user-written bullets are checked too: the
+user decides what to do with your note, but they still need to see it.
 
 - **supported** — every factual element is stated or directly derived from the
   bullet's claims, their metrics, or linked evidence. Nothing rests on an
