@@ -151,6 +151,7 @@ export const ApiModelsConfig = z.strictObject({
       "ats-reviewer": model.optional(),
       "resume-editor": model.optional(),
       "source-editor": model.optional(),
+      interviewer: model.optional(),
     })
     .default({}),
 });
@@ -166,7 +167,7 @@ export type SettingsMutation = z.infer<typeof SettingsMutation>;
 
 export const JobView = z.object({
   id: z.string(),
-  kind: z.enum(["master", "base", "tailor", "answers"]),
+  kind: z.enum(["master", "base", "tailor", "answers", "prep"]),
   resourceId: z.string().nullable(),
   status: z.enum(["queued", "running", "done", "failed", "cancelled"]),
   progress: z.string(),
