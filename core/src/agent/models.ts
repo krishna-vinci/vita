@@ -15,6 +15,7 @@ export const ModelsConfig: z.ZodType<{ default: string; roles: Partial<Record<Ro
       "resume-editor": modelName.optional(),
       "source-editor": modelName.optional(),
       interviewer: modelName.optional(),
+      "template-adopter": modelName.optional(),
     })
     .strict()
     .default({}),

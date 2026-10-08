@@ -16,7 +16,8 @@ export type RoleName =
   | "ats-reviewer"
   | "resume-editor"
   | "source-editor"
-  | "interviewer";
+  | "interviewer"
+  | "template-adopter";
 export type ReadToolName = "read_outline" | "read_projects" | "search_evidence" | "read_resume" | "read_analysis";
 
 export interface RoleSpec<O> {

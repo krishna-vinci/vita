@@ -1,0 +1,25 @@
+\documentclass{article}
+\usepackage{microtype}
+\newcommand{\cvheading}[1]{\section*{#1}}
+\setlength{\parindent}{0pt}
+\begin{document}
+{\Large ((( header.name )))}\par
+((* for contact in header.contact *))
+((( contact.value )))\par
+((* endfor *))
+((* for section in sections *))
+\cvheading{((( section.title )))}
+((* if section.text *))
+((( section.text )))\par
+((* endif *))
+((* for item in section.items *))
+((( item.title )))\par
+((* if item.subtitle *))
+((( item.subtitle )))\par
+((* endif *))
+((* for bullet in item.bullets *))
+((( bullet.text )))\par
+((* endfor *))
+((* endfor *))
+((* endfor *))
+\end{document}

@@ -12,4 +12,5 @@ export * from "./prep/index.js";
 export * from "./render/index.js";
 export * from "./search/index.js";
 export * from "./source/index.js";
+export * from "./templates/index.js";
 export * from "./workspace/index.js";
