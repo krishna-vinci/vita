@@ -20,6 +20,7 @@ import { passwordAuth } from "./auth/middleware.js";
 import { ApiFailure } from "./errors.js";
 import { chatRoutes } from "./routes/chat.js";
 import { eventsRoutes } from "./routes/events.js";
+import { prepRoutes } from "./routes/prep.js";
 import type { WorkspaceRuntime } from "./runtime.js";
 
 async function body<T>(c: Context, schema: z.ZodType<T>, optional = false): Promise<T> {
@@ -172,6 +173,7 @@ export function createServer(
   });
   app.route("/api/events", eventsRoutes(runtime.hub));
   app.route("/api/chat", chatRoutes(runtime));
+  app.route("/api/applications", prepRoutes(runtime));
   app.get("/api/settings", async (c) => c.json(await runtime.settings()));
   app.put("/api/settings", async (c) => c.json(await runtime.putSettings(await body(c, PutSettingsRequest))));
   app.get("/api/jobs", (c) => c.json(runtime.jobs.list()));

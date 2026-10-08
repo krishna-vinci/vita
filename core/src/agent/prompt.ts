@@ -12,6 +12,7 @@ const preambles: Record<RoleName, string> = {
   "ats-reviewer": "Review requirement coverage, section naming and machine-readable resume content.",
   "resume-editor": "Make the smallest evidence-backed resume edits through operations. Never change locked bullets.",
   "source-editor": "Propose surgical exact-string source edits for user approval. Never apply source changes yourself.",
+  interviewer: "Prepare likely interview questions, evidence-backed stories and plain, honest answers to gaps.",
 };
 
 export interface SystemPromptOptions<O> {

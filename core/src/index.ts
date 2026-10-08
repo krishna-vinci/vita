@@ -7,6 +7,7 @@ export * from "./lint/index.js";
 export * from "./ops/index.js";
 export * from "./packs/index.js";
 export * from "./pipeline/index.js";
+export * from "./prep/index.js";
 export * from "./render/index.js";
 export * from "./search/index.js";
 export * from "./source/index.js";

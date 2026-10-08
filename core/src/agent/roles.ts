@@ -3,13 +3,20 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai/providers/faux";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
-import { AtsNote, CheckNote, JobAnalysis, Resume } from "@vita/shared";
+import { AtsNote, CheckNote, JobAnalysis, Prep, Resume } from "@vita/shared";
 import { Type } from "typebox";
 import { z } from "zod";
 import { ModelsConfig } from "./models.js";
 import type { SubmitToolSpec } from "./tools.js";
 
-export type RoleName = "analyst" | "writer" | "checker" | "ats-reviewer" | "resume-editor" | "source-editor";
+export type RoleName =
+  | "analyst"
+  | "writer"
+  | "checker"
+  | "ats-reviewer"
+  | "resume-editor"
+  | "source-editor"
+  | "interviewer";
 export type ReadToolName = "read_outline" | "read_projects" | "search_evidence" | "read_resume" | "read_analysis";
 
 export interface RoleSpec<O> {
@@ -54,6 +61,13 @@ export const atsReviewerRole: RoleSpec<{ ats: AtsNote[] }> = {
   skills: ["ats-review"],
   readTools: ["read_resume", "read_analysis"],
   submitTool: submit("submit_ats", z.object({ ats: z.array(AtsNote) })),
+};
+
+export const interviewerRole: RoleSpec<Prep> = {
+  name: "interviewer",
+  skills: ["interview-prep"],
+  readTools: ["read_resume", "read_analysis", "read_projects", "search_evidence"],
+  submitTool: submit("submit_prep", Prep),
 };
 
 export const FauxScript = z.array(z.object({ tool: z.string(), arguments: z.record(z.string(), z.json()) }));
