@@ -1,4 +1,6 @@
 import { mkdir, open } from "node:fs/promises";
+import { Profile } from "@vita/shared";
+import { stringify } from "yaml";
 import { writeTextAtomic } from "./files.js";
 import { commitPaths, ensureRepo } from "./git.js";
 import { resolveInWorkspace } from "./paths.js";
@@ -22,6 +24,7 @@ export async function initWorkspace(root: string, opts: { name: string }): Promi
     await mkdir(resolveInWorkspace(root, rel), { recursive: true });
   }
   const files = {
+    "profile.yaml": stringify(Profile.parse({ name, contact: [] })),
     "projects.md":
       "# Projects and evidence\n\n<!-- Record items, claims, sources and measured or counted outcomes. -->\n",
     "config/models.yaml": "default: anthropic/claude-sonnet-5-5\nroles: {}\n",

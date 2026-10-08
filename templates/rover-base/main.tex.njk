@@ -22,17 +22,20 @@
 \begin{center}
   \begin{minipage}{0.5\textwidth}
     {\Huge\bfseries ((( header.name )))}
-((* if header.headline *))
+((* if header.name and header.headline *))
     \\ \medskip
     ((( header.headline )))
 ((* endif *))
-  \end{minipage} \hfill
+  \end{minipage}
+((* if header.contact.length *))
+  \hfill
   \begin{minipage}{0.4\textwidth}
     \raggedleft
 ((* for contact in header.contact *))
     ((( contact.label ))): ((( contact.value )))((* if not loop.last *)) \\((* endif *))
 ((* endfor *))
   \end{minipage}
+((* endif *))
 \end{center}
 
 ((* for section in sections *))

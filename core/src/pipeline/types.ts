@@ -12,6 +12,7 @@ export interface PipelineDeps {
   onProgress?: (e: { stage: string; round?: number; message?: string }) => void;
   signal?: AbortSignal;
   onUsage?: (entry: RoleUsage) => void;
+  now?: () => Date;
   /** Disable Pi's transient retry in faux-provider tests. */
   retry?: RunRoleOptions<unknown>["retry"];
 }

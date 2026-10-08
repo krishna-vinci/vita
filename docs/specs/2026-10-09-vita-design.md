@@ -103,6 +103,7 @@ The workspace is a git repository owned by the user. The app auto-commits after 
 ```
 <workspace>/
   outline.md
+  profile.yaml                  # name, headline, contact (never model-written)
   projects.md                   # evidence inventory (name kept: covers projects, roles, certifications)
   evidence/files/               # uploaded documents referenced by evidence items
   instructions.md               # user-level standing instructions (optional)

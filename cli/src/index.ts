@@ -18,6 +18,12 @@ export function createProgram(): Command {
     .command("import <dir>")
     .requiredOption("--projects <legacy.md>")
     .option("--outline <outline.md>")
+    .option("--name <name>")
+    .option("--headline <headline>")
+    .option("--contact <Label=value[=url]>", "Contact entry (repeatable)", (value: string, entries: string[] = []) => [
+      ...entries,
+      value,
+    ])
     .action(async (dir, opts) => {
       await importCommand(dir, opts);
     });

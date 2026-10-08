@@ -1,0 +1,7 @@
+name: "Jordan Reed"
+headline: "Registered nurse"
+contact:
+  - label: "Email"
+    value: "jordan.reed@example.test"
+  - label: "Location"
+    value: "Example City"

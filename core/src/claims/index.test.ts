@@ -1,9 +1,62 @@
-import { ItemMeta, Metric } from "@vita/shared";
+import { ItemMeta, Metric, Pack, Resume } from "@vita/shared";
 import { describe, expect, it } from "vitest";
+import { lintResume } from "../lint/index.js";
 import { parseOutline, parseProjects } from "../source/index.js";
 import { buildClaimIndex } from "./index.js";
 
 describe("buildClaimIndex", () => {
+  it("accepts variant claims and checks numbers against variant text and item evidence", () => {
+    const { doc } = parseProjects(`## Workshop
+\`\`\`yaml
+kind: role
+evidence:
+  - { id: ev-time, kind: measurement, text: "Saved 70 percent" }
+\`\`\`
+### Limits
+- No independent supervision.
+### Variants
+- Operations: Prepared 12 sessions. <!-- v:workshop-operations -->
+`);
+    const index = buildClaimIndex(doc, parseOutline(""));
+    expect(index.claims.get("workshop-operations")).toMatchObject({
+      id: "workshop-operations",
+      text: "Prepared 12 sessions.",
+      source: "projects",
+      itemSlug: "workshop",
+      itemName: "Workshop",
+      metrics: [],
+      evidence: doc.items[0]?.meta.evidence,
+      limits: ["No independent supervision."],
+    });
+    const resume = Resume.parse({
+      id: "master",
+      kind: "master",
+      parent: null,
+      template: "rover-base",
+      header: { name: "Alex" },
+      sections: [
+        {
+          id: "work",
+          title: "Work",
+          kind: "entries",
+          items: [
+            {
+              id: "item",
+              title: "Workshop",
+              bullets: [{ id: "bullet", text: "Prepared 12 sessions and saved 70%.", claims: ["workshop-operations"] }],
+            },
+          ],
+        },
+      ],
+    });
+    const ctx = { index, pack: Pack.parse({ id: "general", name: "General" }), rules: {} };
+    expect(lintResume(resume, ctx)).toEqual([]);
+    const bullet = resume.sections[0]?.items[0]?.bullets[0];
+    if (!bullet) throw new Error("Missing test bullet");
+    bullet.text = "Prepared 13 sessions and saved 71%.";
+    expect(lintResume(resume, ctx).map(({ rule }) => rule)).toEqual(["unsourced-number", "unsourced-number"]);
+  });
+
   it("resolves only a claim's linked item evidence and keeps metrics, limits, items and variants", () => {
     const { doc, issues } = parseProjects(`## Workshop
 \`\`\`yaml

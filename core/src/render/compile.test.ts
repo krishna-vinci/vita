@@ -60,3 +60,17 @@ it("rejects unsafe input, included unsafe text assets and symlinks before compil
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+it("compiles rover-base with an empty headline and contact list", async (context) => {
+  if (!available) context.skip();
+  const resume = Resume.parse(
+    JSON.parse(await readFile(new URL("./fixtures/resume-basic.json", import.meta.url), "utf8")),
+  );
+  resume.header = { name: "Alex Example", headline: "", contact: [] };
+  const tpl = await loadTemplate([fileURLToPath(new URL("../../../templates", import.meta.url))], "rover-base");
+  const tex = renderTex(resume, tpl);
+  expect(tex).not.toContain("\\raggedleft");
+  expect(tex).not.toContain("\\\\ \\medskip");
+  const { pdf } = await compileTex({ tex, assetsDir: tpl.dir });
+  expect(checkRender(resume, await pdfText(pdf), 1).ok).toBe(true);
+}, 60_000);

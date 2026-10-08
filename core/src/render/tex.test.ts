@@ -24,3 +24,21 @@ it("renders escaped visible content of every section kind and applies layout kno
   expect(tex).toContain("\\fontsize{11}{13.2}\\selectfont");
   expect(tex).toContain("\\linespread{0.95}");
 });
+
+it("omits the contact minipage and headline break when header fields are empty", async () => {
+  const resume = Resume.parse({
+    id: "master",
+    kind: "master",
+    parent: null,
+    template: "rover-base",
+    header: { name: "Alex", headline: "", contact: [] },
+    sections: [],
+  });
+  const tpl = await loadTemplate([fileURLToPath(new URL("../../../templates", import.meta.url))], "rover-base");
+  const tex = renderTex(resume, tpl);
+  expect(tex.match(/\\begin\{minipage\}/g)).toHaveLength(1);
+  expect(tex).not.toContain("\\hfill");
+  expect(tex).not.toContain("\\\\ \\medskip");
+  resume.header = { name: "", headline: "Headline", contact: [] };
+  expect(renderTex(resume, tpl)).not.toContain("\\\\ \\medskip");
+});

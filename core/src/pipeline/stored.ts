@@ -3,6 +3,7 @@ import { type Context, effectivePack, loadContext } from "./context.js";
 import { type GenerationInput, generate } from "./generate.js";
 import { withGenerationLock } from "./lock.js";
 import { persist } from "./persist.js";
+import { loadProfile } from "./profile.js";
 import type { PipelineDeps, RoleUsage, WorkspaceHandle } from "./types.js";
 
 export async function generateStored(
@@ -13,12 +14,13 @@ export async function generateStored(
 ) {
   return withGenerationLock(ws.root, async () => {
     deps.signal?.throwIfAborted();
+    const profile = await loadProfile(ws.root);
     const expected = await fileHash(ws.root, `${prefix}/resume.json`);
     const ctx = await loadContext(ws);
     try {
       const { input, extra } = await prepare(ctx);
       const usage: RoleUsage[] = [];
-      const result = await generate(ctx, input, deps, usage);
+      const result = await generate(ctx, input, deps, usage, profile);
       await persist(ws, prefix, result, deps, usage, extra ?? {}, expected);
       return { resume: result.resume, review: result.review };
     } finally {

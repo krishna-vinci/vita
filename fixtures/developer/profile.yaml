@@ -1,0 +1,7 @@
+name: "Morgan Vale"
+headline: "Software developer"
+contact:
+  - label: "Email"
+    value: "morgan.vale@example.test"
+  - label: "Location"
+    value: "Example City"

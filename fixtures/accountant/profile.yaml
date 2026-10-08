@@ -1,0 +1,7 @@
+name: "Avery Stone"
+headline: "Accountant"
+contact:
+  - label: "Email"
+    value: "avery.stone@example.test"
+  - label: "Location"
+    value: "Example City"

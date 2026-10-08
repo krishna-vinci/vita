@@ -6,9 +6,11 @@ import { analystRole } from "../agent/roles.js";
 import { selectEvidence } from "../search/index.js";
 import { fileHash, readText, resolveInWorkspace } from "../workspace/index.js";
 import { effectivePack, findGaps, loadContext, mergeKeywords } from "./context.js";
+import { localDate } from "./date.js";
 import { data, generate, roleRunner } from "./generate.js";
 import { withGenerationLock } from "./lock.js";
 import { persist } from "./persist.js";
+import { loadProfile } from "./profile.js";
 import type { PipelineDeps, RoleUsage, WorkspaceHandle } from "./types.js";
 
 export async function tailor(
@@ -26,6 +28,8 @@ export async function tailor(
 ): Promise<{ applicationDir: string; resume: Resume; review: Review; analysis: JobAnalysis }> {
   return withGenerationLock(ws.root, async () => {
     deps.signal?.throwIfAborted();
+    const profile = await loadProfile(ws.root);
+    const date = localDate((deps.now ?? (() => new Date()))());
     if (input.slug !== undefined) Slug.parse(input.slug);
     if (input.baseId !== undefined) Slug.parse(input.baseId);
     if (input.applicationId !== undefined) Slug.parse(input.applicationId);
@@ -94,7 +98,7 @@ export async function tailor(
         maxClaims: 40,
       });
       const slug = Slug.parse(input.slug ?? slugify([analysis.company, analysis.title].filter(Boolean).join("-")));
-      const id = input.applicationId ?? `${new Date().toISOString().slice(0, 10)}-${slug}`;
+      const id = input.applicationId ?? `${date}-${slug}`;
       const applicationDir = `applications/${id}`;
       if (!existingDir)
         try {
@@ -124,6 +128,7 @@ export async function tailor(
         },
         deps,
         usage,
+        profile,
       );
       await persist(
         ws,
@@ -139,6 +144,7 @@ export async function tailor(
         expected,
         {
           ...metadata,
+          createdAt: metadata.createdAt ?? date,
           title: analysis.title,
           company: analysis.company,
           baseId: existing?.parent ?? base?.id ?? (seed ? "master" : null),

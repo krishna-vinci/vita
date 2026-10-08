@@ -3,8 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as core from "@vita/core";
-import { Resume } from "@vita/shared";
+import { Profile, Resume } from "@vita/shared";
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
+import { parse as parseYaml } from "yaml";
+import { printReview } from "./commands/master";
 import { checkCommand, createProgram, importCommand, initCommand, renderCommand, setupCommand } from "./index";
 import { bundledTemplatesDir } from "./paths";
 
@@ -169,4 +171,66 @@ it("rejects escaping output symlinks and leaves the last good PDF intact on comp
   } finally {
     process.exitCode = previous;
   }
+});
+
+it("creates and updates a profile through repeatable import flags, preserving unspecified fields", async () => {
+  const root = join(dir, "workspace");
+  await initCommand(root);
+  await rm(join(root, "profile.yaml"));
+  const source = fileURLToPath(new URL("../../core/src/source/fixtures/legacy-projects.md", import.meta.url));
+  await createProgram().parseAsync(
+    [
+      "import",
+      root,
+      "--projects",
+      source,
+      "--name",
+      "Alex Example",
+      "--headline",
+      "Coordinator",
+      "--contact",
+      "Email=alex@example.test",
+      "--contact",
+      "Web=Portfolio=https://example.test/?a=b",
+    ],
+    { from: "user" },
+  );
+  expect(Profile.parse(parseYaml(await core.readText(root, "profile.yaml")))).toEqual({
+    name: "Alex Example",
+    headline: "Coordinator",
+    contact: [
+      { label: "Email", value: "alex@example.test" },
+      { label: "Web", value: "Portfolio", url: "https://example.test/?a=b" },
+    ],
+  });
+  await importCommand(root, { projects: source, headline: "Updated" });
+  const updated = Profile.parse(parseYaml(await core.readText(root, "profile.yaml")));
+  expect(updated.name).toBe("Alex Example");
+  expect(updated.headline).toBe("Updated");
+  expect(updated.contact).toHaveLength(2);
+  const before = await core.readText(root, "profile.yaml");
+  await expect(importCommand(root, { projects: source, contact: ["Invalid"] })).rejects.toThrow("Label=value");
+  expect(await core.readText(root, "profile.yaml")).toBe(before);
+  expect((await core.log(root, 1))[0]?.author).toBe("importer");
+});
+
+it("prints plain-language gap questions with their requirement ids", () => {
+  printReview({
+    round: 1,
+    done: false,
+    blocking: [],
+    lint: [],
+    checks: [],
+    ats: [],
+    render: null,
+    overrides: [],
+    gaps: [
+      "req-short: Have you used Example skill?",
+      "req-long: Do you have experience with leading a team across multiple locations?",
+    ],
+  });
+  expect(console.log).toHaveBeenCalledWith("Gap: req-short: Have you used Example skill?");
+  expect(console.log).toHaveBeenCalledWith(
+    "Gap: req-long: Do you have experience with leading a team across multiple locations?",
+  );
 });

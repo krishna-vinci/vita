@@ -127,5 +127,9 @@ export function findGaps(ctx: Context, analysis: JobAnalysis): string[] {
                 .length === 0,
           )),
     )
-    .map((requirement) => `${requirement.id}: What evidence supports ${requirement.text}?`);
+    .map((requirement) => {
+      const question =
+        requirement.text.trim().split(/\s+/).length <= 4 ? "Have you used" : "Do you have experience with";
+      return `${requirement.id}: ${question} ${requirement.text}?`;
+    });
 }

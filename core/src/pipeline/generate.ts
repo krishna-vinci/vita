@@ -5,10 +5,13 @@ import {
   type Finding,
   type JobAnalysis,
   type Pack,
+  type Profile,
   Resume,
   Review,
   visibleBullets,
 } from "@vita/shared";
+import { Type } from "typebox";
+import { z } from "zod";
 import { buildSystemPrompt, modelWarnings, type RoleSpec, runRole, wrapUntrusted } from "../agent/index.js";
 import { atsReviewerRole, checkerRole, writerRole } from "../agent/roles.js";
 import { lintResume } from "../lint/index.js";
@@ -135,7 +138,27 @@ export interface GenerationInput {
   notes?: string;
 }
 
-export async function generate(ctx: Context, input: GenerationInput, deps: PipelineDeps, usage: RoleUsage[]) {
+export async function generate(
+  ctx: Context,
+  input: GenerationInput,
+  deps: PipelineDeps,
+  usage: RoleUsage[],
+  profile: Profile,
+) {
+  const header = { name: profile.name, headline: profile.headline, contact: profile.contact };
+  const writer: RoleSpec<Resume> = {
+    ...writerRole,
+    skills: input.kind === "base" ? [...writerRole.skills, "build-base"] : writerRole.skills,
+    submitTool: {
+      ...writerRole.submitTool,
+      parameters: Type.Unsafe(z.toJSONSchema(z.object(Resume.shape).omit({ header: true }), { io: "input" })),
+      output: z.preprocess(
+        (value) =>
+          typeof value === "object" && value !== null && !Array.isArray(value) ? { ...value, header } : value,
+        Resume,
+      ),
+    },
+  };
   const models = effectiveModels(deps);
   const run = roleRunner(ctx, deps, usage, models);
   const warnings: string[] = [];
@@ -182,7 +205,7 @@ export async function generate(ctx: Context, input: GenerationInput, deps: Pipel
   for (let round = 1; round <= 2; round++) {
     deps.onProgress?.({ stage: round === 1 ? "write" : "revise", round });
     const draft = await run(
-      input.kind === "base" ? { ...writerRole, skills: [...writerRole.skills, "build-base"] } : writerRole,
+      writer,
       [
         `Generate a ${input.kind} resume with id ${input.id}, parent ${input.parent ?? "null"}, template ${input.template}, at most ${input.maxPages} pages.`,
         "Preserve locked bullets exactly, including visibility. User answers are context pending source approval; they do not create new claims or metrics. Never invent claim IDs or grant overrides.",
@@ -192,7 +215,7 @@ export async function generate(ctx: Context, input: GenerationInput, deps: Pipel
               data("direction", input.direction),
             ]
           : []),
-        "Return the complete Resume object through submit_resume.",
+        "The engine supplies the header from profile.yaml. Return the resume content without a header through submit_resume.",
         context,
         data("previous resume", resume ?? null),
         data("previous review", review ?? null),
@@ -201,7 +224,7 @@ export async function generate(ctx: Context, input: GenerationInput, deps: Pipel
       input.analysis,
     );
     resume = carryUserState(
-      { ...draft, id: input.id, kind: input.kind, parent: input.parent, template: input.template },
+      { ...draft, header, id: input.id, kind: input.kind, parent: input.parent, template: input.template },
       input.seed,
     );
     deps.onProgress?.({ stage: "lint", round });

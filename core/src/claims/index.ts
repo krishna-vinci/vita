@@ -56,6 +56,16 @@ export function buildClaimIndex(projects: ProjectsDoc, outline: Outline): ClaimI
     }
     for (const variant of item.variants) {
       index.variants.set(variant.id, { ...variant, itemSlug: item.slug });
+      index.claims.set(variant.id, {
+        id: variant.id,
+        text: variant.text,
+        source: "projects",
+        itemSlug: item.slug,
+        itemName: item.name,
+        evidence: [...item.meta.evidence],
+        metrics: [],
+        limits: [...item.limits],
+      });
     }
   }
   return index;

@@ -1,0 +1,7 @@
+name: "Casey Rowan"
+headline: "Primary teacher"
+contact:
+  - label: "Email"
+    value: "casey.rowan@example.test"
+  - label: "Location"
+    value: "Example City"

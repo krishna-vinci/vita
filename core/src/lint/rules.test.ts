@@ -147,13 +147,13 @@ describe("claim rules", () => {
     expect(ruleFindings("unsourced-number", "Served 45 visitors.", [], { origin: "user" })).toHaveLength(1);
   });
 
-  it("blocks unknown IDs even on user bullets and does not accept variant IDs as claims", () => {
+  it("blocks unknown IDs even on user bullets and accepts variant IDs as claims", () => {
     expect(findings("Organised materials.", ["absent"])).toEqual([
       { rule: "unknown-claim", severity: "block", message: "Unknown claim: absent.", bulletId: "bullet" },
     ]);
     expect(findings("Organised materials.", ["workshop-count"])).toEqual([]);
     expect(ruleFindings("unknown-claim", "Organised materials.", ["absent"], { origin: "user" })).toHaveLength(1);
-    expect(ruleFindings("unknown-claim", "Served 777 visitors.", ["workshop-variant"])).toHaveLength(1);
+    expect(findings("Served 777 visitors.", ["workshop-variant"])).toEqual([]);
   });
 });
 

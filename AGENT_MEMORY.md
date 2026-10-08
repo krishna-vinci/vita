@@ -52,9 +52,6 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - M0, M1 done; M2 T1 ops + T2 server merged. Running: M1-FIX (real-run findings), M2-T3 web scaffold, M2-T4 chat. Then T5/T6 critical screens (Sonnet).
 
 ## Open gaps
-- Real master run on the owner's data (2 min 23 s): writer cited variant ids (not indexed as claims), header came back empty (no profile source) → LaTeX failed. Fix queued: `docs/prompts/m1-fix-real-run.md` (after M2-T2 merges).
-- Gap questions are engine-worded ("What evidence supports Python?"); UI/pipeline should ask "Have you used Python?" with Yes/No/Skip.
-- Application ids use the UTC date; use the local date.
 - Personal absolute paths (/home/krishna/...) in AGENTS.md, AGENT_MEMORY.md and `.claude/skills/codex-orchestrate/` must be generalised before the public release (M5).
 
 ## Recently done
@@ -73,3 +70,4 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - 2026-10-09 · M2-T1 (Sol 6.1) · `core/src/ops` (applyOps, applyResumeOps), 61 tests · user edits lock bullets; AI cannot hide/move ancestors of locked bullets; moves use final destination index · none open.
 - 2026-10-09 · M1-T5 (Sol 6.1 + 1 unblock) · `core/src/pipeline` (tailor, generateMaster, evaluateDone, persistence), shared analysis/review schemas, `vita master`/`vita tailor` with hidden `--faux <script.json>` ([{tool, arguments}]) · orchestrator: added `writeFileAtomic`; must-have coverage now searches all visible text (skills lists count); checker skill checks locked/user bullets too · gap answers stay in meta pending source approval.
 - 2026-10-09 · M2-T2 (Sol 6.1 + 1 scope round) · `server/` (Hono, runtime, jobs, SSE, Basic auth, loopback rule), `shared/src/api.ts`, core additions `generateBase`, `tailor({applicationId})` reruns, `undoPaths`, `skills/build-base` · default port 4317 (orchestrator); `pnpm server` with `VITA_WORKSPACE`; usage caches in `.vita/jobs`, `.vita/edits`; template default in `config/server.json` · live smoke test OK (health, workspace, traversal 403).
+- 2026-10-09 · M1-FIX (Sol 6.1) · `profile.yaml` (shared `Profile`; header is engine-owned, never model-written), variants indexed as claims, template safe with empty header fields, local dates via `deps.now`, plain gap questions · generation requires a named profile.yaml · core 191 / shared 26 / cli 20 / server 19 tests pass.

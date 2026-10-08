@@ -30,6 +30,10 @@ describe("initWorkspace", () => {
 
   it("creates the starter files and directories with exactly one system commit", async () => {
     await initWorkspace(root, { name: "Alex Example" });
+    expect(parse(await readFile(path.join(root, "profile.yaml"), "utf8"))).toEqual({
+      name: "Alex Example",
+      contact: [],
+    });
     const outline = await readFile(path.join(root, "outline.md"), "utf8");
     expect(outline).toContain("# Alex Example\n");
     expect(outline.match(/^## .+$/gm)).toEqual([

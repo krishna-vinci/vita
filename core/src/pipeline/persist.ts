@@ -1,5 +1,6 @@
 import { stringify as stringifyYaml } from "yaml";
 import { commitPaths, fileHash, writeFileAtomic, writeTextAtomic } from "../workspace/index.js";
+import { localDate } from "./date.js";
 import type { generate } from "./generate.js";
 import type { PipelineDeps, RoleUsage, WorkspaceHandle } from "./types.js";
 
@@ -28,7 +29,7 @@ export async function persist(
       id: result.resume.id,
       kind: result.resume.kind,
       parent: result.resume.parent,
-      createdAt: metadata.createdAt ?? new Date().toISOString(),
+      createdAt: metadata.createdAt ?? localDate((deps.now ?? (() => new Date()))()),
       usage,
       warnings: result.warnings,
     }),

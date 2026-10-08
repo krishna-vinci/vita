@@ -55,7 +55,12 @@ async function profile(name = "developer", unlock = false) {
   if (unlock) for (const bullet of visibleBullets(resume)) bullet.locked = false;
   await writeTextAtomic(root, "resumes/master/resume.json", JSON.stringify(resume));
   await ensureRepo(root);
-  await commitPaths(root, ["outline.md", "projects.md", "config", "resumes", ".gitignore"], "Fixture", "system");
+  await commitPaths(
+    root,
+    ["outline.md", "projects.md", "config", "resumes", "profile.yaml", ".gitignore"],
+    "Fixture",
+    "system",
+  );
   return { ws: { root, bundledDir }, resume };
 }
 
@@ -83,6 +88,121 @@ async function deps(script: unknown): Promise<PipelineDeps> {
 }
 
 describe("faux generation pipeline", () => {
+  it("uses the profile header for master, base and job even when the writer omits or invents it", async () => {
+    const { ws, resume } = await profile();
+    const header = {
+      name: "Profile Name",
+      headline: "Profile Headline",
+      contact: [{ label: "Email", value: "profile@example.test" }],
+    };
+    await writeTextAtomic(ws.root, "profile.yaml", JSON.stringify(header));
+    vi.spyOn(render, "compileTex").mockResolvedValue({ pdf: Buffer.from("stub-pdf"), log: "" });
+    vi.spyOn(render, "pdfText").mockResolvedValue({
+      text: visibleBullets(resume)
+        .map((b) => b.text)
+        .join("\n"),
+      pages: 1,
+    });
+    const spy = vi.spyOn(agent, "runRole");
+    const submitted = { ...resume } as Partial<Resume>;
+    delete submitted.header;
+    const steps = [{ tool: "submit_resume", arguments: submitted }, ...draft(resume, undefined, false).slice(1)];
+    const master = await generateMaster(ws, await deps(steps));
+    expect(master.resume.header).toEqual(header);
+    const invented = { ...resume, header: { name: "Invented Name", contact: [] } };
+    const base = await generateBase(ws, { name: "Direction" }, await deps(draft(invented, undefined, false)));
+    expect(base.resume.header).toEqual(header);
+    const job = await tailor(
+      ws,
+      { jobText: "Catalogue", slug: "profile" },
+      await deps([{ tool: "submit_analysis", arguments: analysis }, ...draft(invented)]),
+    );
+    expect(job.resume.header).toEqual(header);
+    for (const [opts] of spy.mock.calls.filter(([opts]) => opts.role.name === "writer")) {
+      expect(opts.role.submitTool.parameters).not.toHaveProperty("properties.header");
+      expect(opts.task).toContain("The engine supplies the header from profile.yaml");
+    }
+    expect(JSON.parse(await readText(ws.root, `${job.applicationDir}/resume.json`)).header).toEqual(header);
+    expect(await readText(ws.root, `${job.applicationDir}/out/resume.md`)).toContain("# Profile Name");
+  });
+
+  it("rejects missing and empty profile names before any model call for all generation entry points", async () => {
+    const { ws } = await profile();
+    const spy = vi.spyOn(agent, "runRole");
+    const options = await deps([]);
+    for (const content of [undefined, 'name: ""\ncontact: []\n', 'name: "   "\ncontact: []\n']) {
+      if (content === undefined) await rm(join(ws.root, "profile.yaml"));
+      else await writeTextAtomic(ws.root, "profile.yaml", content);
+      for (const run of [
+        () => generateMaster(ws, options),
+        () => generateBase(ws, { name: "Direction" }, options),
+        () => tailor(ws, { jobText: "Job" }, options),
+      ]) {
+        await expect(run()).rejects.toMatchObject({
+          name: "ProfileRequiredError",
+          code: "profile-required",
+          message: "Add your name in profile.yaml first",
+        });
+      }
+    }
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("uses the local calendar date near midnight for application ids and metadata", async () => {
+    vi.stubEnv("TZ", "Asia/Kolkata");
+    const now = () => new Date("2026-10-08T18:45:00.000Z");
+    expect(now().getDate()).toBe(9);
+    const { ws, resume } = await profile();
+    vi.spyOn(render, "compileTex").mockResolvedValue({ pdf: Buffer.from("stub-pdf"), log: "" });
+    vi.spyOn(render, "pdfText").mockResolvedValue({
+      text: visibleBullets(resume)
+        .map((b) => b.text)
+        .join("\n"),
+      pages: 1,
+    });
+    const options = { ...(await deps([{ tool: "submit_analysis", arguments: analysis }, ...draft(resume)])), now };
+    const result = await tailor(ws, { jobText: "Catalogue", slug: "local-date" }, options);
+    expect(result.applicationDir).toBe("applications/2026-10-09-local-date");
+    expect(parseYaml(await readText(ws.root, `${result.applicationDir}/meta.yaml`)).createdAt).toBe("2026-10-09");
+    await generateMaster(ws, { ...(await deps(draft(resume, undefined, false))), now });
+    expect(parseYaml(await readText(ws.root, "resumes/master/meta.yaml")).createdAt).toBe("2026-10-09");
+  });
+
+  it("asks plain-language gap questions using the four-word boundary and keeps requirement ids", async () => {
+    const { ws, resume } = await profile();
+    vi.spyOn(render, "compileTex").mockResolvedValue({ pdf: Buffer.from("stub-pdf"), log: "" });
+    vi.spyOn(render, "pdfText").mockResolvedValue({
+      text: visibleBullets(resume)
+        .map((b) => b.text)
+        .join("\n"),
+      pages: 1,
+    });
+    const options = await deps([
+      {
+        tool: "submit_analysis",
+        arguments: {
+          ...analysis,
+          requirements: [
+            { id: "req-short", text: "Example skill", importance: "must", keywords: [] },
+            { id: "req-four", text: "One two three four", importance: "must", keywords: [] },
+            { id: "req-long", text: "leading a team across multiple locations", importance: "must", keywords: [] },
+          ],
+        },
+      },
+      ...draft(resume),
+    ]);
+    const progress = vi.fn();
+    options.onProgress = progress;
+    const result = await tailor(ws, { jobText: "Job" }, options);
+    expect(result.review.gaps).toEqual([
+      "req-short: Have you used Example skill?",
+      "req-four: Have you used One two three four?",
+      "req-long: Do you have experience with leading a team across multiple locations?",
+    ]);
+    expect(result.review.done).toBe(true);
+    expect(progress).toHaveBeenCalledWith({ stage: "gaps", message: result.review.gaps[2] });
+  });
+
   it("tailors a developer resume, wraps all embedded data, writes PDF and commits only the application as writer", async (test) => {
     if (!available) return test.skip();
     const { ws, resume } = await profile();
