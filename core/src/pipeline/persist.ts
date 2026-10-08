@@ -12,6 +12,7 @@ export async function persist(
   extra: Record<string, string>,
   expected: string | null,
   metadata: Record<string, unknown> = {},
+  message?: string,
 ) {
   deps.signal?.throwIfAborted();
   if ((await fileHash(ws.root, `${prefix}/resume.json`)) !== expected)
@@ -27,7 +28,7 @@ export async function persist(
       id: result.resume.id,
       kind: result.resume.kind,
       parent: result.resume.parent,
-      createdAt: new Date().toISOString(),
+      createdAt: metadata.createdAt ?? new Date().toISOString(),
       usage,
       warnings: result.warnings,
     }),
@@ -43,7 +44,7 @@ export async function persist(
   await commitPaths(
     ws.root,
     Object.keys(files),
-    `Generate ${result.resume.kind} resume: ${result.resume.id}`,
+    message ?? `Generate ${result.resume.kind} resume: ${result.resume.id}`,
     "writer",
   );
   deps.onProgress?.({

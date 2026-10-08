@@ -9,8 +9,10 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { parse as parseYaml } from "yaml";
 import * as agent from "../agent/index.js";
 import { createGenerationRuntime, FauxScript } from "../agent/roles.js";
+import * as render from "../render/index.js";
 import { tectonicAvailable } from "../render/index.js";
 import { commitPaths, ensureRepo, log, readText, writeTextAtomic } from "../workspace/index.js";
+import { BaseGenerationError, generateBase } from "./base.js";
 import { generateMaster } from "./master.js";
 import { tailor } from "./tailor.js";
 import type { PipelineDeps } from "./types.js";
@@ -263,6 +265,103 @@ describe("faux generation pipeline", () => {
     const meta = parseYaml(await readText(ws.root, `${result.applicationDir}/meta.yaml`));
     expect(meta.answers).toEqual({ "req-extra": "I have pending documentation" });
     expect(await readText(ws.root, "projects.md")).toBe(source);
+  });
+
+  it("reruns an existing application, merges answers and preserves user bullets and creation time", async () => {
+    const { ws, resume } = await profile();
+    vi.spyOn(render, "compileTex").mockResolvedValue({ pdf: Buffer.from("stub-pdf"), log: "" });
+    vi.spyOn(render, "pdfText").mockResolvedValue({
+      text: visibleBullets(resume)
+        .map((b) => b.text)
+        .join("\n"),
+      pages: 1,
+    });
+    const created = await tailor(
+      ws,
+      { jobText: "Catalogue service", slug: "rerun", answers: { first: "yes" } },
+      await deps([{ tool: "submit_analysis", arguments: analysis }, ...draft(resume)]),
+    );
+    const id = created.resume.id;
+    const before = parseYaml(await readText(ws.root, `${created.applicationDir}/meta.yaml`));
+    const existing = structuredClone(created.resume);
+    const user = visibleBullets(existing)[0];
+    if (!user) throw new Error("No fixture bullet");
+    user.origin = "user";
+    user.locked = false;
+    await writeTextAtomic(ws.root, `${created.applicationDir}/resume.json`, JSON.stringify(existing));
+    const proposed = structuredClone(resume);
+    proposed.sections = proposed.sections.filter((section) => section.id !== "work-section");
+    vi.mocked(render.pdfText).mockResolvedValue({
+      text: [...visibleBullets(proposed), ...visibleBullets(existing).filter((b) => b.id.startsWith("work-bullet"))]
+        .map((b) => b.text)
+        .join("\n"),
+      pages: 1,
+    });
+    const rerun = await tailor(
+      ws,
+      { applicationId: id, jobText: "Catalogue service", answers: { second: "no" } },
+      await deps([
+        { tool: "submit_analysis", arguments: analysis },
+        { tool: "submit_resume", arguments: proposed },
+        { tool: "submit_checks", arguments: { checks: checks(existing) } },
+        { tool: "submit_ats", arguments: { ats: [] } },
+      ]),
+    );
+    expect(rerun.applicationDir).toBe(created.applicationDir);
+    expect(visibleBullets(rerun.resume).find((b) => b.id === user.id)).toMatchObject({
+      text: user.text,
+      locked: true,
+      origin: "user",
+    });
+    const after = parseYaml(await readText(ws.root, `${created.applicationDir}/meta.yaml`));
+    expect(after.createdAt).toBe(before.createdAt);
+    expect(after.answers).toEqual({ first: "yes", second: "no" });
+    expect((await log(ws.root, 1))[0]).toMatchObject({ author: "writer", message: `Rerun ${id} with answers` });
+    await expect(tailor(ws, { applicationId: "missing", jobText: "Job" }, await deps([]))).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+  });
+
+  it("builds a checked base from master with a per-call skill and one-page default", async () => {
+    const { ws, resume } = await profile();
+    vi.spyOn(render, "compileTex").mockResolvedValue({ pdf: Buffer.from("stub-pdf"), log: "" });
+    vi.spyOn(render, "pdfText").mockResolvedValue({
+      text: visibleBullets(resume)
+        .map((b) => b.text)
+        .join("\n"),
+      pages: 1,
+    });
+    const spy = vi.spyOn(agent, "runRole");
+    const options = await deps(draft(resume, undefined, false));
+    const result = await generateBase(ws, { name: "Service Direction" }, options);
+    expect(result).toMatchObject({
+      id: "service-direction",
+      resume: { kind: "base", parent: "master" },
+      review: { done: true },
+    });
+    expect(result.review.render?.maxPages).toBe(1);
+    expect(parseYaml(await readText(ws.root, "resumes/service-direction/base.yaml"))).toMatchObject({
+      name: "Service Direction",
+      packs: ["general"],
+      rules: { max_pages: 1 },
+    });
+    expect(spy.mock.calls[0]?.[0].role.skills).toContain("build-base");
+    expect(spy.mock.calls[0]?.[0].task).toContain("Service Direction");
+    expect(spy.mock.calls.map(([opts]) => opts.role.name)).toEqual(["writer", "checker"]);
+    expect((await log(ws.root, 1))[0]?.author).toBe("writer");
+    await expect(generateBase(ws, { name: "Service Direction" }, options)).rejects.toMatchObject({
+      code: "base-exists",
+    });
+  });
+
+  it("requires a master before base generation and validates template and page budget", async () => {
+    const { ws } = await profile();
+    const options = await deps([]);
+    await expect(generateBase(ws, { name: "Direction", maxPages: 0 }, options)).rejects.toThrow();
+    await expect(generateBase(ws, { name: "Direction", template: "../escape" }, options)).rejects.toThrow();
+    await rm(join(ws.root, "resumes/master/resume.json"));
+    await expect(generateBase(ws, { name: "Direction" }, options)).rejects.toBeInstanceOf(BaseGenerationError);
+    await expect(generateBase(ws, { name: "Direction" }, options)).rejects.toMatchObject({ code: "master-required" });
   });
 
   it("refuses path traversal and does not start roles for an aborted generation", async () => {

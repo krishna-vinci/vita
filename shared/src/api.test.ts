@@ -1,0 +1,41 @@
+import { describe, expect, it } from "vitest";
+import {
+  AnswersRequest,
+  CreateApplicationRequest,
+  ImportLegacyRequest,
+  PutMarkdownRequest,
+  PutSettingsRequest,
+  ResumeOpsRequest,
+  UndoRequest,
+} from "./api";
+
+describe("API contracts", () => {
+  it("requires concurrency hashes for source writes and applied imports", () => {
+    expect(PutMarkdownRequest.safeParse({ markdown: "Text" }).success).toBe(false);
+    expect(PutMarkdownRequest.parse({ markdown: "Text", baseHash: null }).baseHash).toBeNull();
+    expect(ImportLegacyRequest.parse({ markdown: "Text" }).apply).toBe(false);
+    expect(ImportLegacyRequest.safeParse({ markdown: "Text", apply: true }).success).toBe(false);
+    expect(ImportLegacyRequest.parse({ markdown: "Text", apply: true, baseHash: "hash" }).apply).toBe(true);
+  });
+  it("validates operations and requires ids for scoped undo", () => {
+    expect(
+      ResumeOpsRequest.parse({ ops: [{ op: "bullet.override", id: "bullet", reason: "this-resume-only" }] }).ops[0]?.op,
+    ).toBe("bullet.override");
+    expect(
+      ResumeOpsRequest.safeParse({ ops: [{ op: "move", id: "bullet", toParent: "item", index: -1 }] }).success,
+    ).toBe(false);
+    expect(UndoRequest.safeParse({ scope: "resume" }).success).toBe(false);
+    expect(UndoRequest.parse({ scope: "outline" }).scope).toBe("outline");
+    expect(UndoRequest.safeParse({ scope: "application", id: "../escape" }).success).toBe(false);
+  });
+  it("accepts free-text gap answers and rejects credentials in settings", () => {
+    expect(AnswersRequest.parse({ answers: { req: "yes", other: "I have documentation" } }).answers.req).toBe("yes");
+    expect(CreateApplicationRequest.safeParse({ jobText: " " }).success).toBe(false);
+    expect(
+      PutSettingsRequest.safeParse({
+        template: "rover-base",
+        models: { default: "faux/writer", apiKey: "not-accepted" },
+      }).success,
+    ).toBe(false);
+  });
+});

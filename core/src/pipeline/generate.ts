@@ -57,6 +57,7 @@ export function roleRunner(ctx: Context, deps: PipelineDeps, usage: RoleUsage[],
       retry: deps.retry,
       onUsage: (entry) => {
         usage.push(entry);
+        deps.onUsage?.(entry);
         // Fallback safety uses the actual writer, including a rate-limit fallback.
         if (role.name === "writer") models.roles.writer = entry.model;
       },
@@ -117,7 +118,7 @@ function carryUserState(draft: Resume, seed?: Resume): Resume {
 }
 
 export interface GenerationInput {
-  kind: "master" | "job";
+  kind: "master" | "base" | "job";
   id: string;
   parent: string | null;
   template: string;
@@ -130,6 +131,8 @@ export interface GenerationInput {
   gaps: string[];
   jobText?: string;
   answers?: Record<string, string>;
+  direction?: string;
+  notes?: string;
 }
 
 export async function generate(ctx: Context, input: GenerationInput, deps: PipelineDeps, usage: RoleUsage[]) {
@@ -173,15 +176,22 @@ export async function generate(ctx: Context, input: GenerationInput, deps: Pipel
     ),
     data("job.md", input.jobText ?? ""),
     data("answers", input.answers ?? {}),
+    data("user notes", input.notes ?? ""),
   ].join("\n\n");
   // Two checked drafts total: initial draft plus one revision.
   for (let round = 1; round <= 2; round++) {
     deps.onProgress?.({ stage: round === 1 ? "write" : "revise", round });
     const draft = await run(
-      writerRole,
+      input.kind === "base" ? { ...writerRole, skills: [...writerRole.skills, "build-base"] } : writerRole,
       [
         `Generate a ${input.kind} resume with id ${input.id}, parent ${input.parent ?? "null"}, template ${input.template}, at most ${input.maxPages} pages.`,
         "Preserve locked bullets exactly, including visibility. User answers are context pending source approval; they do not create new claims or metrics. Never invent claim IDs or grant overrides.",
+        ...(input.kind === "base"
+          ? [
+              "Select and order content from the master resume for the direction in the following data.",
+              data("direction", input.direction),
+            ]
+          : []),
         "Return the complete Resume object through submit_resume.",
         context,
         data("previous resume", resume ?? null),
