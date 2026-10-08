@@ -1,0 +1,28 @@
+{
+  "id": "master",
+  "kind": "master",
+  "parent": null,
+  "template": "sample-cv",
+  "header": { "name": "Alex Example", "contact": [{ "label": "Email", "value": "alex@example.test" }] },
+  "sections": [
+    {
+      "id": "experience",
+      "title": "Experience",
+      "kind": "entries",
+      "items": [
+        {
+          "id": "cooperative",
+          "title": "Example Cooperative",
+          "subtitle": "Coordinator",
+          "bullets": [
+            {
+              "id": "records",
+              "text": "Organised records and documented the review process.",
+              "claims": ["example-records"]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

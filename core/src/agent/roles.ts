@@ -9,7 +9,14 @@ import { z } from "zod";
 import { ModelsConfig } from "./models.js";
 import type { SubmitToolSpec } from "./tools.js";
 
-export type RoleName = "analyst" | "writer" | "checker" | "ats-reviewer" | "resume-editor" | "source-editor";
+export type RoleName =
+  | "analyst"
+  | "writer"
+  | "checker"
+  | "ats-reviewer"
+  | "resume-editor"
+  | "source-editor"
+  | "template-adopter";
 export type ReadToolName = "read_outline" | "read_projects" | "search_evidence" | "read_resume" | "read_analysis";
 
 export interface RoleSpec<O> {
