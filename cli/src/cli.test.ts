@@ -141,7 +141,7 @@ for (const profile of profiles) {
     const root = await copyProfile(profile);
     const out = profile === "nurse" ? join(dir, "export") : undefined;
     const result = await renderCommand(root, { out });
-    expect(result).toEqual({ ok: true, pages: 1, maxPages: 1, missingBullets: [], outOfOrder: [] });
+    expect(result).toEqual({ ok: true, pages: 1, maxPages: 2, missingBullets: [], outOfOrder: [] });
     const output = out ?? join(root, "resumes/master");
     expect((await readFile(join(output, "resume.pdf"))).subarray(0, 5).toString()).toBe("%PDF-");
     expect(await readFile(join(output, "resume.md"), "utf8")).toMatch(/^# /);

@@ -55,9 +55,16 @@
 ((* endif *))
 ((* endfor *))
 ((* elif section.kind == "list" *))
-((( section.items | join(", ", "title") )))\par
-((* elif section.text *))
-((( section.text )))\par
+((* for item in section.detailItems *))
+\textbf{((( item.title )))}: ((( item.bullets | join("; ", "text") )))\par
+((* endfor *))
+((* if section.plainItems.length *))
+((( section.plainItems | join(", ", "title") )))\par
+((* endif *))
+((* else *))
+((* for paragraph in section.paragraphs *))
+((( paragraph )))\par
+((* endfor *))
 ((* endif *))
 ((* endfor *))
 \end{document}

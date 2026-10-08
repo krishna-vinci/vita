@@ -11,7 +11,8 @@ import {
   resolveInWorkspace,
   writeTextAtomic,
 } from "@vita/core";
-import { type RenderCheck, Resume, Slug } from "@vita/shared";
+import { BaseConfig, type RenderCheck, Resume, Slug } from "@vita/shared";
+import { parse as parseYaml } from "yaml";
 import { bundledTemplatesDir } from "../paths";
 
 export async function renderCommand(dir: string, opts: { resume?: string; out?: string } = {}): Promise<RenderCheck> {
@@ -21,7 +22,7 @@ export async function renderCommand(dir: string, opts: { resume?: string; out?: 
   const tpl = await loadTemplate([resolveInWorkspace(root, "templates"), bundledTemplatesDir], resume.template);
   const tex = renderTex(resume, tpl);
   const { pdf } = await compileTex({ tex, assetsDir: tpl.dir });
-  const check = checkRender(resume, await pdfText(pdf), 1);
+  const check = checkRender(resume, await pdfText(pdf), await pageLimit(root, id, resume));
   const outputRoot = opts.out ? resolve(opts.out) : root;
   const prefix = opts.out ? "" : `resumes/${id}/`;
   await mkdir(outputRoot, { recursive: true });
@@ -31,4 +32,22 @@ export async function renderCommand(dir: string, opts: { resume?: string; out?: 
   await writeTextAtomic(outputRoot, `${prefix}resume.md`, renderMarkdown(resume));
   console.log(JSON.stringify(check, null, 2));
   return check;
+}
+
+// Same limits as generation: master up to 2 pages, a base from its base.yaml, otherwise rules.yaml (default 1).
+async function pageLimit(root: string, id: string, resume: Resume): Promise<number> {
+  if (resume.kind === "master") return 2;
+  const read = async (rel: string) => {
+    try {
+      return parseYaml(await readText(root, rel)) as unknown;
+    } catch {
+      return undefined;
+    }
+  };
+  if (resume.kind === "base") {
+    const base = BaseConfig.safeParse(await read(`resumes/${id}/base.yaml`));
+    if (base.success && base.data.rules.max_pages) return base.data.rules.max_pages;
+  }
+  const rules = (await read("config/rules.yaml")) as { max_pages?: unknown } | undefined;
+  return typeof rules?.max_pages === "number" ? rules.max_pages : 1;
 }

@@ -42,3 +42,42 @@ it("omits the contact minipage and headline break when header fields are empty",
   resume.header = { name: "", headline: "Headline", contact: [] };
   expect(renderTex(resume, tpl)).not.toContain("\\\\ \\medskip");
 });
+
+it("renders bullets placed in summary and list sections", async () => {
+  const resume = Resume.parse({
+    id: "master",
+    kind: "master",
+    parent: null,
+    template: "rover-base",
+    header: { name: "Alex" },
+    sections: [
+      {
+        id: "s",
+        title: "Summary",
+        kind: "summary",
+        items: [{ id: "si", title: "", bullets: [{ id: "s1", text: "Calm planner." }] }],
+      },
+      {
+        id: "k",
+        title: "Skills",
+        kind: "list",
+        items: [
+          {
+            id: "k1",
+            title: "Tools",
+            bullets: [
+              { id: "k1a", text: "Spreadsheets" },
+              { id: "k1b", text: "Rostering" },
+            ],
+          },
+          { id: "k2", title: "First aid" },
+        ],
+      },
+    ],
+  });
+  const tpl = await loadTemplate([fileURLToPath(new URL("../../../templates", import.meta.url))], "rover-base");
+  const tex = renderTex(resume, tpl);
+  expect(tex).toContain("Calm planner.\\par");
+  expect(tex).toContain("\\textbf{Tools}: Spreadsheets; Rostering\\par");
+  expect(tex).toContain("First aid\\par");
+});

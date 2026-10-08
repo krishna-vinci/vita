@@ -11,7 +11,8 @@
     "@vita/core": "workspace:*",
     "@vita/shared": "workspace:*",
     "commander": "15.0.0",
-    "tsx": "^4.23.15"
+    "tsx": "^4.23.15",
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
     "@types/node": "^26.6.3",

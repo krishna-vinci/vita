@@ -46,7 +46,8 @@ export function checkRender(
 ): RenderCheck {
   // Compare without whitespace: PDF extraction can split words where microtype or kerning
   // widens a gap (e.g. "Trained" extracted as "T rained").
-  const compact = (value: string) => normalizeForMatch(value).replace(/\s+/g, "");
+  // List-marker glyphs can land inside the first word ("A•utomated"); drop them too.
+  const compact = (value: string) => normalizeForMatch(value).replace(/[\s•◦▪‣∙·]+/g, "");
   const text = compact(extracted.text);
   const missingBullets: string[] = [];
   const outOfOrder: string[] = [];

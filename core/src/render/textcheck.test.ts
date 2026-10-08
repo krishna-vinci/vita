@@ -63,3 +63,8 @@ it("matches bullets whose words were split by PDF extraction", () => {
   const data = resume(["Trained new staff on intake"]);
   expect(checkRender(data, { text: "• T rained new sta ff on in take", pages: 1 }, 1).ok).toBe(true);
 });
+
+it("matches bullets when the list glyph lands inside the first word", () => {
+  const data = resume(["Automated API validation"]);
+  expect(checkRender(data, { text: "A\n•utomated API validation", pages: 1 }, 1).ok).toBe(true);
+});
