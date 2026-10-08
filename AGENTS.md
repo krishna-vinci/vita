@@ -36,7 +36,7 @@ Some directories do not exist until their milestone lands; create only what your
 - Never commit secrets or real credentials. Never touch `.env*` files.
 - Do not `git commit`, `git push`, rebase, or switch branches unless the task explicitly says so. The orchestrator reviews and commits.
 - If the task is ambiguous or blocked, or a step does not fit the real code, stop and report (file:line, what you saw) instead of guessing.
-- Exception: minimal integration edits outside the listed scope that the task strictly needs (registrations, barrel exports, type unions, route wiring, CLI flag registration) are allowed without stopping. List each with its reason in the final report.
+- Exception: minimal integration edits outside the listed scope that the task strictly needs (registrations, barrel exports, type unions, route wiring, CLI flag registration) are allowed without stopping, and so are small backwards-compatible additions to engine modules your task strictly needs (a new optional field, an extra exported helper), each with a test. List each with its reason in the final report. Stop only for real design conflicts.
 - Never delete or modify committed files you did not change for your task.
 - Never read or copy the owner's personal resume files outside this repo (`/home/krishna/project-remote/*.md`) unless the task names them; never commit personal data. Fixtures are fictional.
 - Do not add dependencies beyond those the task names. Pin exact versions for `@earendil-works/*` (Pi SDK).
