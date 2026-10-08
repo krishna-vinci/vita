@@ -1,0 +1,659 @@
+<title>Vita Product Draft</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Crimson+Pro:wght@400;600&display=swap">
+<style>
+/* Layout: reading column for argument; wide frames for the prototype and diagrams, each scrolling inside itself on phones. */
+:root{
+  --paper:#f6f6f4; --surface:#ffffff; --ink:#17191d; --muted:#5f6570; --line:#e2e3e0; --line-2:#cfd1cc;
+  --accent:#2f4fd6; --accent-ink:#ffffff; --tint:#ebeefd;
+  --ok:#1d8656; --ok-bg:#e3f4ec; --warn:#9a6410; --warn-bg:#fbefd6;
+  --sheet:#ffffff; --sheet-ink:#16181c; --sheet-muted:#5b616b; --sheet-hl:#fbe7ad; --sheet-src:#6b7280;
+  --f-display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --f-sheet:"Crimson Pro","Iowan Old Style",Georgia,serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#101215; --surface:#181b20; --ink:#e8e9ec; --muted:#9aa0aa; --line:#2a2e35; --line-2:#3a3f48;
+  --accent:#93a6ff; --accent-ink:#101215; --tint:#1e2440;
+  --ok:#55c891; --ok-bg:#16291f; --warn:#e2aa4c; --warn-bg:#2f2513;
+  --sheet:#fbfbfa; --sheet-ink:#16181c; --sheet-muted:#5b616b; --sheet-hl:#fbe7ad; --sheet-src:#6b7280; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#101215; --surface:#181b20; --ink:#e8e9ec; --muted:#9aa0aa; --line:#2a2e35; --line-2:#3a3f48;
+  --accent:#93a6ff; --accent-ink:#101215; --tint:#1e2440;
+  --ok:#55c891; --ok-bg:#16291f; --warn:#e2aa4c; --warn-bg:#2f2513;
+  --sheet:#fbfbfa; --sheet-ink:#16181c; --sheet-muted:#5b616b; --sheet-hl:#fbe7ad; --sheet-src:#6b7280; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font:16px/1.65 var(--f-body);padding-inline:16px;padding-block:0 96px}
+.wrap{max-width:1080px;margin:0 auto}
+.col{max-width:660px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.15;margin:0}
+h1{font-size:clamp(2.4rem,6vw,3.6rem);font-weight:700;letter-spacing:-.02em}
+h2{font-size:1.75rem;font-weight:700;letter-spacing:-.01em}
+h3{font-size:1.1rem;font-weight:600}
+p{margin:0}
+code{font-family:var(--f-mono);font-size:.85em}
+.muted{color:var(--muted)}
+.small{font-size:.86rem}
+.eyebrow{font:500 .72rem/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+section{padding-block:72px 0;display:grid;gap:22px}
+.head{display:grid;gap:8px;max-width:660px}
+header{padding-block:56px 0;display:grid;gap:16px}
+.lede{font-size:1.2rem;line-height:1.55}
+nav.toc{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.9rem;padding-top:8px}
+nav.toc a{color:var(--muted);text-decoration:none}
+nav.toc a:hover{color:var(--accent)}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;display:grid;gap:10px;align-content:start}
+.box ul,ul.plain{margin:0;padding-left:20px;display:grid;gap:5px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:760px){.two,.three{grid-template-columns:1fr}}
+
+/* constitution */
+.laws{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;border-top:1px solid var(--line)}
+.law{display:grid;grid-template-columns:2.2rem 1fr;gap:4px 10px;padding:18px 18px 18px 0;border-bottom:1px solid var(--line)}
+.law:nth-child(odd){padding-right:28px}
+.law .n{font:500 .85rem var(--f-mono);color:var(--accent);padding-top:3px}
+.law b{font-family:var(--f-display);font-weight:500;font-size:1.08rem}
+.law p{grid-column:2;color:var(--muted);font-size:.95rem}
+@media (max-width:760px){.laws{grid-template-columns:1fr}.law:nth-child(odd){padding-right:0}}
+
+/* depth levels */
+.level{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;display:grid;gap:10px;align-content:start}
+.level .who{font-size:.85rem;color:var(--muted)}
+.level h3{font-size:1.25rem}
+.level.l2{border-color:var(--line-2)}
+.level.l3{border-color:var(--accent)}
+
+/* prototype */
+.proto-scroll{overflow-x:auto;border-radius:14px;border:1px solid var(--line);background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.04),0 12px 32px rgba(0,0,0,.06)}
+.app{min-width:920px;min-height:600px;display:grid;grid-template-rows:auto 1fr;font-size:14px;line-height:1.5}
+.bar{display:flex;align-items:center;gap:22px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.logo{font:700 1.05rem var(--f-display)}
+.nav{display:flex;gap:4px}
+.nav button{font:500 14px var(--f-body);background:none;border:0;color:var(--muted);padding:6px 12px;border-radius:6px;cursor:pointer}
+.nav button[aria-current="page"]{background:var(--tint);color:var(--accent)}
+.view{padding:28px;display:grid;gap:16px;align-content:start}
+.btn{font:500 14px var(--f-body);padding:9px 16px;border-radius:8px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn.sm{font-size:13px;padding:6px 11px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.link{border:0;background:none;color:var(--accent);padding:4px 0}
+button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+textarea{width:100%;font:14px/1.55 var(--f-body);border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);padding:14px;resize:none}
+.center{max-width:580px;margin:20px auto 0;display:grid;gap:14px;width:100%}
+.ask{background:var(--tint);border-radius:12px;padding:18px;display:grid;gap:10px}
+.ask b{font-size:1.05rem}
+.split{display:grid;grid-template-columns:1fr 310px;min-height:540px;margin:-28px}
+.doc{padding:24px 28px;background:var(--paper);display:grid;align-content:start;gap:12px}
+.chat{border-left:1px solid var(--line);padding:20px;display:grid;grid-template-rows:auto auto 1fr auto;gap:12px}
+.msgs{display:grid;gap:10px;align-content:start}
+.msg{padding:9px 12px;border-radius:10px;max-width:94%;font-size:13.5px}
+.msg.u{background:var(--ink);color:var(--paper);justify-self:end}
+.msg.a{background:var(--paper);border:1px solid var(--line)}
+.input{display:flex;gap:8px}
+.input input{flex:1;min-width:0;font:14px var(--f-body);padding:9px 12px;border:1px solid var(--line-2);border-radius:8px;background:var(--paper);color:var(--ink)}
+.switch{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer;background:none;border:0;padding:0;font-family:var(--f-body)}
+.switch .track{width:32px;height:18px;border-radius:9px;background:var(--line-2);position:relative;transition:background .15s}
+.switch .track::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--surface);transition:transform .15s}
+.switch[aria-pressed="true"] .track{background:var(--accent)}
+.switch[aria-pressed="true"] .track::after{transform:translateX(14px)}
+.sheet{background:var(--sheet);color:var(--sheet-ink);font:13px/1.45 var(--f-sheet);padding:28px 34px;border-radius:3px;box-shadow:0 1px 3px rgba(0,0,0,.12),0 6px 20px rgba(0,0,0,.06);display:grid;gap:6px;max-width:640px;width:100%;justify-self:center}
+.sheet .nm{font:600 22px/1 var(--f-sheet);text-align:center}
+.sheet .ct{text-align:center;color:var(--sheet-muted);font-size:12px}
+.sheet .sec{font:600 13px var(--f-sheet);border-bottom:.8px solid var(--sheet-ink);margin-top:6px;letter-spacing:.05em;text-transform:uppercase}
+.sheet .ent{display:flex;justify-content:space-between;font-weight:600}
+.sheet ul{margin:0;padding-left:16px;display:grid;gap:3px}
+.sheet [contenteditable]{outline:none;border-radius:2px}
+.sheet [contenteditable]:hover,.sheet [contenteditable]:focus{background:rgba(47,79,214,.08)}
+.src{display:none;font:11px/1.3 var(--f-mono);color:var(--sheet-src);padding:1px 0 3px}
+.src.f{color:#9a6410}
+.details .src{display:block}
+mark.q{background:var(--sheet-hl);color:inherit;border-radius:2px;cursor:pointer;padding:0 1px}
+.pop{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,.08);max-width:640px;justify-self:center;width:100%}
+.match{display:none;gap:6px}
+.details .match{display:grid}
+.mrow{display:grid;grid-template-columns:16px 1fr;gap:8px;font-size:13px;align-items:start}
+.mrow i{font-style:normal;font:600 12px var(--f-mono)}
+.mrow i.y{color:var(--ok)} .mrow i.p{color:var(--warn)} .mrow i.n{color:var(--muted)}
+.prep{display:grid;gap:10px;max-width:640px}
+.qa{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:4px}
+.list{display:grid;gap:8px;max-width:640px}
+.li{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:center}
+.li .s{color:var(--muted);font-size:13px;grid-column:1}
+.field{display:grid;gap:6px;max-width:440px}
+.field label{font-weight:500;font-size:14px}
+.field select,.field input{font:14px var(--f-body);padding:9px 12px;border:1px solid var(--line-2);border-radius:8px;background:var(--paper);color:var(--ink)}
+.adv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;max-width:760px}
+.adv div{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:2px}
+.adv span{font-size:12.5px;color:var(--muted)}
+.hint{color:var(--muted);font-size:13px}
+.subtabs{display:flex;gap:4px;background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:3px}
+.subtabs button{font:500 13px var(--f-body);border:0;background:none;color:var(--muted);padding:6px 12px;border-radius:6px;cursor:pointer}
+.subtabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.subview{display:grid;gap:12px;max-width:720px}
+.outline{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:22px 26px;display:grid;gap:8px;outline:none;font-size:14px}
+.outline:focus{border-color:var(--accent)}
+.outline h4{margin:6px 0 0;font:600 15px var(--f-display)}
+.outline ul{margin:0;padding-left:20px;display:grid;gap:4px}
+.bases{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.base{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:4px;align-content:start}
+.base.main{border-color:var(--accent)}
+.base.add{border-style:dashed;background:transparent}
+.base .s{color:var(--muted);font-size:13px}
+.note-u{background:var(--tint);border-radius:10px;padding:12px 14px;font-size:13.5px;max-width:720px}
+.ladder{min-width:940px;display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+.rung{border:1px solid var(--line-2);border-radius:10px;padding:14px;background:var(--paper);display:grid;gap:6px;align-content:start;margin-right:22px;position:relative}
+.rung:not(:last-child)::after{content:"→";position:absolute;right:-18px;top:44%;color:var(--muted)}
+.rung b{font-family:var(--f-display);font-weight:500;font-size:1.05rem}
+.rung span{font-size:13px;color:var(--muted)}
+.rung code{font-size:11.5px;color:var(--accent)}
+.rung.hi{border-color:var(--accent)}
+
+/* tables, diagrams */
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:640px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 .72rem var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--paper)}
+tr:last-child td{border-bottom:0}
+.pill{display:inline-block;font:500 12px var(--f-body);padding:3px 9px;border-radius:999px;white-space:nowrap}
+.pill.ok{background:var(--ok-bg);color:var(--ok)} .pill.no{background:var(--warn-bg);color:var(--warn)}
+.diagram{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:22px}
+.pipe{min-width:940px;display:grid;grid-template-columns:repeat(7,1fr)}
+.stage{display:grid;gap:4px;align-content:start;padding:12px;border:1px solid var(--line-2);border-radius:8px;background:var(--paper);margin-right:18px;position:relative;font-size:13px}
+.stage:not(:last-child)::after{content:"";position:absolute;right:-15px;top:50%;width:12px;border-top:1.5px solid var(--muted)}
+.stage:not(:last-child)::before{content:"";position:absolute;right:-16px;top:calc(50% - 4px);border:4px solid transparent;border-left-color:var(--muted)}
+.stage .who{font:500 10.5px var(--f-mono);color:var(--accent)}
+.stage b{font-family:var(--f-display);font-weight:500;font-size:.98rem}
+.stage span.d{color:var(--muted)}
+.stage.code{border-style:dashed}
+.stage.gate{border-color:var(--warn);background:var(--warn-bg)}
+.stage.gate .who{color:var(--warn)}
+.loopnote{min-width:940px;display:flex;justify-content:flex-end;gap:10px;align-items:center;margin-top:12px;font-size:12.5px;color:var(--muted)}
+.loopnote .arc{flex:0 0 50%;height:16px;border:1.5px dashed var(--muted);border-top:0;border-radius:0 0 10px 10px}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12.5px;color:var(--muted);margin-top:14px}
+.legend span{display:inline-flex;gap:6px;align-items:center}
+.sw{width:14px;height:10px;border-radius:2px;border:1px solid var(--line-2);background:var(--paper)}
+.sw.c{border-style:dashed} .sw.g{border-color:var(--warn);background:var(--warn-bg)}
+.stack{min-width:940px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px}
+.stack .layer{border:1px solid var(--line-2);border-radius:10px;padding:14px;background:var(--paper);display:grid;gap:6px;align-content:start}
+.stack .layer b{font-family:var(--f-display);font-weight:500;font-size:1.05rem}
+.stack .layer span{font-size:13px;color:var(--muted)}
+.stack .arrow{grid-column:1/-1;font-size:12.5px;color:var(--muted);text-align:center}
+.arch{min-width:940px;display:grid;grid-template-columns:200px 1fr 220px;gap:14px}
+.arch .layer{border:1px solid var(--line-2);border-radius:10px;padding:12px;display:grid;gap:8px;align-content:start;background:var(--paper)}
+.arch .b{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:8px 10px;font-size:13px;display:grid;gap:2px}
+.arch .b span{font-size:12px;color:var(--muted)}
+.arch .b.acc{border-color:var(--accent)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+pre.tree{font:12.5px/1.6 var(--f-mono);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;overflow-x:auto;margin:0;color:var(--ink)}
+pre.tree .c{color:var(--muted)}
+.roadmap{display:grid;border-left:2px solid var(--line-2);margin-left:6px;max-width:700px}
+.ms{display:grid;grid-template-columns:110px 1fr;gap:12px;padding:0 0 20px 20px;position:relative}
+.ms::before{content:"";position:absolute;left:-7px;top:5px;width:12px;height:12px;border-radius:50%;background:var(--surface);border:2px solid var(--accent)}
+.ms .id{font:500 .85rem var(--f-mono);color:var(--accent)}
+.ms b{font-family:var(--f-display);font-weight:500}
+@media (prefers-reduced-motion:reduce){.switch .track,.switch .track::after{transition:none}}
+</style>
+
+<div class="wrap">
+<header>
+  <span class="eyebrow">Draft v0.4 · 8 Oct 2026 · working name</span>
+  <h1>Vita</h1>
+  <p class="lede col">An open-source resume studio that writes like a good engineer reviews: specific, measured where it can be, and never claiming what you didn't do.</p>
+  <p class="muted col">Paste a job and get a tailored resume, checked against your real work, in about a minute. The first screen is simple. Every layer of rigour underneath is one click away when you want it.</p>
+  <nav class="toc" aria-label="Sections">
+    <a href="#philosophy">Philosophy</a><a href="#depth">Three depths</a><a href="#try">Try it</a><a href="#standard">Writing standard</a><a href="#making">How it's made</a><a href="#editing">Editing</a><a href="#layers">Outline to job</a><a href="#extend">Extending</a><a href="#arch">Architecture</a><a href="#roadmap">Roadmap</a>
+  </nav>
+</header>
+
+<section id="philosophy">
+  <div class="head">
+    <span class="eyebrow">The constitution</span>
+    <h2>Philosophy</h2>
+    <p class="muted">Fixed design commitments. Changing one needs a written decision, not a quiet code change. Numbered so issues and pull requests can cite them.</p>
+  </div>
+  <div class="laws">
+    <div class="law"><span class="n">1</span><b>Truth over polish</b><p>A modest true line beats an impressive false one. Vita never invents an employer, skill, number or outcome.</p></div>
+    <div class="law"><span class="n">2</span><b>Every claim has a receipt</b><p>Each line links to evidence: code, a document, a link, a measurement, or something you said, with the date you said it.</p></div>
+    <div class="law"><span class="n">3</span><b>Ask, don't guess</b><p>When a line could be stronger with a fact Vita doesn't have, it asks you. Your answer is saved and reused.</p></div>
+    <div class="law"><span class="n">4</span><b>Facts once, resumes many</b><p>Your outline and project inventory are the single source of truth. A master resume and targeted base resumes grow from them, and every job resume starts from the closest base. Fix a fact once and it flows down.</p></div>
+    <div class="law"><span class="n">5</span><b>Impact over activity</b><p>Lines say what changed because of your work, not only what you did. Measured when possible, concrete always.</p></div>
+    <div class="law"><span class="n">6</span><b>The writer never grades itself</b><p>A separate checker, on a different model, reviews every line against evidence. Rate limits never collapse the two onto one model.</p></div>
+    <div class="law"><span class="n">7</span><b>Rules live in code</b><p>Anything mechanical, such as unsourced numbers, banned phrases, page count or PDF readability, is checked by code, not requested in a prompt.</p></div>
+    <div class="law"><span class="n">8</span><b>Sound like a person</b><p>No "spearheaded", no "leveraged synergies", no three-adjective stacks. Plain verbs, real nouns, varied rhythm.</p></div>
+    <div class="law"><span class="n">9</span><b>Simple surface, deep core</b><p>The default screen needs no explanation. Detail and control are available in layers, and nothing advanced is required to start.</p></div>
+    <div class="law"><span class="n">10</span><b>Agents propose, you decide</b><p>Profile changes arrive as diffs. Your own edits are locked and survive any regeneration.</p></div>
+    <div class="law"><span class="n">11</span><b>Gaps are preparation, not lies</b><p>A requirement you don't meet stays off the resume and becomes interview prep: how to answer honestly and bridge from what you know.</p></div>
+    <div class="law"><span class="n">12</span><b>Readable by people and machines</b><p>Every PDF is compiled, its text extracted and checked for reading order, so application systems parse what recruiters see.</p></div>
+    <div class="law"><span class="n">13</span><b>Your files, your models</b><p>Plain Markdown and YAML in a git repo you own. Any model provider, including local ones. Deleting the app deletes nothing.</p></div>
+    <div class="law"><span class="n">14</span><b>Extend with data, not code</b><p>Professions, templates, rules and instructions are files. Adding a career or a house style never needs an engine change.</p></div>
+    <div class="law"><span class="n">15</span><b>Cost is visible</b><p>Every run shows an estimate before and actual spend after, per role, in detailed view.</p></div>
+    <div class="law"><span class="n">16</span><b>Untrusted input stays data</b><p>Job posts, web pages and repositories are read as material, never followed as instructions.</p></div>
+  </div>
+</section>
+
+<section id="depth">
+  <div class="head">
+    <span class="eyebrow">Principle 9 in practice</span>
+    <h2>Three depths, one product</h2>
+    <p class="muted">Everyone gets the same engine. What changes is how much of it you choose to see.</p>
+  </div>
+  <div class="three">
+    <div class="level"><span class="who">Default · everyone</span><h3>Simple</h3><ul class="muted"><li>Paste a job, answer a question or two</li><li>Clean resume, chat beside it</li><li>Soft highlights on anything unsupported</li><li>Download, prepare for interview</li></ul></div>
+    <div class="level l2"><span class="who">One toggle · curious users</span><h3>Detailed</h3><ul class="muted"><li>Evidence source under every line</li><li>Job requirement match, met and missing</li><li>Checker notes and revision history</li><li>Tokens and cost per run</li></ul></div>
+    <div class="level l3"><span class="who">Settings · power users and hosts</span><h3>Advanced</h3><ul class="muted"><li>Model per role, separate checker</li><li>Base resume rules, profession packs, rules</li><li>Custom instructions by layer</li><li>Templates, layout ranges, raw LaTeX</li><li>Integrations (MCP), optional classifier</li></ul></div>
+  </div>
+</section>
+
+<section id="try">
+  <div class="head">
+    <span class="eyebrow">Clickable sketch</span>
+    <h2>Try it</h2>
+    <p class="muted">Your real projects, an example job. Turn on <b>Show details</b> on the resume to see the layer underneath. Click the highlighted text, edit any line, or try the chat suggestions.</p>
+  </div>
+  <div class="proto-scroll">
+    <div class="app">
+      <div class="bar">
+        <span class="logo">Vita</span>
+        <nav class="nav" aria-label="App">
+          <button data-go="me">Me</button>
+          <button data-go="jobs" aria-current="page">Jobs</button>
+          <button data-go="settings">Settings</button>
+        </nav>
+      </div>
+
+      <div class="view" id="v-paste">
+        <div class="center">
+          <h3>New job</h3>
+          <textarea rows="9" aria-label="Job description">Platform Engineer · Northwind Freight (example)
+We're looking for someone to own our deployment platform.
+• Linux, Docker, Terraform
+• CI/CD with GitHub Actions
+• Python or Go
+• Kubernetes in production
+• Monitoring and alerting</textarea>
+          <div class="row"><button class="btn primary" data-step="ask">Make my resume</button><span class="hint">About a minute · est. $0.05</span></div>
+        </div>
+      </div>
+
+      <div class="view" id="v-ask" hidden>
+        <div class="center">
+          <div class="ask">
+            <span class="hint">Starting from your <b>DevOps / SRE</b> base, the closest match · <button class="btn link">change</button></span>
+            <span class="hint">One quick question before I write</span>
+            <b>This job wants Kubernetes. Have you used it?</b>
+            <div class="row"><button class="btn" data-step="resume">Yes, I'll tell you about it</button><button class="btn" data-step="resume">No</button></div>
+          </div>
+          <p class="hint">If you say no, it stays off your resume and goes into interview prep with advice on answering it (principle 11).</p>
+        </div>
+      </div>
+
+      <div class="view" id="v-resume" hidden>
+        <div class="split">
+          <div class="doc" id="doc">
+            <div class="row" style="justify-content:space-between;max-width:640px;width:100%;justify-self:center">
+              <button class="switch" id="det" aria-pressed="false"><span class="track"></span>Show details</button>
+              <div class="row"><button class="btn sm" data-step="prep">Prepare me</button><button class="btn sm primary" id="dl">Download PDF</button></div>
+            </div>
+            <div class="sheet">
+              <div class="nm">Krishna Teja</div>
+              <div class="ct">github.com/krishna-vinci · krishna.quest</div>
+              <div class="sec">Skills</div>
+              <div contenteditable="true" spellcheck="false">Linux, Docker, Docker Compose, Terraform, Ansible, GitHub Actions, AWS, Python, Go, PostgreSQL</div>
+              <div class="src">from: profile skills · each skill linked to at least one project</div>
+              <div class="sec">Projects</div>
+              <div class="ent"><span>Studium</span><span>2026</span></div>
+              <ul>
+                <li><span contenteditable="true" spellcheck="false">Packaged a self-hosted learning platform with Docker Compose, health checks, a systemd unit and backup and restore tooling.</span><div class="src">from: studium/compose.yaml, deploy/studium.service · checked ✓</div></li>
+                <li><span contenteditable="true" spellcheck="false">Added GitHub Actions workflows for type checks, test suites and multi-architecture container releases.</span><div class="src">from: studium/.github/workflows/ci.yml, release.yml · checked ✓</div></li>
+                <li id="b-flag"><span id="b-flag-t">Cut deployment effort <mark class="q" id="m70" tabindex="0" role="button" aria-label="Question about 70%">by 70%</mark> by replacing manual setup with one-command rollouts.</span><div class="src f" id="b-flag-s">checker: "70%" has no source · lint blocked export</div></li>
+              </ul>
+              <div class="ent"><span>Kite Algo</span><span>2025</span></div>
+              <ul><li><span id="b-kite" contenteditable="true" spellcheck="false">Built a Python trading control plane with paper and live execution paths, database migrations and automated API tests.</span><div class="src">from: kite-algo/README.md, alembic/ · checked ✓</div></li></ul>
+              <div class="sec">Experience</div>
+              <div class="ent"><span>Independent Developer</span><span>2020 – Present</span></div>
+              <ul><li><span contenteditable="true" spellcheck="false">Run self-hosted services on Linux with systemd, uptime monitoring, health checks and off-site backups.</span><div class="src">from: profile experience · your own statement, 2026-05-10</div></li></ul>
+            </div>
+            <div class="pop" id="pop" hidden>
+              <b>Where does "70%" come from?</b>
+              <span class="hint">I couldn't find this number in your projects. Numbers help, but only real ones.</span>
+              <div class="row"><button class="btn sm" id="p-add">I measured it</button><button class="btn sm" id="p-reword">Say it without a number</button><button class="btn link" id="p-remove">Remove line</button></div>
+            </div>
+          </div>
+          <div class="chat">
+            <b>Chat</b>
+            <div class="match" aria-label="Job match">
+              <span class="eyebrow">Job match</span>
+              <div class="mrow"><i class="y">✓</i><span>Linux, Docker, Terraform</span></div>
+              <div class="mrow"><i class="y">✓</i><span>GitHub Actions</span></div>
+              <div class="mrow"><i class="y">✓</i><span>Python, Go</span></div>
+              <div class="mrow"><i class="p">~</i><span>Monitoring: uptime checks, no metrics stack</span></div>
+              <div class="mrow"><i class="n">–</i><span>Kubernetes: gap, in interview prep</span></div>
+              <span class="hint">Run: 2 drafts · 1 open note · 41k tokens · $0.06</span>
+            </div>
+            <div class="msgs" id="msgs"><div class="msg a">Here's your resume. Skills come first because this job is tool-heavy. Ask me for any change.</div></div>
+            <div style="display:grid;gap:8px">
+              <div class="row"><button class="btn sm" data-say="Focus Kite Algo on Go">Focus Kite Algo on Go</button><button class="btn sm" data-say="Add Kubernetes to skills">Add Kubernetes</button></div>
+              <div class="input"><input id="chatin" placeholder="Ask for a change…" aria-label="Ask for a change"><button class="btn primary" id="send">Send</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="view" id="v-prep" hidden>
+        <div class="row"><button class="btn link" data-step="resume">← Back to resume</button></div>
+        <h3>Interview prep · Platform Engineer</h3>
+        <div class="prep">
+          <div class="qa"><b>"How is Studium deployed, and how would you recover it after a disk failure?"</b><span class="muted">Walk through Compose volumes, health checks and the backup scheduler. Say plainly what you've tested and what you haven't.</span></div>
+          <div class="qa"><b>"Have you run Kubernetes?"</b><span class="muted">Say no directly. Then bridge: Compose services, health checks and volumes map to pods, probes and persistent volumes. Mention a concrete plan, such as running Studium on k3s.</span></div>
+          <div class="qa"><b>"Tell me about a service that failed quietly."</b><span class="muted">Use the Kite Algo websocket reconnect work. Situation, task and action are drafted from your profile; fill in the result.</span></div>
+        </div>
+      </div>
+
+      <div class="view" id="v-me" hidden>
+        <div class="row" style="justify-content:space-between">
+          <div class="subtabs" role="tablist" aria-label="Me">
+            <button role="tab" aria-selected="true" data-sub="sub-outline">Outline</button>
+            <button role="tab" aria-selected="false" data-sub="sub-projects">Projects</button>
+            <button role="tab" aria-selected="false" data-sub="sub-base">Base resumes</button>
+          </div>
+          <button class="btn sm">Connect GitHub</button>
+        </div>
+
+        <div id="sub-outline" class="subview">
+          <div class="outline" contenteditable="true" spellcheck="false" aria-label="Outline">
+            <h4>Professional summary</h4>
+            <p>Independent product, backend and platform developer building self-directed products across web apps, API services, data workflows, automation and Linux deployments.</p>
+            <h4>Experience</h4>
+            <p><b>Independent Developer</b> · Remote · 2020 – Present</p>
+            <ul><li>Build and operate web products and internal platforms from product surface through backend services, data workflows, deployment and maintenance.</li><li>Self-host Gitea for private repositories; maintain services with Uptime Kuma, health checks and Proxmox VMs.</li></ul>
+            <h4>Projects</h4>
+            <p><b>Studium</b> · open-source learning platform · <span class="hint">evidence in Projects ↗</span></p>
+            <p class="hint">…write freely. Everything you know about your work goes here, unfiltered.</p>
+          </div>
+          <p class="hint">One long document. Write in your own words; Vita reads structure from headings and bullets. Or tell the chat: "add that I moved backups to Restic last year".</p>
+        </div>
+
+        <div id="sub-projects" class="subview" hidden>
+          <div class="list">
+            <div class="li"><b>Studium</b><span class="hint">checked against code, 7 Oct</span><span class="s">14 claims · evidence table · claim limits · bullet variants</span></div>
+            <div class="li"><b>Newsy</b><span class="hint">live site linked</span><span class="s">9 claims · approved stack framing</span></div>
+            <div class="li"><b>Kite Algo</b><span class="hint"></span><span class="s">8 claims</span></div>
+            <div class="li"><b>LocalDocs Hub</b><span class="hint"></span><span class="s">6 claims</span></div>
+          </div>
+          <p class="hint">The verified layer: stack, evidence links, what you may and may not claim, and ready-made bullet variants.</p>
+          <div class="ask" style="max-width:640px"><b>Got a minute?</b><span>Studium has no measured results yet. Roughly how long does a chapter take to draft, start to finish?</span><div class="row"><button class="btn sm">Answer</button><button class="btn link">Later</button></div></div>
+        </div>
+
+        <div id="sub-base" class="subview" hidden>
+          <div class="bases">
+            <div class="base main"><span class="eyebrow">Master</span><b>Everything, best version</b><span class="hint">2 pages · updated from outline 2 days ago</span><span class="s">Your complete, polished resume. Usable on its own for general applications, and the starting point when no targeted base fits.</span><div class="row"><button class="btn sm">Open</button><button class="btn sm">PDF</button></div></div>
+            <div class="base"><span class="eyebrow">Targeted</span><b>DevOps / SRE</b><span class="hint">1 page · from Master</span><span class="s">Leads with infrastructure, Linux, AWS, Docker.</span><div class="row"><button class="btn sm">Open</button></div></div>
+            <div class="base"><span class="eyebrow">Targeted</span><b>Full-stack</b><span class="hint">1 page · from Master</span><span class="s">Leads with React, SvelteKit, FastAPI.</span><div class="row"><button class="btn sm">Open</button></div></div>
+            <div class="base add"><b>+ New base resume</b><span class="s">Name a direction, e.g. "AI backend". Vita drafts it from your Master.</span></div>
+          </div>
+          <div class="note-u"><b>Your outline changed.</b> Master and DevOps / SRE can include the new Restic line. <button class="btn link">Review changes</button></div>
+        </div>
+      </div>
+
+      <div class="view" id="v-settings" hidden>
+        <h3>Settings</h3>
+        <div class="field"><label for="s-model">AI model</label><select id="s-model"><option>Anthropic · Claude Sonnet 5.5</option><option>OpenAI</option><option>Local model</option></select></div>
+        <div class="field"><label for="s-tpl">Template</label><select id="s-tpl"><option>Rover Base</option><option>Rover Star</option><option>Rover Office</option></select></div>
+        <span class="eyebrow" style="margin-top:8px">Advanced</span>
+        <div class="adv">
+          <div><b>Models per role</b><span>Writer, checker, researcher. Checker on a different model.</span></div>
+          <div><b>Templates</b><span>Upload your own LaTeX, set layout ranges</span></div>
+          <div><b>Profession packs</b><span>Keywords, metrics, interview banks</span></div>
+          <div><b>Instructions</b><span>Standing guidance, sites to read</span></div>
+          <div><b>Rules</b><span>Pages, spelling, banned phrases</span></div>
+          <div><b>Integrations</b><span>GitHub and other MCP servers</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="standard">
+  <div class="head">
+    <span class="eyebrow">Principles 1, 5, 8</span>
+    <h2>The writing standard</h2>
+    <p class="muted">Every line follows action, scope, outcome. When a real measurement exists, the line takes the XYZ form: accomplished X, measured by Y, by doing Z. When it doesn't, the writer uses the strongest outcome the evidence supports.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Outcome strength</th><th>Example</th><th>Where it can come from</th></tr></thead>
+    <tbody>
+      <tr><td><span class="pill ok">Measured</span></td><td>Cut chapter drafting from 9 to 3 minutes</td><td>Benchmarks, logs, analytics, or a number you gave, dated</td></tr>
+      <tr><td><span class="pill ok">Counted</span></td><td>Ingests five source formats through one pipeline</td><td>Code or documentation, with a file reference</td></tr>
+      <tr><td><span class="pill ok">Concrete</span></td><td>Replaced manual server setup with one-command rollouts</td><td>Code or documentation</td></tr>
+      <tr><td><span class="pill no">Not allowed</span></td><td>Improved efficiency by 40%</td><td>Nothing. Code blocks export until it's fixed.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="three">
+    <div class="box"><h3>Metric interview</h3><p class="muted">Vita notices which projects lack measured results and asks a few specific questions, chosen by profession: deploy time for DevOps, page load for frontend, data volume for data work.</p></div>
+    <div class="box"><h3>No vanity numbers</h3><p class="muted">Lines of code, commit counts and stars are skipped by default. Counts of real things, such as services, users, formats or latency, come first.</p></div>
+    <div class="box"><h3>Human voice</h3><p class="muted">Banned phrase lists, varied openings, one to two lines per bullet, and your own past wording used as a style sample.</p></div>
+  </div>
+</section>
+
+<section id="making">
+  <div class="head">
+    <span class="eyebrow">Principles 6, 7, 12</span>
+    <h2>How a resume is made</h2>
+    <p class="muted">Each step is an AI role with its own model, tools and write permissions, or plain code where a rule can be checked mechanically.</p>
+  </div>
+  <div class="diagram">
+    <div class="pipe">
+      <div class="stage"><span class="who">analyst</span><b>Read the job</b><span class="d">Must-haves, nice-to-haves, keywords. Picks the closest base resume.</span></div>
+      <div class="stage"><span class="who">selector</span><b>Pick evidence</b><span class="d">Search your profile, keep the most relevant facts.</span></div>
+      <div class="stage"><span class="who">writer</span><b>Draft</b><span class="d">Structured resume. Each line keeps links to its evidence.</span></div>
+      <div class="stage code"><span class="who">code</span><b>Lint</b><span class="d">Unsourced numbers, banned phrases, length, your rules.</span></div>
+      <div class="stage gate"><span class="who">checker</span><b>Verify</b><span class="d">Different model. Reads evidence only. Flags overstatement.</span></div>
+      <div class="stage gate"><span class="who">ats reviewer + code</span><b>Render and parse</b><span class="d">Keywords, compile PDF, extract text, check order and pages.</span></div>
+      <div class="stage"><span class="who">you</span><b>Approve</b><span class="d">Answer what's left, edit, download. Saved to history.</span></div>
+    </div>
+    <div class="loopnote"><span>notes return to the writer · at most two rounds · anything left becomes a question for you</span><span class="arc" aria-hidden="true"></span></div>
+    <div class="legend"><span><i class="sw"></i>AI role</span><span><i class="sw c"></i>code</span><span><i class="sw g"></i>review gate</span></div>
+  </div>
+  <div class="two">
+    <div class="box"><h3>Done means</h3><ul class="muted"><li>No number without a source</li><li>No open checker note, unless you overrode it, with the reason recorded</li><li>Every must-have is covered or listed as a gap</li><li>PDF compiles, fits the page limit, extracts in reading order</li><li>Your rules pass</li></ul></div>
+    <div class="box"><h3>Then, automatically</h3><ul class="muted"><li>Interview prep: questions, story drafts, talking points, gap answers</li><li>Facts you supplied during the run are offered back to your profile</li><li>The application is committed, so every version you sent is recoverable</li></ul></div>
+  </div>
+</section>
+
+<section id="editing">
+  <div class="head">
+    <span class="eyebrow">Principle 10</span>
+    <h2>Editing</h2>
+    <p class="muted">The resume is one structured document with an ID on every line. Clicks, chat and reviewers all make the same small changes to it, so they mix freely and every change can be undone.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Way</th><th>Depth</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><b>Click and type</b></td><td>Simple</td><td>Edit any line, drag to reorder, hide or add items from your profile. Edited lines are locked so regeneration never overwrites them.</td></tr>
+      <tr><td><b>Chat</b></td><td>Simple</td><td>"Fit one page", "move Skills up", "focus Kite Algo on Go". Changes only the lines involved and shows what moved.</td></tr>
+      <tr><td><b>Line actions</b></td><td>Detailed</td><td>Shorter, stronger verb, add a job keyword, swap to another wording stored in your profile.</td></tr>
+      <tr><td><b>Layout</b></td><td>Advanced</td><td>Font size, margins, spacing, section order, within ranges the template allows. "Fit one page" tries these before cutting content.</td></tr>
+      <tr><td><b>Raw LaTeX</b></td><td>Advanced</td><td>Detach one application's source and edit it by hand. Vita warns that later regenerations won't touch it.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted col">Edits that add an unsupported number or skill are flagged, not blocked: save it to your profile as your own statement, add a source, or keep it for this resume only. The choice is recorded.</p>
+</section>
+
+<section id="layers">
+  <div class="head">
+    <span class="eyebrow">Principle 4 in practice</span>
+    <h2>Outline, master, base, job</h2>
+    <p class="muted">Four layers, each with one job. Writing stays free at the top, rigour grows as you move down, and each layer is narrower than the one above it. Doing this by hand works but drifts: layers fall out of sync and claims go unchecked. Vita keeps the layers and removes the drift.</p>
+  </div>
+  <div class="diagram">
+    <div class="ladder">
+      <div class="rung hi"><span class="eyebrow">Source · you write</span><b>Outline + evidence</b><span>One long, unfiltered outline in your own words, and a verified inventory: stack, evidence links, what you may and may not claim, bullet variants.</span><code>Vita adds: GitHub research, metric questions, claim IDs kept invisibly</code></div>
+      <div class="rung"><span class="eyebrow">Master · broad</span><b>Master resume</b><span>The complete best version, up to two pages. Useful on its own, and the root of every other resume.</span><code>Vita adds: regenerated from the source, your polish locked</code></div>
+      <div class="rung"><span class="eyebrow">Base · per direction</span><b>Targeted bases</b><span>One per career direction you pursue. Each selects and orders from the master, usually one page.</span><code>Vita adds: suggested from your evidence, profession packs</code></div>
+      <div class="rung"><span class="eyebrow">Job · per application</span><b>Job resume</b><span>Starts from the closest base, tailored to one job, checked, with interview prep.</span><code>Vita adds: base picked for you, checker, PDF, history</code></div>
+    </div>
+  </div>
+  <div class="three">
+    <div class="box"><h3>Changes flow down</h3><p class="muted">Edit the outline and Vita proposes the matching changes to the master and the affected bases as diffs. Nothing below is rewritten without your approval.</p></div>
+    <div class="box"><h3>Good edits flow up</h3><p class="muted">A better wording you write in a job resume can be promoted to the base, the master or the project's bullet variants, so the next resume starts from it.</p></div>
+    <div class="box"><h3>Edits are kept</h3><p class="muted">Lines you polished by hand in the master or a base are locked. Regenerating from the outline never overwrites them; it only suggests.</p></div>
+  </div>
+  <p class="muted col">Picking the base for a job is automatic: the analyst compares the job with each base and suggests the closest, and you can switch with one click. With no targeted bases yet, the master is the starting point.</p>
+</section>
+
+<section id="extend">
+  <div class="head">
+    <span class="eyebrow">Principle 14</span>
+    <h2>Extending without code</h2>
+    <p class="muted">Nothing about a profession is hard-coded. IT ships first; other careers arrive as new packs. Packs give the writer and checker profession knowledge; base resumes give them your direction.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Mechanism</th><th>Holds</th><th>Edited by</th></tr></thead>
+    <tbody>
+      <tr><td><b>Packs</b></td><td>Per profession: keyword synonyms, metric questions, section order, verbs, banned phrases, interview banks. Packs extend each other, e.g. devops-sre extends it-core. A base resume names the packs it uses.</td><td>Project and community</td></tr>
+    </tbody>
+  </table></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Mechanism</th><th>Holds</th><th>Edited by</th></tr></thead>
+    <tbody>
+      <tr><td><b>Instructions</b></td><td>Prose guidance in layers: core (locked), host, profile, application, chat. Can target roles and allow specific websites or integrations to be read.</td><td>Hosts and users</td></tr>
+      <tr><td><b>Rules</b></td><td>Mechanical checks: page limit, spelling locale, date format, required sections, banned phrases. Enforced by code.</td><td>Hosts and users</td></tr>
+      <tr><td><b>Templates</b></td><td>LaTeX with placeholders filled the same way every time. Upload your own; an AI converts it once and you approve it.</td><td>Users and community</td></tr>
+      <tr><td><b>Integrations</b></td><td>MCP servers such as GitHub, read-only, for gathering evidence.</td><td>Hosts and users</td></tr>
+      <tr><td><b>Classifier</b></td><td>Optional cheap model (Jev, Clef, or local) for routing hints such as evidence relevance and synonym matching. Never skips a reviewer: Studium's trial showed it saves context, not checks.</td><td>Users</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted col">Custom instructions can never lift core principles, widen what an AI role may write, or switch off a reviewer. First IT packs: it-core, devops-sre, cloud, backend, frontend, fullstack, data, ml-ai, security, qa, mobile, it-support, embedded.</p>
+</section>
+
+<section id="arch">
+  <div class="head">
+    <span class="eyebrow">For contributors</span>
+    <h2>Architecture</h2>
+    <p class="muted">One Node process and a web app, on the same base as Studium. Built on Pi SDK 1.1, so model access, MCP and codemode come from Pi rather than custom code.</p>
+  </div>
+  <div class="diagram">
+    <div class="arch">
+      <div class="layer"><span class="eyebrow">Clients</span>
+        <div class="b acc"><b>Web app</b><span>React, TypeScript, Vite, Tailwind</span></div>
+        <div class="b"><b>CLI</b><span><code>vita tailor job.txt</code></span></div>
+        <div class="b"><b>Agent skills</b><span>SKILL.md files, usable from Claude Code or opencode</span></div>
+      </div>
+      <div class="layer"><span class="eyebrow">Server · Node + Hono</span>
+        <div class="g2">
+          <div class="b"><b>API and live progress</b><span>typed routes, server-sent events</span></div>
+          <div class="b"><b>Jobs</b><span>tailor, research, prep, template adoption</span></div>
+          <div class="b acc"><b>Role runtime</b><span>one Pi session per role, scoped tools and write rules, model per role</span></div>
+          <div class="b"><b>Pi extensions</b><span>MCP, codemode for research scripts, tool search</span></div>
+          <div class="b"><b>Lint and rules</b><span>sources, phrases, limits</span></div>
+          <div class="b"><b>Renderer</b><span>template → Tectonic → PDF → text check</span></div>
+          <div class="b"><b>Store</b><span>git commits, rebuildable search index</span></div>
+          <div class="b"><b>Classifier</b><span>optional, off by default</span></div>
+        </div>
+      </div>
+      <div class="layer"><span class="eyebrow">Outside</span>
+        <div class="b"><b>Model providers</b><span>any Pi provider, local included</span></div>
+        <div class="b"><b>GitHub via MCP</b><span>read-only</span></div>
+        <div class="b"><b>Web</b><span>allow-listed, treated as data</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="two">
+    <pre class="tree">vita-data/                <span class="c"># a git repo you own</span>
+  outline.md                <span class="c"># you write freely</span>
+  projects.md               <span class="c"># evidence, limits, variants</span>
+  instructions.md
+  resumes/
+    master.json             <span class="c"># + .md, .pdf</span>
+    devops-sre.json         <span class="c"># base: packs, order</span>
+    fullstack.json
+  packs/
+  templates/rover-base/
+  applications/
+    2026-10-08-northwind/
+      job.md  resume.json  resume.md
+      resume.pdf  review.json  prep.md
+  config/
+    models.yaml  rules.yaml  mcp.json</pre>
+    <div class="tbl"><table style="min-width:0">
+      <thead><tr><th>Role</th><th>May write</th></tr></thead>
+      <tbody>
+        <tr><td>analyst</td><td>job analysis</td></tr>
+        <tr><td>researcher</td><td>evidence drafts, needs approval</td></tr>
+        <tr><td>writer</td><td>resume draft</td></tr>
+        <tr><td>checker</td><td>review notes only</td></tr>
+        <tr><td>ats reviewer</td><td>review notes only</td></tr>
+        <tr><td>resume editor</td><td>resume lines by ID</td></tr>
+        <tr><td>profile editor</td><td>profile diffs, needs approval</td></tr>
+        <tr><td>interviewer</td><td>interview prep</td></tr>
+        <tr><td>template adopter</td><td>template drafts, needs approval</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<section id="roadmap">
+  <div class="head">
+    <span class="eyebrow">Delivery</span>
+    <h2>Roadmap</h2>
+    <p class="muted">The engine is built strict from day one. The surface grows in layers. Your current resume repo is the first real dataset at every step.</p>
+  </div>
+  <div class="roadmap">
+    <div class="ms"><span class="id">M0</span><div><b>Foundation</b><p class="muted">Outline, evidence and resume formats; importer for existing Markdown and old resumes; master resume generation; template placeholders, Rover templates converted, PDF build and text check.</p></div></div>
+    <div class="ms"><span class="id">M1</span><div><b>Strict engine, headless</b><p class="muted">Analyst, writer, checker, ATS reviewer and lint as a command-line run, with the done criteria enforced and tests on recorded model output.</p></div></div>
+    <div class="ms"><span class="id">M2</span><div><b>Simple surface</b><p class="muted">Me (outline, projects, base resumes), Jobs, Settings. Paste, question, resume with chat, click to edit, undo, download.</p></div></div>
+    <div class="ms"><span class="id">M3</span><div><b>Detailed layer and profile intelligence</b><p class="muted">Show details, profile chat with diffs, GitHub research, metric interview, interview prep.</p></div></div>
+    <div class="ms"><span class="id">M4</span><div><b>Advanced layer</b><p class="muted">Models per role, base resume suggestions and sync, IT packs, instructions, rules, layout ranges, template upload.</p></div></div>
+    <div class="ms"><span class="id">M5</span><div><b>Open-source release</b><p class="muted">Docker image, sample profile, docs, guides for contributing packs and templates, licence review.</p></div></div>
+    <div class="ms"><span class="id">Later</span><div><b>Beyond</b><p class="muted">Optional classifier, careers beyond IT, cover letters, multiple profiles per deployment.</p></div></div>
+  </div>
+  <div class="box col"><h3>Still to decide</h3><ul class="muted"><li>Licence: AGPL to match Studium, or MIT for wider adoption</li><li>Final name</li></ul></div>
+</section>
+</div>
+
+<script>
+(function(){
+  var views={paste:'v-paste',ask:'v-ask',resume:'v-resume',prep:'v-prep',me:'v-me',settings:'v-settings'};
+  var jobStep='paste';
+  function show(id){Object.keys(views).forEach(function(k){document.getElementById(views[k]).hidden=(k!==id);});}
+  document.querySelectorAll('.nav button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('.nav button').forEach(function(x){if(x===b)x.setAttribute('aria-current','page');else x.removeAttribute('aria-current');});
+    show(b.dataset.go==='jobs'?jobStep:b.dataset.go);
+  });});
+  document.querySelectorAll('[data-step]').forEach(function(b){b.addEventListener('click',function(){jobStep=b.dataset.step;show(jobStep);});});
+
+  var det=document.getElementById('det'), split=document.querySelector('.split');
+  det.addEventListener('click',function(){var on=det.getAttribute('aria-pressed')!=='true';det.setAttribute('aria-pressed',on?'true':'false');split.classList.toggle('details',on);});
+
+  var pop=document.getElementById('pop'), mark=document.getElementById('m70');
+  function say(who,text){var d=document.createElement('div');d.className='msg '+who;d.textContent=text;document.getElementById('msgs').appendChild(d);}
+  mark.addEventListener('click',function(){pop.hidden=false;});
+  mark.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();pop.hidden=false;}});
+  document.getElementById('p-reword').addEventListener('click',function(){
+    var t=document.getElementById('b-flag-t'); t.textContent='Replaced manual server setup with one-command rollouts, so a fresh install takes a single command.'; t.contentEditable='true';
+    var s=document.getElementById('b-flag-s'); s.textContent='from: studium/compose.yaml · checked ✓'; s.classList.remove('f');
+    pop.hidden=true; say('a','Reworded the Studium line without the number. The checker passed it.');
+  });
+  document.getElementById('p-remove').addEventListener('click',function(){document.getElementById('b-flag').remove();pop.hidden=true;say('a','Removed that line.');});
+  document.getElementById('p-add').addEventListener('click',function(){pop.hidden=true;say('a','What did you measure, and how? For example: "setup went from about 2 hours to 5 minutes". I\'ll save it to your Studium page, dated, so future resumes can use it.');});
+
+  var replies={
+    'Focus Kite Algo on Go':function(){document.getElementById('b-kite').textContent='Moved market data into a dedicated Go service with websocket reconnects and fan-out to Python workers.';return 'Updated the Kite Algo line to lead with the Go service. Nothing else changed.';},
+    'Add Kubernetes to skills':function(){return 'Your profile has no Kubernetes work, so I won\'t list it as a skill. I can add "learning Kubernetes" to a summary line, or keep it in interview prep only. Which do you prefer?';}
+  };
+  function handle(text){if(!text)return;say('u',text);var r=replies[text];setTimeout(function(){say('a',r?r():'In the real app I\'d make that change and show you what moved. This sketch only knows the two suggestions.');},350);}
+  document.querySelectorAll('[data-say]').forEach(function(b){b.addEventListener('click',function(){handle(b.dataset.say)});});
+  var input=document.getElementById('chatin');
+  document.getElementById('send').addEventListener('click',function(){handle(input.value.trim());input.value='';});
+  input.addEventListener('keydown',function(e){if(e.key==='Enter'){handle(input.value.trim());input.value='';}});
+  var subs=[].slice.call(document.querySelectorAll('.subtabs [role="tab"]'));
+  subs.forEach(function(t){t.addEventListener('click',function(){
+    subs.forEach(function(x){var on=x===t;x.setAttribute('aria-selected',on?'true':'false');document.getElementById(x.dataset.sub).hidden=!on;});
+  });});
+  document.getElementById('dl').addEventListener('click',function(){say('a','In the real app this saves resume.pdf and resume.md. This sketch can\'t download files.');});
+})();
+</script>

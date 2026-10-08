@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+.vita/
+.claude/codex-runs/
+.claude/worktrees/
+.claude/settings.local.json
+.DS_Store
