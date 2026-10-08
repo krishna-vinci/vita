@@ -24,7 +24,7 @@ The orchestrator keeps the rest of this file current. When something under "Open
   - `fast` (DeepSeek 4.1 Flash) for quick fixes and read-only exploration before a Sonnet prompt.
   - `precise` (GLM 5.3 Flash) for tightly scoped light fixes only; slow.
   - `luna` (GPT-6 Luna, xhigh) for dead-simple fixes.
-  - **Sonnet** (Claude Agent tool) for high-stack frontend and the frontend last pass; one session per milestone.
+  - **Frontend split (owner rule):** Codex does frontend setup and plumbing (Vite/Tailwind/shadcn scaffold, routing, API client, query hooks, simple screens). **Sonnet** (Claude Agent tool) does the critical frontend: the job resume workspace (resume + chat + click-to-edit), the Me outline editor, base resumes, and the final polish pass. UI uses **shadcn/ui** components. One Sonnet session per milestone.
   - Only one GLM run at a time (429s).
 - Design: `docs/design/vita-draft.html` (visual draft v0.5). Spec: `docs/specs/2026-10-09-vita-design.md`.
 - Owner's design preferences: simple surface, deep core; keep the outline → master → base → job philosophy; no hard-coded professions.
