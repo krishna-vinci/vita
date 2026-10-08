@@ -1,0 +1,12 @@
+Vita — Copyright (C) 2026 Vita contributors.
+Vita code is licensed under AGPL-3.0-only; see LICENSE.
+
+The bundled Rover Base template (templates/rover-base/main.tex.njk) is
+adapted from Rover resume templates by subidit:
+https://github.com/subidit/rover-resume
+Original template: templates/base rover/base-rover.tex
+Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0):
+https://creativecommons.org/licenses/by/4.0/
+modified: converted to Vita's template contract, parameterized layout and
+replaced sample content with resume data; removed pdfTeX-only primitives.
+The adapted template retains the CC BY 4.0 licence.

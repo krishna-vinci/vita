@@ -1,0 +1,73 @@
+{
+  "id": "master",
+  "kind": "master",
+  "parent": null,
+  "template": "rover-base",
+  "header": {
+    "name": "Alex Example",
+    "headline": "Operations coordinator",
+    "contact": [{ "label": "Email", "value": "alex@example.test" }]
+  },
+  "sections": [
+    {
+      "id": "summary",
+      "title": "Summary",
+      "kind": "summary",
+      "text": "Thoughtful coordination & clear communication."
+    },
+    {
+      "id": "experience",
+      "title": "Experience",
+      "kind": "entries",
+      "items": [
+        {
+          "id": "role",
+          "title": "Example Cooperative",
+          "subtitle": "Coordinator",
+          "period": "2024–2026",
+          "location": "Example City",
+          "bullets": [
+            {
+              "id": "special",
+              "text": "Recorded & % $ # _ { } ~ ^ \\ symbols accurately.",
+              "claims": ["role.symbols"]
+            },
+            {
+              "id": "quotes",
+              "text": "Prepared “clear” notes — including ‘office’ updates – for everyone.",
+              "claims": ["role.notes"]
+            },
+            { "id": "hidden-bullet", "text": "HIDDEN BULLET", "hidden": true }
+          ]
+        },
+        {
+          "id": "hidden-item",
+          "title": "HIDDEN ITEM",
+          "hidden": true,
+          "bullets": [{ "id": "hidden-item-bullet", "text": "HIDDEN ITEM BULLET" }]
+        }
+      ]
+    },
+    {
+      "id": "skills",
+      "title": "Skills",
+      "kind": "list",
+      "items": [{ "id": "coordination", "title": "Coordination" }, { "id": "writing", "title": "Writing & editing" }]
+    },
+    {
+      "id": "notes",
+      "title": "Notes",
+      "kind": "text",
+      "text": "Available for local assignments."
+    },
+    {
+      "id": "hidden-section",
+      "title": "HIDDEN SECTION",
+      "kind": "entries",
+      "hidden": true,
+      "items": [
+        { "id": "other", "title": "Other", "bullets": [{ "id": "other-bullet", "text": "HIDDEN SECTION BULLET" }] }
+      ]
+    }
+  ]
+}
