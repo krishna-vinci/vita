@@ -15,12 +15,15 @@ import {
   type MarkdownResource,
   type PutMarkdownRequest,
   type PutSettingsRequest,
+  type ResumeChatReply,
   type ResumeMutation,
   type ResumeOpsRequest,
   type ResumeResource,
   type ResumeSummary,
   type SettingsMutation,
   type SettingsView,
+  type SourceChatReply,
+  type SourceProposal,
   type UndoRequest,
   type UndoResult,
   type WorkspaceView,
@@ -97,6 +100,12 @@ export const api = {
     list: (signal?: AbortSignal) => get<JobView[]>("/jobs", signal),
     get: (id: string, signal?: AbortSignal) => get<JobView>(`/jobs/${segment(id)}`, signal),
     cancel: (id: string) => send<JobMutation>(`/jobs/${segment(id)}/cancel`, {}),
+  },
+  chat: {
+    resume: (scope: "application" | "resume", id: string, message: string) =>
+      send<ResumeChatReply>(`/chat/resume/${scope}/${segment(id)}`, { message }),
+    source: (message: string) => send<SourceChatReply>("/chat/source", { message }),
+    applySource: (proposal: SourceProposal) => send<MarkdownMutation>("/chat/source/apply", proposal),
   },
   undo: (body: UndoRequest) => send<UndoResult>("/undo", body),
 };

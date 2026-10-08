@@ -83,3 +83,18 @@ export function useSaveSettings() {
     },
   });
 }
+
+export const useResumeChat = (scope: "application" | "resume", id: string) => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (message: string) => api.chat.resume(scope, id, message),
+    onSuccess: async () => {
+      await client.invalidateQueries({
+        queryKey: scope === "resume" ? queryKeys.resume(id) : queryKeys.application(id),
+      });
+    },
+  });
+};
+export const useSourceChat = () => useMutation({ mutationFn: api.chat.source });
+export const useApplySource = () =>
+  useApiMutation(api.chat.applySource, [queryKeys.outline, queryKeys.projects, queryKeys.workspace]);

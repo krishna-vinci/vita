@@ -1,0 +1,22 @@
+import type { CheckNote } from "@vita/shared";
+import type { SourceClaim } from "@/lib/resume-view";
+
+/** Everything a line of the resume can ask the page to do. */
+export interface SheetActions {
+  edit(id: string, text: string): Promise<boolean>;
+  hide(id: string, hidden: boolean): void;
+  hideSection(id: string, hidden: boolean): void;
+  hideItem(id: string, hidden: boolean): void;
+  move(id: string, toParent: string, index: number): void;
+  vouch(id: string, note: string): void;
+  ask(message: string): void;
+}
+
+export interface SheetContext {
+  actions: SheetActions;
+  details: boolean;
+  busy: boolean;
+  changed: ReadonlySet<string>;
+  claims: ReadonlyMap<string, SourceClaim>;
+  checks: ReadonlyMap<string, CheckNote>;
+}
