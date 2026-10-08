@@ -25,6 +25,7 @@ Add the pack loader with `extends` merging and the bundled `general` pack; four 
 ## Acceptance
 - `resolvePack` handles `extends` chains, de-duplicates list entries case-insensitively, errors on cycles.
 - All four fixtures pass `vita check`; developer and nurse fixtures render with `ok: true`, 1 page.
+- Also add `vita setup`: compiles every bundled template once with a sample resume using `tectonic -X compile` WITHOUT `--only-cached` (bundled templates are trusted) to warm the package cache; render's sandboxed compile uses `--only-cached`. Implement as `warmTemplateCache(templatesDir)` in `core/src/render/warm.ts` (allowed new file) and the CLI command.
 - `vita init`, `import`, `render`, `check` behave as specified; commands are exported as functions so tests call them without subprocesses.
 - Neutrality test passes.
 
