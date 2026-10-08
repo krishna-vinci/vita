@@ -49,7 +49,7 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - Codex tool limits (from Studium): `rm -rf` on computed paths is rejected; put test data under a temp dir. If `apply_patch` fails, write the file with a heredoc.
 
 ## Status (2026-10-09)
-- M0, M1, M2 (T1–T5) and M3 backend (prep, templates, sync, fit) merged. Next: T6 Sonnet polish + M3 screens; M4 (researcher/GitHub MCP, IT packs, instructions/rules UI); M5 release.
+- 2026-10-09 pause (owner usage limit): M0–M3 backend + M2 screens merged; M4-T2 IT packs merged. IN FLIGHT (uncommitted): Sonnet M2-T6 polish + M3 screens in main tree `web/` (brief: see SendMessage text = bugs 1–4 + screens 5–9 listed in this memory's M2-T5 entry and docs/plans/2026-10-09-m3-depth.md); Codex M4-T1 research, M4-T3 instructions, M4-T4 metrics in ~/vita-worktrees/m4-*. Resume: review each `.claude/codex-runs/m4-*/last.md`, merge; check `git status web/` for Sonnet's partial work. Then M4 screens (Sonnet) and M5 release (Docker, README, docs, path scrub).
 
 ## Open gaps
 - Personal absolute paths (/home/krishna/...) in AGENTS.md, AGENT_MEMORY.md and `.claude/skills/codex-orchestrate/` must be generalised before the public release (M5).
