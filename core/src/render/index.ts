@@ -6,3 +6,4 @@ export { type PrescanIssue, prescanTex } from "./prescan";
 export { type LoadedTemplate, loadTemplate, resolveLayout } from "./templates";
 export { renderTex } from "./tex";
 export { checkRender, normalizeForMatch, pdfText } from "./textcheck";
+export { warmTemplateCache } from "./warm";

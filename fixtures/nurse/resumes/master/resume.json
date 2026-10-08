@@ -1,0 +1,142 @@
+{
+  "id": "master",
+  "kind": "master",
+  "parent": null,
+  "template": "rover-base",
+  "layout": {},
+  "header": {
+    "name": "Jordan Reed",
+    "headline": "Registered nurse",
+    "contact": [
+      {
+        "label": "Email",
+        "value": "jordan.reed@example.test"
+      },
+      {
+        "label": "Location",
+        "value": "Example City"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "id": "summary",
+      "title": "Summary",
+      "kind": "summary",
+      "text": "Provides attentive care with clear documentation and collaborative handovers."
+    },
+    {
+      "id": "work-section",
+      "title": "Clinical Experience",
+      "kind": "entries",
+      "items": [
+        {
+          "id": "work-item",
+          "title": "Linden Community Clinic",
+          "subtitle": "Registered Nurse",
+          "period": "2023–2026",
+          "location": "Example City",
+          "bullets": [
+            {
+              "id": "work-bullet-1",
+              "text": "Coordinated patient handovers using structured notes and escalation guidance.",
+              "claims": ["nurse-work-1"],
+              "origin": "user",
+              "locked": true
+            },
+            {
+              "id": "work-bullet-2",
+              "text": "Prepared care plans with the clinical team and documented follow-up needs.",
+              "claims": ["nurse-work-2"],
+              "origin": "user",
+              "locked": true
+            },
+            {
+              "id": "work-bullet-3",
+              "text": "Supported new colleagues in using the clinic documentation process.",
+              "claims": ["nurse-work-3"],
+              "origin": "user",
+              "locked": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "project-section",
+      "title": "Projects",
+      "kind": "entries",
+      "items": [
+        {
+          "id": "project-item",
+          "title": "Discharge Information Review",
+          "subtitle": "Care Team Contributor",
+          "period": "2025–2026",
+          "location": "Example City",
+          "bullets": [
+            {
+              "id": "project-bullet-1",
+              "text": "Reviewed discharge information for clarity with the care team.",
+              "claims": ["nurse-project-1"],
+              "origin": "user",
+              "locked": true
+            },
+            {
+              "id": "project-bullet-2",
+              "text": "Updated patient guidance using approved clinic materials.",
+              "claims": ["nurse-project-2"],
+              "origin": "user",
+              "locked": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qualification-section",
+      "title": "Licences",
+      "kind": "entries",
+      "items": [
+        {
+          "id": "qualification-item",
+          "title": "Registered Nursing Licence",
+          "subtitle": "Fictional Regional Nursing Council",
+          "period": "2023–2026",
+          "location": "Example City",
+          "bullets": [
+            {
+              "id": "qualification-bullet-1",
+              "text": "Maintained a current nursing licence in the fictional training region.",
+              "claims": ["nurse-qualification-1"],
+              "origin": "user",
+              "locked": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "skills",
+      "title": "Skills",
+      "kind": "list",
+      "items": [
+        {
+          "id": "skill-1",
+          "title": "Care planning"
+        },
+        {
+          "id": "skill-2",
+          "title": "Clinical documentation"
+        },
+        {
+          "id": "skill-3",
+          "title": "Patient education"
+        },
+        {
+          "id": "skill-4",
+          "title": "Team handovers"
+        }
+      ]
+    }
+  ]
+}

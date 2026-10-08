@@ -1,0 +1,142 @@
+{
+  "id": "master",
+  "kind": "master",
+  "parent": null,
+  "template": "rover-base",
+  "layout": {},
+  "header": {
+    "name": "Casey Rowan",
+    "headline": "Primary teacher",
+    "contact": [
+      {
+        "label": "Email",
+        "value": "casey.rowan@example.test"
+      },
+      {
+        "label": "Location",
+        "value": "Example City"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "id": "summary",
+      "title": "Summary",
+      "kind": "summary",
+      "text": "Plans inclusive lessons and helps families understand learning progress."
+    },
+    {
+      "id": "work-section",
+      "title": "Teaching Experience",
+      "kind": "entries",
+      "items": [
+        {
+          "id": "work-item",
+          "title": "Willow Primary School",
+          "subtitle": "Classroom Teacher",
+          "period": "2022–2026",
+          "location": "Example City",
+          "bullets": [
+            {
+              "id": "work-bullet-1",
+              "text": "Planned lessons using formative assessment to adapt classroom activities.",
+              "claims": ["teacher-work-1"],
+              "origin": "user",
+              "locked": true
+            },
+            {
+              "id": "work-bullet-2",
+              "text": "Prepared accessible learning materials with colleagues.",
+              "claims": ["teacher-work-2"],
+              "origin": "user",
+              "locked": true
+            },
+            {
+              "id": "work-bullet-3",
+              "text": "Communicated pupil progress and next steps with families.",
+              "claims": ["teacher-work-3"],
+              "origin": "user",
+              "locked": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "project-section",
+      "title": "Projects",
+      "kind": "entries",
+      "items": [
+        {
+          "id": "project-item",
+          "title": "Shared Reading Programme",
+          "subtitle": "Programme Contributor",
+          "period": "2025–2026",
+          "location": "Example City",
+          "bullets": [
+            {
+              "id": "project-bullet-1",
+              "text": "Organised shared reading activities with school volunteers.",
+              "claims": ["teacher-project-1"],
+              "origin": "user",
+              "locked": true
+            },
+            {
+              "id": "project-bullet-2",
+              "text": "Documented activity plans for colleagues to reuse.",
+              "claims": ["teacher-project-2"],
+              "origin": "user",
+              "locked": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qualification-section",
+      "title": "Professional Development",
+      "kind": "entries",
+      "items": [
+        {
+          "id": "qualification-item",
+          "title": "Inclusive Classroom Practice",
+          "subtitle": "Meadow Education Centre",
+          "period": "2025",
+          "location": "Example City",
+          "bullets": [
+            {
+              "id": "qualification-bullet-1",
+              "text": "Completed practical training in accessible classroom planning.",
+              "claims": ["teacher-qualification-1"],
+              "origin": "user",
+              "locked": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "skills",
+      "title": "Skills",
+      "kind": "list",
+      "items": [
+        {
+          "id": "skill-1",
+          "title": "Lesson planning"
+        },
+        {
+          "id": "skill-2",
+          "title": "Formative assessment"
+        },
+        {
+          "id": "skill-3",
+          "title": "Family communication"
+        },
+        {
+          "id": "skill-4",
+          "title": "Inclusive teaching"
+        }
+      ]
+    }
+  ]
+}

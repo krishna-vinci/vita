@@ -45,10 +45,11 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - **rtk hides git exit codes and output** in chained commands. Orchestrator: use `rtk proxy git …` and `git -c commit.gpgsign=false merge …` (merges are signed by default on this host).
 - **Tectonic runs with `--only-cached`** in the sandbox (no network during compiles). Any new LaTeX package must be warmed into the cache first by a trusted compile without `--only-cached` (planned `vita setup`). Templates use `microtype` and `\setlength{\parindent}{0pt}` (owner rule).
 - Nunjucks 3.2.4 has no `map` filter; use `join(", ", "title")`. Template delimiters: `((( var )))`, `((* tag *))`, `((= comment =))`.
+- PDF extraction can split words (microtype/kerning: "T rained"); `checkRender` compares with all whitespace removed. Never reword fixtures to dodge a checker bug — fix the checker.
 - Codex tool limits (from Studium): `rm -rf` on computed paths is rejected; put test data under a temp dir. If `apply_patch` fails, write the file with a heredoc.
 
 ## Status (2026-10-09)
-- M0 in progress: T1 done; T2 workspace, T3 source, T4 render running in parallel worktrees; T5 after.
+- M0 done. M1 in progress (T4 skills merged; T1 lint, T3 runtime running; T2 search next; T5 pipeline last). M2 plan written.
 
 ## Open gaps
 - Personal absolute paths (/home/krishna/...) in AGENTS.md, AGENT_MEMORY.md and `.claude/skills/codex-orchestrate/` must be generalised before the public release (M5).
@@ -61,3 +62,4 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - 2026-10-09 · M0-T2 (Sol 6.1) · `core/src/workspace/{paths,lock,files,git,init}.ts`, 35 tests · `withRepoLock` is non-reentrant (don't call git helpers inside it); git runs with `--work-tree`, hooks disabled, inherited GIT_* env stripped; commits only named paths, never `.vita/` · none open.
 - 2026-10-09 · M0-T3 (Sol 6.1) · `core/src/source/{anchors,outline,projects,import-legacy,markdown}.ts`, 11 tests · outline anchoring is byte-preserving and idempotent; legacy verification prose and evidence tables are also kept in `extra`; serialisation closes unclosed fences · orchestrator verified the importer on the owner's real projects.md (5 items, 0 reparse issues).
 - 2026-10-09 · M0-T4 (Sol 6.1 + 1 fix round) · `core/src/render/*`, `templates/rover-base`, `NOTICE`, 23 tests incl. real compile (ok, 1 page) · delimiters switched to nbconvert style (bare `}` collides with LaTeX); orchestrator added microtype + parindent 0 and warmed the cache · open: `vita setup` cache warm-up (T5).
+- 2026-10-09 · M0-T5 (Sol 6.1) · `core/src/packs`, `packs/general`, fixtures developer/nurse/teacher/accountant, CLI init/import/render/check/setup, `warmTemplateCache` · 45 tests; orchestrator made `checkRender` whitespace-insensitive and anchor ids strip heading links; smoke-tested import of the owner's real outline/projects (33 anchors) · M0 complete.

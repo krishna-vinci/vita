@@ -1,0 +1,2 @@
+default: anthropic/claude-sonnet-5-5
+roles: {}

@@ -39,12 +39,23 @@ export function bulletText(line: string): string | null {
 
 const fillerWords = new Set(["a", "an", "and", "at", "by", "for", "from", "in", "of", "on", "or", "the", "to", "with"]);
 
+// "Studium — [GitHub](https://…)" → "Studium": drop links, inline marks and trailing qualifiers.
+export function idTitle(title: string): string {
+  const plain = title
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/[*_`]/g, "");
+  const head = plain.split(/\s+[—–|]\s+|\s+-\s+|:\s/)[0] ?? plain;
+  return slugify(head.trim()).split("-").slice(0, 4).join("-");
+}
+
 export function factId(title: string, text: string, used: Set<string>): string {
-  const words = (text.match(/[\p{L}\p{N}]+/gu) ?? [])
+  const plainText = text.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/https?:\/\/\S+/g, "");
+  const words = (plainText.match(/[\p{L}\p{N}]+/gu) ?? [])
     .map((word) => slugify(word))
     .filter((word) => !fillerWords.has(word))
     .slice(0, 4);
-  return uniqueId(`${slugify(title)}-${words.join("-") || "fact"}`, used);
+  return uniqueId(`${idTitle(title)}-${words.join("-") || "fact"}`, used);
 }
 
 export function uniqueId(base: string, used: Set<string>, maxLength = 80): string {

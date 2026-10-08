@@ -58,3 +58,8 @@ it("matches repeated bullets to successive occurrences and ignores hidden conten
   expect(checkRender(data, { text: "Repeated bullet\nRepeated bullet", pages: 1 }, 1).ok).toBe(true);
   expect(checkRender(data, { text: "Repeated bullet", pages: 1 }).outOfOrder).toEqual(["b1"]);
 });
+
+it("matches bullets whose words were split by PDF extraction", () => {
+  const data = resume(["Trained new staff on intake"]);
+  expect(checkRender(data, { text: "• T rained new sta ff on in take", pages: 1 }, 1).ok).toBe(true);
+});

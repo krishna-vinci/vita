@@ -44,12 +44,15 @@ export function checkRender(
   extracted: { text: string; pages: number },
   maxPages?: number,
 ): RenderCheck {
-  const text = normalizeForMatch(extracted.text);
+  // Compare without whitespace: PDF extraction can split words where microtype or kerning
+  // widens a gap (e.g. "Trained" extracted as "T rained").
+  const compact = (value: string) => normalizeForMatch(value).replace(/\s+/g, "");
+  const text = compact(extracted.text);
   const missingBullets: string[] = [];
   const outOfOrder: string[] = [];
   let next = 0;
   for (const bullet of visibleBullets(resume)) {
-    const normalized = normalizeForMatch(bullet.text);
+    const normalized = compact(bullet.text);
     const position = text.indexOf(normalized, next);
     if (position >= 0) {
       next = position + normalized.length;

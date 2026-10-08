@@ -1,0 +1,59 @@
+id: general
+name: General
+keywords: []
+verbs:
+  - Built
+  - Led
+  - Reduced
+  - Organised
+  - Trained
+  - Delivered
+  - Improved
+  - Coordinated
+  - Designed
+  - Resolved
+  - Prepared
+  - Created
+  - Managed
+  - Planned
+  - Reviewed
+  - Maintained
+  - Supported
+  - Documented
+  - Developed
+  - Introduced
+  - Simplified
+  - Updated
+  - Evaluated
+  - Established
+  - Completed
+  - Identified
+  - Presented
+  - Negotiated
+  - Implemented
+  - Analysed
+banned_phrases:
+  - spearheaded
+  - leveraged
+  - synergy
+  - results-driven
+  - team player
+  - go-getter
+  - think outside the box
+  - detail-oriented
+  - hard-working
+  - dynamic
+  - passionate about
+  - cutting-edge
+  - seamless
+  - robust
+  - best-in-class
+  - world-class
+metric_questions:
+  - How much time did this save, and how was it measured?
+  - What volume of work did you handle?
+  - How many people did you serve or support?
+  - How did quality or the error rate change?
+  - How much money did this save or earn?
+section_order: [Summary, Experience, Projects, Education, Skills, Certifications]
+interview_topics: [motivation, conflict, failure and learning, prioritisation, teamwork]

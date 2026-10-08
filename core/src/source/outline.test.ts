@@ -59,3 +59,10 @@ describe("outline", () => {
     expect(parseOutline("## Notes\n```\n- Unclosed example").sections[0]?.bullets).toEqual([]);
   });
 });
+
+it("builds readable anchor ids from headings that contain links", () => {
+  const { markdown } = assignOutlineAnchors(
+    "## Projects\n\n### Studium — [GitHub](https://github.com/x/y)\n* Built an open-source learning platform.\n",
+  );
+  expect(markdown).toContain("<!-- c:studium-built-open-source-learning -->");
+});

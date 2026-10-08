@@ -1,0 +1,142 @@
+{
+  "id": "master",
+  "kind": "master",
+  "parent": null,
+  "template": "rover-base",
+  "layout": {},
+  "header": {
+    "name": "Morgan Vale",
+    "headline": "Software developer",
+    "contact": [
+      {
+        "label": "Email",
+        "value": "morgan.vale@example.test"
+      },
+      {
+        "label": "Location",
+        "value": "Example City"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "id": "summary",
+      "title": "Summary",
+      "kind": "summary",
+      "text": "Builds maintainable services and explains technical choices clearly."
+    },
+    {
+      "id": "work-section",
+      "title": "Experience",
+      "kind": "entries",
+      "items": [
+        {
+          "id": "work-item",
+          "title": "Harbour Tools",
+          "subtitle": "Software Developer",
+          "period": "2023–2026",
+          "location": "Example City",
+          "bullets": [
+            {
+              "id": "work-bullet-1",
+              "text": "Built a catalogue service with typed interfaces and automated checks.",
+              "claims": ["developer-work-1"],
+              "origin": "user",
+              "locked": true
+            },
+            {
+              "id": "work-bullet-2",
+              "text": "Documented release procedures so teammates could maintain the service.",
+              "claims": ["developer-work-2"],
+              "origin": "user",
+              "locked": true
+            },
+            {
+              "id": "work-bullet-3",
+              "text": "Resolved import failures by adding validation and recovery messages.",
+              "claims": ["developer-work-3"],
+              "origin": "user",
+              "locked": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "project-section",
+      "title": "Projects",
+      "kind": "entries",
+      "items": [
+        {
+          "id": "project-item",
+          "title": "Community Archive",
+          "subtitle": "Volunteer Developer",
+          "period": "2025–2026",
+          "location": "Example City",
+          "bullets": [
+            {
+              "id": "project-bullet-1",
+              "text": "Created a searchable archive for local volunteers.",
+              "claims": ["developer-project-1"],
+              "origin": "user",
+              "locked": true
+            },
+            {
+              "id": "project-bullet-2",
+              "text": "Prepared maintenance notes and reviewed contributions.",
+              "claims": ["developer-project-2"],
+              "origin": "user",
+              "locked": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qualification-section",
+      "title": "Education",
+      "kind": "entries",
+      "items": [
+        {
+          "id": "qualification-item",
+          "title": "BSc in Computing",
+          "subtitle": "Northbank College",
+          "period": "2020–2023",
+          "location": "Example City",
+          "bullets": [
+            {
+              "id": "qualification-bullet-1",
+              "text": "Completed a computing degree with a group software project.",
+              "claims": ["developer-qualification-1"],
+              "origin": "user",
+              "locked": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "skills",
+      "title": "Skills",
+      "kind": "list",
+      "items": [
+        {
+          "id": "skill-1",
+          "title": "TypeScript"
+        },
+        {
+          "id": "skill-2",
+          "title": "SQL"
+        },
+        {
+          "id": "skill-3",
+          "title": "Automated testing"
+        },
+        {
+          "id": "skill-4",
+          "title": "Technical writing"
+        }
+      ]
+    }
+  ]
+}

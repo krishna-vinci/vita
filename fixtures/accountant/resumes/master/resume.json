@@ -1,0 +1,142 @@
+{
+  "id": "master",
+  "kind": "master",
+  "parent": null,
+  "template": "rover-base",
+  "layout": {},
+  "header": {
+    "name": "Avery Stone",
+    "headline": "Accountant",
+    "contact": [
+      {
+        "label": "Email",
+        "value": "avery.stone@example.test"
+      },
+      {
+        "label": "Location",
+        "value": "Example City"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "id": "summary",
+      "title": "Summary",
+      "kind": "summary",
+      "text": "Keeps financial records clear and supports careful review of exceptions."
+    },
+    {
+      "id": "work-section",
+      "title": "Experience",
+      "kind": "entries",
+      "items": [
+        {
+          "id": "work-item",
+          "title": "Cedar Cooperative",
+          "subtitle": "Accountant",
+          "period": "2022–2026",
+          "location": "Example City",
+          "bullets": [
+            {
+              "id": "work-bullet-1",
+              "text": "Prepared month-end reconciliations and documented outstanding entries.",
+              "claims": ["accountant-work-1"],
+              "origin": "user",
+              "locked": true
+            },
+            {
+              "id": "work-bullet-2",
+              "text": "Reviewed supplier records with the operations team before payment approval.",
+              "claims": ["accountant-work-2"],
+              "origin": "user",
+              "locked": true
+            },
+            {
+              "id": "work-bullet-3",
+              "text": "Maintained working papers for internal financial reviews.",
+              "claims": ["accountant-work-3"],
+              "origin": "user",
+              "locked": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "project-section",
+      "title": "Projects",
+      "kind": "entries",
+      "items": [
+        {
+          "id": "project-item",
+          "title": "Reconciliation Checklist",
+          "subtitle": "Process Contributor",
+          "period": "2025–2026",
+          "location": "Example City",
+          "bullets": [
+            {
+              "id": "project-bullet-1",
+              "text": "Created a checklist linking reconciliation steps to supporting records.",
+              "claims": ["accountant-project-1"],
+              "origin": "user",
+              "locked": true
+            },
+            {
+              "id": "project-bullet-2",
+              "text": "Supported colleagues in documenting exceptions for review.",
+              "claims": ["accountant-project-2"],
+              "origin": "user",
+              "locked": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qualification-section",
+      "title": "Qualifications",
+      "kind": "entries",
+      "items": [
+        {
+          "id": "qualification-item",
+          "title": "Diploma in Accounting",
+          "subtitle": "Brookfield College",
+          "period": "2020–2022",
+          "location": "Example City",
+          "bullets": [
+            {
+              "id": "qualification-bullet-1",
+              "text": "Completed an accounting diploma with practical financial reporting assignments.",
+              "claims": ["accountant-qualification-1"],
+              "origin": "user",
+              "locked": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "skills",
+      "title": "Skills",
+      "kind": "list",
+      "items": [
+        {
+          "id": "skill-1",
+          "title": "Account reconciliation"
+        },
+        {
+          "id": "skill-2",
+          "title": "Financial reporting"
+        },
+        {
+          "id": "skill-3",
+          "title": "Working papers"
+        },
+        {
+          "id": "skill-4",
+          "title": "Spreadsheet analysis"
+        }
+      ]
+    }
+  ]
+}
