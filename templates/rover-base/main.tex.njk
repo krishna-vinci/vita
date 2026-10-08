@@ -1,0 +1,60 @@
+% Rover Resume - Base Template
+% https://github.com/subidit/rover-resume (CC BY 4.0)
+% Modified: converted to Vita's template contract. See NOTICE.
+\documentclass[11pt]{article}
+\usepackage[margin=((( layout.margin_in )))in, a4paper]{geometry}
+\setcounter{secnumdepth}{0}
+\usepackage{titlesec}
+\titlespacing{\section}{0pt}{((( layout.section_gap_pt )))pt}{((( layout.section_gap_pt )))pt}
+\titlespacing{\subsection}{0pt}{*0}{*0}
+\titlespacing{\subsubsection}{0pt}{*0}{*0}
+\titleformat{\section}{\large\bfseries\uppercase}{}{}{}[\titlerule]
+\titleformat*{\subsubsection}{\large\itshape}
+\usepackage{enumitem}
+\usepackage{microtype}
+\setlength{\parindent}{0pt}
+\setlist[itemize]{noitemsep,left=0pt .. \parindent}
+\pagestyle{empty}
+\linespread{((( layout.line_spread )))}
+
+\begin{document}
+\fontsize{((( layout.font_pt )))}{((( layout.font_pt * 1.2 )))}\selectfont
+\begin{center}
+  \begin{minipage}{0.5\textwidth}
+    {\Huge\bfseries ((( header.name )))}
+((* if header.headline *))
+    \\ \medskip
+    ((( header.headline )))
+((* endif *))
+  \end{minipage} \hfill
+  \begin{minipage}{0.4\textwidth}
+    \raggedleft
+((* for contact in header.contact *))
+    ((( contact.label ))): ((( contact.value )))((* if not loop.last *)) \\((* endif *))
+((* endfor *))
+  \end{minipage}
+\end{center}
+
+((* for section in sections *))
+\section{((( section.title )))}
+((* if section.kind == "entries" *))
+((* for item in section.items *))
+\subsection{((( item.title )))((* if item.period *)) \hfill ((( item.period )))((* endif *))}
+((* if item.subtitle or item.location *))
+\subsubsection{((* if item.subtitle *))((( item.subtitle )))((* endif *))((* if item.location *)) \hfill ((( item.location )))((* endif *))}
+((* endif *))
+((* if item.bullets.length *))
+\begin{itemize}
+((* for bullet in item.bullets *))
+  \item ((( bullet.text )))
+((* endfor *))
+\end{itemize}
+((* endif *))
+((* endfor *))
+((* elif section.kind == "list" *))
+((( section.items | join(", ", "title") )))\par
+((* elif section.text *))
+((( section.text )))\par
+((* endif *))
+((* endfor *))
+\end{document}
