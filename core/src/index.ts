@@ -3,6 +3,7 @@
 export * from "./agent/index.js";
 export * from "./chat/index.js";
 export * from "./claims/index.js";
+export * from "./fit/index.js";
 export * from "./lint/index.js";
 export * from "./ops/index.js";
 export * from "./packs/index.js";
