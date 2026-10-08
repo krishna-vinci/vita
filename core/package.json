@@ -8,8 +8,11 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@earendil-works/pi-ai": "1.1.0",
+    "@earendil-works/pi-coding-agent": "1.1.0",
     "@vita/shared": "workspace:*",
     "nunjucks": "3.2.4",
+    "typebox": "1.3.27",
     "yaml": "^2.9.1",
     "zod": "^4.6.5"
   },
