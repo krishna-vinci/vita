@@ -7,7 +7,9 @@
   "scripts": {
     "lint": "biome check .",
     "vita": "pnpm --filter @vita/cli exec tsx src/index.ts",
-    "server": "pnpm --filter @vita/server exec tsx src/main.ts"
+    "server": "pnpm --filter @vita/server exec tsx src/main.ts",
+    "web": "pnpm --filter @vita/web exec vite",
+    "build:web": "pnpm --filter @vita/web exec vite build"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",
