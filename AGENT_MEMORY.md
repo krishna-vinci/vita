@@ -49,7 +49,7 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - Codex tool limits (from Studium): `rm -rf` on computed paths is rejected; put test data under a temp dir. If `apply_patch` fails, write the file with a heredoc.
 
 ## Status (2026-10-09)
-- M0 and M1 done (faux-tested). M2: T1 ops merged; T2 server next, then T3 web scaffold (Codex), T4 chat backends, T5/T6 critical screens (Sonnet).
+- M0, M1 done; M2 T1 ops + T2 server merged. Running: M1-FIX (real-run findings), M2-T3 web scaffold, M2-T4 chat. Then T5/T6 critical screens (Sonnet).
 
 ## Open gaps
 - Real master run on the owner's data (2 min 23 s): writer cited variant ids (not indexed as claims), header came back empty (no profile source) → LaTeX failed. Fix queued: `docs/prompts/m1-fix-real-run.md` (after M2-T2 merges).
@@ -72,3 +72,4 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - 2026-10-09 · M1-T2 (Sol 6.1) · `core/src/search` (EvidenceSearch FTS5, selectEvidence), 10 tests · evidence hits map to linked claims, variant hits to item claims; mandatory claims beat `maxClaims` · none open.
 - 2026-10-09 · M2-T1 (Sol 6.1) · `core/src/ops` (applyOps, applyResumeOps), 61 tests · user edits lock bullets; AI cannot hide/move ancestors of locked bullets; moves use final destination index · none open.
 - 2026-10-09 · M1-T5 (Sol 6.1 + 1 unblock) · `core/src/pipeline` (tailor, generateMaster, evaluateDone, persistence), shared analysis/review schemas, `vita master`/`vita tailor` with hidden `--faux <script.json>` ([{tool, arguments}]) · orchestrator: added `writeFileAtomic`; must-have coverage now searches all visible text (skills lists count); checker skill checks locked/user bullets too · gap answers stay in meta pending source approval.
+- 2026-10-09 · M2-T2 (Sol 6.1 + 1 scope round) · `server/` (Hono, runtime, jobs, SSE, Basic auth, loopback rule), `shared/src/api.ts`, core additions `generateBase`, `tailor({applicationId})` reruns, `undoPaths`, `skills/build-base` · default port 4317 (orchestrator); `pnpm server` with `VITA_WORKSPACE`; usage caches in `.vita/jobs`, `.vita/edits`; template default in `config/server.json` · live smoke test OK (health, workspace, traversal 403).

@@ -10,7 +10,7 @@ const host = process.env.VITA_HOST ?? "127.0.0.1";
 const passwordHash = process.env.VITA_PASSWORD_HASH;
 try {
   assertBindAllowed(host, passwordHash);
-  const port = Number(process.env.VITA_PORT ?? 3000);
+  const port = Number(process.env.VITA_PORT ?? 4317);
   if (!Number.isInteger(port) || port < 1 || port > 65535)
     throw new Error("VITA_PORT must be an integer from 1 to 65535");
   const bundledDir = fileURLToPath(new URL("../../", import.meta.url));
