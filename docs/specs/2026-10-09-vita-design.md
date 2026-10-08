@@ -317,7 +317,7 @@ templates/<id>/
   preview.png           # generated
 ```
 
-Nunjucks delimiters: `\VAR{ … }` for values, `\BLOCK{ … }` for tags, `\#{ … }` for comments. All values pass through a LaTeX escaping filter by default (`\ & % $ # _ { } ~ ^`, plus Unicode quotes and dashes).
+Nunjucks delimiters follow Jupyter nbconvert's LaTeX convention, chosen because a bare `}` ending collides with LaTeX braces: `((( … )))` for values, `((* … *))` for tags, `((= … =))` for comments. All values pass through a LaTeX escaping filter by default (`\ & % $ # _ { } ~ ^`, plus Unicode quotes and dashes).
 
 ```yaml
 id: rover-base
@@ -455,7 +455,7 @@ Three places: **Me** (Outline editor, Projects, Base resumes), **Jobs** (list; n
 
 ## 21. Decisions taken in this spec
 
-- Template filling uses a deterministic contract (Nunjucks with LaTeX-safe delimiters); models only adopt templates once.
+- Template filling uses a deterministic contract (Nunjucks with nbconvert-style `((( )))` / `((* *))` delimiters); models only adopt templates once.
 - Single user per deployment; workspace layout allows multiple profiles later.
 - Same stack as Studium; built directly on Pi SDK 1.1 (native MCP and codemode); Studium patterns copied and adapted, not shared as a package.
 - The repo lives at `project-remote/vita/` as its own git repository. Pushing to GitHub happens only when the author asks.
