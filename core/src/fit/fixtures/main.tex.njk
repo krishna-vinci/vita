@@ -1,0 +1,14 @@
+\documentclass{article}
+\pagestyle{empty}
+\setlength{\textheight}{100pt}
+\setlength{\textwidth}{450pt}
+\setlength{\parindent}{0pt}
+\begin{document}
+((* for section in sections *))
+((* for item in section.items *))
+((* for bullet in item.bullets *))
+\vbox to ((( layout.line_spread * 30 )))pt{\hbox{((( bullet.text )))}\vfil}
+((* endfor *))
+((* endfor *))
+((* endfor *))
+\end{document}
