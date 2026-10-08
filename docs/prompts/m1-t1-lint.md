@@ -8,7 +8,7 @@ Build the claim index from parsed projects and outline, and the lint engine that
 ## Context
 - Read first: `AGENTS.md`, `AGENT_MEMORY.md`, spec `docs/specs/2026-10-09-vita-design.md` (§5, §8, §14a, §17).
 - The full task — files, exact interfaces, behaviour and tests — is **Task 1** in `docs/plans/2026-10-09-m1-engine.md`. Implement it exactly. Read "Global Constraints" there too.
-- M0 is merged: `@vita/shared` schemas; `core/src/workspace`, `core/src/source` (`parseOutline`, `parseProjects`, `ProjectsDoc`, `Outline`, …), `core/src/render`, `core/src/packs`; fixtures in `fixtures/{developer,nurse,teacher,accountant}`. Read their barrels before use.
+- M0 is merged: `@vita/shared` schemas; `core/src/workspace`, `core/src/source` (`parseOutline`, `parseProjects`, `ProjectsDoc`, `Outline`, …), `core/src/render`. NOT yet merged (M0-T5 is running in parallel): `core/src/packs` and `fixtures/`. Use the `Pack` type from `@vita/shared` and build synthetic test data inline. Read the merged barrels before use.
 - Other M1 tasks run in parallel in separate worktrees (claims+lint, search, agent runtime, skills). Stay in your own directories. Do NOT edit `core/src/index.ts`; the orchestrator wires barrels while merging.
 - 
 

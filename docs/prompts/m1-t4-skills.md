@@ -8,7 +8,7 @@ Write four profession-neutral Agent Skills used by the M1 roles: analyze-job, wr
 ## Context
 - Read first: `AGENTS.md`, `AGENT_MEMORY.md`, spec `docs/specs/2026-10-09-vita-design.md` (§5, §8, §14a, §17).
 - The full task — files, exact interfaces, behaviour and tests — is **Task 4** in `docs/plans/2026-10-09-m1-engine.md`. Implement it exactly. Read "Global Constraints" there too.
-- M0 is merged: `@vita/shared` schemas; `core/src/workspace`, `core/src/source` (`parseOutline`, `parseProjects`, `ProjectsDoc`, `Outline`, …), `core/src/render`, `core/src/packs`; fixtures in `fixtures/{developer,nurse,teacher,accountant}`. Read their barrels before use.
+- M0 is merged: `@vita/shared` schemas; `core/src/workspace`, `core/src/source` (`parseOutline`, `parseProjects`, `ProjectsDoc`, `Outline`, …), `core/src/render`. NOT yet merged (M0-T5 is running in parallel): `core/src/packs` and `fixtures/`. Use the `Pack` type from `@vita/shared` and build synthetic test data inline. Read the merged barrels before use.
 - Other M1 tasks run in parallel in separate worktrees (claims+lint, search, agent runtime, skills). Stay in your own directories. Do NOT edit `core/src/index.ts`; the orchestrator wires barrels while merging.
 - Skill format reference (read-only): /home/krishna/learny/skills/*/SKILL.md (frontmatter name + description, then body). Tools named in skills: analyst `submit_analysis`, writer `submit_resume`, checker `submit_checks`, ats-reviewer `submit_ats`; read tools `read_outline`, `read_projects`, `search_evidence`, `read_resume`, `read_analysis`.
 
