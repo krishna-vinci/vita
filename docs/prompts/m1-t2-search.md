@@ -10,7 +10,7 @@ In-memory SQLite FTS5 search over claims, variants, evidence text and outline co
 - The full task — files, exact interfaces, behaviour and tests — is **Task 2** in `docs/plans/2026-10-09-m1-engine.md`. Implement it exactly. Read "Global Constraints" there too.
 - M0 is merged: `@vita/shared` schemas; `core/src/workspace`, `core/src/source` (`parseOutline`, `parseProjects`, `ProjectsDoc`, `Outline`, …), `core/src/render`, `core/src/packs`; fixtures in `fixtures/{developer,nurse,teacher,accountant}`. Read their barrels before use.
 - Other M1 tasks run in parallel in separate worktrees (claims+lint, search, agent runtime, skills). Stay in your own directories. Do NOT edit `core/src/index.ts`; the orchestrator wires barrels while merging.
-- Use `node:sqlite` (`DatabaseSync`), built into Node 22; it prints an ExperimentalWarning, which is fine. `buildClaimIndex` comes from M1-T1 which runs in parallel: depend only on the `ClaimIndex`/`IndexedClaim` interface shapes written in the plan, define a local type import from `../claims/index.js`, and if that file is absent in your worktree, create ONLY a minimal `core/src/claims/types.ts` with those two interfaces exactly as in the plan and import from it (the orchestrator reconciles at merge).
+- Use `node:sqlite` (`DatabaseSync`), built into Node 22; it prints an ExperimentalWarning, which is fine. `buildClaimIndex`, `ClaimIndex`, `IndexedClaim` are merged in `core/src/claims` (import from `../claims/index.js`). Packs and fixtures are merged too: use `fixtures/developer` and `fixtures/nurse` (copy to a temp dir) in tests.
 
 ## Scope
 - Change: core/src/search/** (new) with its index.ts barrel.
