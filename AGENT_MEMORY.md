@@ -39,17 +39,19 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - Studium patched a slow streamed tool-argument JSON parse in pi-ai 1.0.0 (`patches/`). Check whether 1.1 still needs it before copying the patch.
 - Tectonic is not installed on the owner's host; Docker image will include it. `pdftotext` (poppler) is available.
 - Vita lives inside the parent repo `project-remote/` as its own nested git repo; run git commands with `-C /home/krishna/project-remote/vita` or from inside it.
+- **Biome via rtk:** the host's rtk hook prints `Linter process terminated abnormally` for biome; run `rtk proxy pnpm exec biome check <files>` to see real output. Biome uses `.gitignore` (vcs enabled).
+- Root `pnpm vita …` runs `tsx` inside `cli/` (cwd is `cli/`), so pass absolute or cli-relative paths.
+- Zod 4: object defaults that contain arrays need explicit array values in `.default({...})`.
 - Codex tool limits (from Studium): `rm -rf` on computed paths is rejected; put test data under a temp dir. If `apply_patch` fails, write the file with a heredoc.
 
 ## Status (2026-10-09)
-- Design spec written; awaiting owner review. Next: M0 implementation plan (`docs/plans/`).
+- M0 in progress: T1 done; T2 workspace, T3 source, T4 render running in parallel worktrees; T5 after.
 
 ## Open gaps
-- Spec review by owner.
-- M0 plan not written.
 - Personal absolute paths (/home/krishna/...) in AGENTS.md, AGENT_MEMORY.md and `.claude/skills/codex-orchestrate/` must be generalised before the public release (M5).
 
 ## Recently done
 - 2026-10-09 · repo created, AGPL-3.0, design draft + spec, agent instructions and Codex dispatch skill (copied from Studium).
 
 ## Log
+- 2026-10-09 · M0-T1 (Sol 6.1) · pnpm workspace (shared/core/cli), Studium tsconfig/biome style, `@vita/shared` schemas (ids, evidence, resume, base, pack, template, review) with 19 tests · root `vita` script runs tsx inside cli; orchestrator enabled biome vcs ignore · none open.

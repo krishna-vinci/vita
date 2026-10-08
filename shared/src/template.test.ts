@@ -1,0 +1,52 @@
+import { describe, expect, it } from "vitest";
+import { Finding, RenderCheck } from "./review";
+import { Knob, TemplateMeta } from "./template";
+
+describe("Knob", () => {
+  it("rejects defaults outside the range and inverted ranges", () => {
+    expect(Knob.safeParse({ min: 10, max: 12, default: 9 }).success).toBe(false);
+    expect(Knob.safeParse({ min: 10, max: 12, default: 13 }).success).toBe(false);
+    expect(Knob.safeParse({ min: 12, max: 10, default: 11 }).success).toBe(false);
+  });
+
+  it("accepts defaults at either boundary", () => {
+    expect(Knob.safeParse({ min: 10, max: 12, default: 10 }).success).toBe(true);
+    expect(Knob.safeParse({ min: 10, max: 12, default: 12 }).success).toBe(true);
+  });
+});
+
+describe("TemplateMeta", () => {
+  it("fills defaults and validates nested knobs and section kinds", () => {
+    expect(TemplateMeta.parse({ id: "rover-base", name: "Rover Base" })).toEqual({
+      id: "rover-base",
+      name: "Rover Base",
+      page: "letter",
+      knobs: {},
+      supports: ["summary", "entries", "list", "text"],
+    });
+    expect(
+      TemplateMeta.safeParse({
+        id: "rover-base",
+        name: "Rover Base",
+        knobs: { font_pt: { min: 10, max: 12, default: 13 } },
+      }).success,
+    ).toBe(false);
+    expect(TemplateMeta.safeParse({ id: "rover-base", name: "Rover Base", supports: ["unknown"] }).success).toBe(false);
+  });
+});
+
+describe("review schemas", () => {
+  it("validates findings and render checks", () => {
+    expect(
+      Finding.parse({ rule: "missing-claims", severity: "block", message: "Add a claim.", bulletId: "bullet-a" }),
+    ).toEqual({
+      rule: "missing-claims",
+      severity: "block",
+      message: "Add a claim.",
+      bulletId: "bullet-a",
+    });
+    expect(Finding.safeParse({ rule: "example", severity: "unknown", message: "Example." }).success).toBe(false);
+    expect(RenderCheck.parse({ pages: 1, maxPages: 2, missingBullets: [], outOfOrder: [], ok: true }).ok).toBe(true);
+    expect(RenderCheck.safeParse({ pages: 1.5, missingBullets: [], outOfOrder: [], ok: true }).success).toBe(false);
+  });
+});

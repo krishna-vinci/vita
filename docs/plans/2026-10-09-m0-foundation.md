@@ -50,7 +50,7 @@ T2–T4 run in parallel: they touch disjoint directories (`core/src/workspace`, 
 - shared: `zod@^4.6.5`, `yaml@^2.9.1`; dev `vitest@^5.0.2`
 - core: `@vita/shared@workspace:*`, `zod@^4.6.5`, `yaml@^2.9.1`, `nunjucks@3.2.4`; dev `@types/nunjucks@3.2.6`, `@types/node@^26.6.3`, `vitest@^5.0.2`
 - cli: `@vita/core@workspace:*`, `@vita/shared@workspace:*`, `commander@15.0.0`, `tsx@^4.23.15`; dev `@types/node@^26.6.3`, `vitest@^5.0.2`
-- root `package.json`: `"packageManager": "pnpm@10.28.2"`, scripts `"lint": "biome check ."`, `"vita": "tsx cli/src/index.ts"`.
+- root `package.json`: `"packageManager": "pnpm@10.28.2"`, scripts `"lint": "biome check ."`, `"vita": "pnpm --filter @vita/cli exec tsx src/index.ts"` (tsx lives in cli).
 
 **Interfaces (Produces) — `@vita/shared` exports exactly these:**
 

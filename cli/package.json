@@ -1,0 +1,20 @@
+{
+  "name": "@vita/cli",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@vita/core": "workspace:*",
+    "@vita/shared": "workspace:*",
+    "commander": "15.0.0",
+    "tsx": "^4.23.15"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "vitest": "^5.0.2"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "@vita/workspace",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "packageManager": "pnpm@10.28.2",
+  "scripts": {
+    "lint": "biome check .",
+    "vita": "pnpm --filter @vita/cli exec tsx src/index.ts"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.14",
+    "typescript": "^7.0.2"
+  }
+}
