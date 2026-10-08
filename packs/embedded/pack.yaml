@@ -1,0 +1,56 @@
+id: embedded
+name: Embedded
+extends: it-core
+keywords:
+  - [Embedded systems, firmware, embedded software]
+  - [C, C programming, ANSI C]
+  - [C++, C plus plus, CPP]
+  - [RTOS, real-time operating system, FreeRTOS]
+  - [Microcontroller, MCU, embedded controller]
+  - [ARM, Cortex-M, ARM architecture]
+  - [Firmware update, OTA update, bootloader]
+  - [Device drivers, driver development, hardware abstraction]
+  - [I2C, SPI, UART]
+  - [GPIO, pin control, hardware interface]
+  - [Interrupts, ISR, interrupt handling]
+  - [Low power, power management, sleep modes]
+  - [PCB, circuit board, hardware design]
+  - [Sensor integration, ADC, analog signals]
+  - [Bare metal, no OS, direct hardware]
+  - [Embedded Linux, Yocto, buildroot]
+  - [CAN bus, automotive bus, CAN]
+  - [Bluetooth Low Energy, BLE, wireless module]
+  - [JTAG, oscilloscope, logic analyser]
+  - [Deterministic timing, latency budget, real-time constraints]
+metric_questions:
+  - What is the memory footprint (RAM, flash, ROM)?
+  - How much did power consumption or battery life improve?
+  - What is the response or interrupt latency?
+  - How many devices or units are deployed or shipped?
+  - What was the failure rate or defect rate?
+  - How much did boot time or startup latency change?
+section_order: [Summary, Skills, Experience, Projects, Education, Certifications]
+verbs:
+  - Implemented
+  - Ported
+  - Flashed
+  - Debugged
+  - Integrated
+  - Optimised
+  - Tuned
+  - Validated
+  - Tested
+  - Provisioned
+  - Configured
+  - Benchmarked
+  - Hardened
+  - Documented
+  - Refactored
+banned_phrases:
+  - bulletproof firmware
+  - zero defects
+  - mission-critical magic
+  - hardware ninja
+  - set in stone
+  - flawless timing
+interview_topics: [real-time constraints, memory and power budgets, interrupt handling, hardware-software interface, RTOS selection, debugging with logic analysers, driver development, communication protocols, testing on target, safety and reliability]

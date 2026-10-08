@@ -1,0 +1,56 @@
+id: mobile
+name: Mobile
+extends: it-core
+keywords:
+  - [iOS, Apple platform, iPhone development]
+  - [Android, Google platform, Android development]
+  - [React Native, RN, cross-platform mobile]
+  - [Flutter, Dart, cross-platform UI]
+  - [Swift, SwiftUI, native iOS development]
+  - [Kotlin, Kotlin Android, Jetpack Compose]
+  - [Objective-C, objc, legacy iOS]
+  - [Java Android, Android SDK, Android Studio]
+  - [Mobile UI, app screens, mobile interface]
+  - [App store release, Play Store, app submission]
+  - [Push notifications, APNs, FCM]
+  - [Offline support, local storage, sync]
+  - [Mobile performance, app startup time, battery usage]
+  - [Responsive layout, adaptive layout, screen sizes]
+  - [Deep linking, universal links, app routing]
+  - [In-app purchases, subscriptions, monetisation]
+  - [Mobile testing, device farm, emulators]
+  - [Geolocation, maps, location services]
+  - [Camera, media capture, audio recording]
+  - [App analytics, crash reporting, Crashlytics]
+metric_questions:
+  - How many downloads, installs, or active users does the app have?
+  - What is the app store rating or review count?
+  - How much did app startup time or crash rate improve?
+  - What retention or session length did you achieve?
+  - How many devices or OS versions are supported?
+  - How much did the app earn through purchases or ads?
+section_order: [Summary, Skills, Experience, Projects, Education, Certifications]
+verbs:
+  - Shipped
+  - Built
+  - Designed
+  - Prototyped
+  - Migrated
+  - Optimised
+  - Refactored
+  - Integrated
+  - Released
+  - Ported
+  - Polished
+  - Localised
+  - Instrumented
+  - Debugged
+  - Published
+banned_phrases:
+  - revolutionary app
+  - app store hit
+  - silky smooth
+  - flawless UX
+  - world's first
+  - next big thing
+interview_topics: [mobile architecture, offline-first design, app lifecycle, memory and battery, platform guidelines, cross-platform trade-offs, push notifications, app release process, mobile testing, performance profiling]

@@ -1,0 +1,57 @@
+id: it-support
+name: IT Support
+extends: it-core
+keywords:
+  - [Technical support, help desk, service desk]
+  - [IT support, desktop support, end-user support]
+  - [Ticketing system, ITSM, service requests]
+  - [Troubleshooting, diagnostics, problem solving]
+  - [Windows administration, Active Directory, Group Policy]
+  - [Mac support, macOS, Apple devices]
+  - [Hardware repair, device provisioning, asset management]
+  - [Networking support, VPN, connectivity]
+  - [Remote support, RDP, remote desktop]
+  - [Onboarding, user provisioning, offboarding]
+  - [Password reset, account access, access requests]
+  - [SLA, response time, first response]
+  - [Knowledge base, self-service, FAQ documentation]
+  - [Incident management, major incidents, service restoration]
+  - [File permissions, shared drives, storage support]
+  - [Printers, peripherals, office hardware]
+  - [Software installation, application deployment, patching]
+  - [Vendor coordination, third-party support, external escalation]
+  - [User training, IT training, documentation for users]
+  - [Customer service, user satisfaction, CSAT]
+metric_questions:
+  - How many tickets or requests do you handle per day or week?
+  - What is your first response or resolution time?
+  - What is the user satisfaction (CSAT) score?
+  - How many users or devices do you support?
+  - How much did you reduce recurring incidents or ticket volume?
+  - What is your first-contact resolution rate?
+  - How many systems or applications do you administer?
+section_order: [Summary, Skills, Experience, Projects, Education, Certifications]
+verbs:
+  - Resolved
+  - Troubleshot
+  - Supported
+  - Diagnosed
+  - Configured
+  - Provisioned
+  - Installed
+  - Documented
+  - Escalated
+  - Trained
+  - Maintained
+  - Restored
+  - Assisted
+  - Coordinated
+  - Onboarded
+banned_phrases:
+  - people person
+  - customer-obsessed
+  - go-to person for everything
+  - always available
+  - miracle worker
+  - tech wizard
+interview_topics: [ticket prioritisation, escalation, root cause analysis, user communication, onboarding and offboarding, security awareness, documentation, SLAs, remote troubleshooting, hardware and software provisioning]

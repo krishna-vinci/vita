@@ -1,0 +1,58 @@
+id: security
+name: Security
+extends: it-core
+keywords:
+  - [Application security, AppSec, software security]
+  - [Threat modelling, threat model, attack surface]
+  - [Penetration testing, pentest, ethical hacking]
+  - [Vulnerability assessment, vulnerability scanning, CVE]
+  - [OWASP Top 10, web vulnerabilities, injection attacks]
+  - [Encryption, cryptography, TLS]
+  - [IAM, least privilege, access control]
+  - [Zero trust, network segmentation, defence in depth]
+  - [SIEM, security monitoring, security log analysis]
+  - [Breach response, security incident handling, forensics]
+  - [Compliance, SOC 2, ISO 27001]
+  - [GDPR, data privacy, privacy engineering]
+  - [Security audit, controls assessment, risk assessment]
+  - [SAST, static analysis, code scanning]
+  - [DAST, dynamic analysis, runtime scanning]
+  - [Secret management, key management, vault]
+  - [Firewall, WAF, network security]
+  - [Phishing, social engineering, security awareness]
+  - [Bug bounty, responsible disclosure, security research]
+  - [Container security, image scanning, supply chain security]
+metric_questions:
+  - How many vulnerabilities did you find and fix?
+  - How much did you reduce the attack surface or risk score?
+  - What was the mean time to detect or respond?
+  - How many systems, endpoints, or accounts did you protect?
+  - What compliance standard did you pass?
+  - How many incidents or breaches were prevented?
+  - How much did security incidents or downtime cost before and after?
+section_order: [Summary, Skills, Experience, Projects, Education, Certifications]
+verbs:
+  - Hardened
+  - Secured
+  - Audited
+  - Scanned
+  - Remediated
+  - Patched
+  - Encrypted
+  - Monitored
+  - Assessed
+  - Investigated
+  - Detected
+  - Mitigated
+  - Isolated
+  - Automated
+  - Documented
+  - Reviewed
+banned_phrases:
+  - hacker-proof
+  - unhackable
+  - bulletproof security
+  - military-grade
+  - 100% secure
+  - zero risk
+interview_topics: [threat modelling, OWASP Top 10, authentication and sessions, encryption in transit and at rest, least privilege, incident response, secure SDLC, vulnerability management, compliance, cloud security]

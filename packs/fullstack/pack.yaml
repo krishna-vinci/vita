@@ -1,0 +1,55 @@
+id: fullstack
+name: Full-Stack
+extends: it-core
+keywords:
+  - [Full-stack, full stack development, end-to-end development]
+  - [MEAN stack, MongoDB Express Angular Node]
+  - [MERN stack, MongoDB Express React Node]
+  - [LAMP stack, Linux Apache MySQL PHP]
+  - [Next.js, full-stack React, React framework]
+  - [REST endpoints, backend API, web services]
+  - [Database design, data modelling, schema design]
+  - [Authentication flow, login system, session management]
+  - [Front-end framework, UI layer, client application]
+  - [Deployment pipeline, release automation, shipping]
+  - [Monorepo, workspace tooling, shared packages]
+  - [Server rendering, hydration, isomorphic app]
+  - [Payment integration, Stripe, checkout flow]
+  - [API integration, third-party services, external APIs]
+  - [Database queries, query optimisation, indexing]
+  - [End-to-end testing, E2E tests, integration testing]
+  - [Webhooks, background workers, scheduled jobs]
+  - [Caching layer, CDN, edge delivery]
+metric_questions:
+  - How many features or end-to-end flows did you ship?
+  - How many users or accounts does the product serve?
+  - How much did load time or API latency improve?
+  - What did the product earn or save?
+  - How many integrations or third-party services did you connect?
+  - How much did you reduce manual work or support tickets?
+section_order: [Summary, Skills, Experience, Projects, Education, Certifications]
+verbs:
+  - Built
+  - Shipped
+  - Integrated
+  - Prototyped
+  - Delivered
+  - Deployed
+  - Refactored
+  - Designed
+  - Implemented
+  - Migrated
+  - Automated
+  - Optimised
+  - Extended
+  - Wired
+  - Launched
+  - Maintained
+banned_phrases:
+  - one-man army
+  - full-stack guru
+  - unicorn
+  - wears many hats
+  - rockstar developer
+  - does it all
+interview_topics: [end-to-end architecture, frontend and backend trade-offs, API design, database modelling, authentication, deployment, testing across the stack, performance, third-party integrations, product thinking]

@@ -1,0 +1,64 @@
+id: backend
+name: Backend
+extends: it-core
+keywords:
+  - [Node.js, Node, NodeJS]
+  - [Python, FastAPI, Django]
+  - [Java, Spring Boot, Spring]
+  - [Go, Golang]
+  - [Ruby, Ruby on Rails, Rails]
+  - ["C#", .NET, ASP.NET]
+  - [REST API, RESTful services, HTTP API]
+  - [GraphQL, query language, schema stitching]
+  - [gRPC, protobuf, remote procedure call]
+  - [PostgreSQL, Postgres, relational database]
+  - [MySQL, MariaDB]
+  - [MongoDB, document database, NoSQL]
+  - [Redis, in-memory cache, key-value store]
+  - [Kafka, event streaming, event bus]
+  - [RabbitMQ, message broker, AMQP]
+  - [ORM, object-relational mapping, database access layer]
+  - [Microservices, service-oriented architecture, SOA]
+  - [Background jobs, task queue, worker processes]
+  - [Database migration, schema migration, database versioning]
+  - [API design, API versioning, API contract]
+  - [Unit testing, integration testing, test coverage]
+  - [Concurrency, multithreading, async programming]
+metric_questions:
+  - What throughput or requests per second does the service handle?
+  - How much did latency or response time improve?
+  - How many API endpoints, services, or integrations did you build?
+  - What was the data volume or table size?
+  - How many concurrent users or connections do you support?
+  - How much did error rates or failed requests drop?
+  - What test coverage or defect reduction did you achieve?
+section_order: [Summary, Skills, Experience, Projects, Education, Certifications]
+verbs:
+  - Built
+  - Implemented
+  - Refactored
+  - Optimised
+  - Integrated
+  - Migrated
+  - Designed
+  - Engineered
+  - Exposed
+  - Abstracted
+  - Modularised
+  - Hardened
+  - Benchmarked
+  - Cached
+  - Scaled
+  - Documented
+  - Extended
+  - Modernised
+  - Rewrote
+  - Decomposed
+banned_phrases:
+  - bulletproof
+  - it just works
+  - backend ninja
+  - rockstar developer
+  - 10x developer
+  - flawless architecture
+interview_topics: [API design, database modelling, caching strategy, concurrency, error handling, testing strategy, authentication and authorisation, scaling services, message queues, debugging production issues]

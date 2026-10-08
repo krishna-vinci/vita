@@ -1,0 +1,61 @@
+id: frontend
+name: Frontend
+extends: it-core
+keywords:
+  - [React, React.js, ReactJS]
+  - [Vue, Vue.js, VueJS]
+  - [Angular, AngularJS]
+  - [Svelte, SvelteKit]
+  - [TypeScript, TS]
+  - [JavaScript, JS, ECMAScript]
+  - [HTML, HTML5, markup]
+  - [CSS, CSS3, stylesheets]
+  - [Tailwind CSS, utility-first CSS, Tailwind]
+  - [Webpack, Vite, build tooling]
+  - [Accessibility, a11y, WCAG]
+  - [Responsive design, mobile-first, adaptive layout]
+  - [Design system, component library, UI kit]
+  - [State management, Redux, Zustand]
+  - [Single-page application, SPA, client-side rendering]
+  - [Server-side rendering, SSR, Next.js]
+  - [Browser compatibility, cross-browser, polyfills]
+  - [Web performance, Core Web Vitals, Lighthouse]
+  - [Progressive web app, PWA, offline support]
+  - [Form validation, input handling, form UX]
+  - [Testing library, Jest, Playwright]
+metric_questions:
+  - How much did page load time or Core Web Vitals improve?
+  - How many users or sessions does the interface serve?
+  - How many screens, components, or pages did you build?
+  - What conversion, engagement, or completion rate changed?
+  - How much did bundle size or resource weight drop?
+  - What accessibility level or audit score did you reach?
+  - How many browsers or devices are supported?
+section_order: [Summary, Skills, Experience, Projects, Education, Certifications]
+verbs:
+  - Built
+  - Designed
+  - Prototyped
+  - Refactored
+  - Modernised
+  - Styled
+  - Composed
+  - Optimised
+  - Localised
+  - Standardised
+  - Animated
+  - Simplified
+  - Migrated
+  - Documented
+  - Tested
+  - Shipped
+  - Rewrote
+  - Componentised
+banned_phrases:
+  - pixel-perfect
+  - cutting-edge UI
+  - stunning
+  - next-generation
+  - web ninja
+  - visually stunning
+interview_topics: [component architecture, state management, accessibility, performance budgets, responsive design, browser rendering, testing strategy, design systems, API integration, build tooling]

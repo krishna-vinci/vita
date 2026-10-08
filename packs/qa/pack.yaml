@@ -1,0 +1,57 @@
+id: qa
+name: QA
+extends: it-core
+keywords:
+  - [Quality assurance, QA, quality engineering]
+  - [Test automation, automated testing, test scripts]
+  - [Manual testing, exploratory testing, functional testing]
+  - [Selenium, WebDriver, browser automation]
+  - [Cypress, end-to-end testing, E2E]
+  - [Playwright, browser testing, cross-browser testing]
+  - [JUnit, unit testing framework, test runner]
+  - [Test plan, test cases, test strategy]
+  - [Regression testing, smoke testing, sanity testing]
+  - [Performance testing, load testing, stress testing]
+  - [API testing, contract testing, integration testing]
+  - [Bug tracking, defect management, issue triage]
+  - [CI test pipeline, continuous testing, test automation pipeline]
+  - [Test coverage, code coverage, coverage reports]
+  - [Test data, fixtures, test environments]
+  - [Mobile testing, device testing, emulator testing]
+  - [Accessibility testing, a11y testing, WCAG compliance testing]
+  - [Security testing, penetration testing, vulnerability testing]
+  - [Shift-left testing, quality gates, early testing]
+  - [Test management, test reporting, quality metrics]
+metric_questions:
+  - How many test cases or scenarios did you write?
+  - What test coverage did you reach?
+  - How many defects did you find before release?
+  - How much did you reduce escaped defects or production bugs?
+  - How much time did automation save per release?
+  - How many release cycles or builds do you validate?
+  - What was the pass rate or flakiness reduction?
+section_order: [Summary, Skills, Experience, Projects, Education, Certifications]
+verbs:
+  - Tested
+  - Automated
+  - Validated
+  - Verified
+  - Reproduced
+  - Documented
+  - Reported
+  - Triaged
+  - Scripted
+  - Executed
+  - Isolated
+  - Benchmarked
+  - Hardened
+  - Maintained
+  - Improved
+banned_phrases:
+  - bug-free
+  - zero defects
+  - QA magic
+  - quality champion
+  - test everything
+  - perfect quality
+interview_topics: [test strategy, test automation frameworks, test pyramid, flaky tests, exploratory testing, regression suites, performance testing, API and contract testing, CI integration, quality metrics]

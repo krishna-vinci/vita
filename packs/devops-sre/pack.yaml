@@ -1,0 +1,62 @@
+id: devops-sre
+name: DevOps / SRE
+extends: it-core
+keywords:
+  - [Kubernetes, k8s]
+  - [Terraform, infrastructure as code, IaC]
+  - [Ansible, configuration management, playbooks]
+  - [Prometheus, exporters, alerting rules]
+  - [Grafana, dashboards, visualisation]
+  - [Jenkins, build pipeline, build automation]
+  - [Helm, Kubernetes packaging, charts]
+  - [Service mesh, Istio, Envoy]
+  - [Site reliability engineering, SRE, reliability engineering]
+  - [SLO, service level objective, error budget]
+  - [Load balancing, reverse proxy, ingress]
+  - [Autoscaling, elastic scaling, horizontal scaling]
+  - [Blue-green deployment, canary release, progressive delivery]
+  - [Runbook, standard operating procedure, operational procedure]
+  - [Capacity planning, resource planning, scaling plan]
+  - [Chaos engineering, fault injection, resilience testing]
+  - [Distributed tracing, OpenTelemetry, trace spans]
+  - [Nginx, web server, proxy server]
+  - [PagerDuty, on-call rotation, paging]
+  - [Postmortem, blameless review, incident retrospective]
+  - [Configuration drift, immutable infrastructure, golden image]
+metric_questions:
+  - How much did deploy frequency or lead time change?
+  - What uptime, availability, or error budget did you maintain?
+  - How long did a deploy or rollback take before and after?
+  - How many incidents or pages per month did you reduce?
+  - How many services did the platform or pipeline cover?
+  - What was the change in infrastructure cost?
+  - How much time did automation save the team each week?
+  - How many environments do you manage?
+section_order: [Summary, Skills, Experience, Projects, Education, Certifications]
+verbs:
+  - Orchestrated
+  - Templated
+  - Consolidated
+  - Virtualised
+  - Right-sized
+  - Codified
+  - Centralised
+  - Streamlined
+  - Operationalised
+  - Baselined
+  - Tuned
+  - Rolled out
+  - De-risked
+  - Automated
+  - Provisioned
+  - Containerised
+  - Hardened
+  - Scaled
+banned_phrases:
+  - hero culture
+  - war room hero
+  - zero downtime guaranteed
+  - 24/7 without fail
+  - set it and forget it
+  - cloud ninja
+interview_topics: [infrastructure as code, incident response, deployment strategy, capacity planning, monitoring and alerting, SLOs and error budgets, container orchestration, cloud cost management, on-call practices, chaos and resilience]

@@ -1,0 +1,58 @@
+id: ml-ai
+name: ML / AI
+extends: it-core
+keywords:
+  - [Machine learning, ML, statistical learning]
+  - [Deep learning, neural networks, DNN]
+  - [PyTorch, torch, tensor library]
+  - [TensorFlow, TF, Keras]
+  - [scikit-learn, sklearn, classical ML]
+  - [NLP, natural language processing, text models]
+  - [Computer vision, CV, image models]
+  - [LLM, large language model, generative AI]
+  - [RAG, retrieval-augmented generation, retrieval pipeline]
+  - [Embeddings, vector search, vector database]
+  - [Fine-tuning, transfer learning, model training]
+  - [Model evaluation, metrics, cross-validation]
+  - [Feature engineering, feature extraction, feature selection]
+  - [MLOps, model deployment, model serving]
+  - [Model inference, prediction, scoring]
+  - [Prompt engineering, prompt design, prompt templates]
+  - [Agentic AI, agents, tool use]
+  - [Recommendation system, recommender, ranking model]
+  - [Data annotation, labelling, training data]
+  - [A/B testing, offline evaluation, experimentation]
+metric_questions:
+  - How accurate is the model (precision, recall, F1)?
+  - How much did the model improve over the baseline?
+  - How many predictions or inference requests per day?
+  - How many records or samples did you train on?
+  - How much did inference latency or cost drop?
+  - How many users does the model or feature serve?
+  - What was the impact on a business metric?
+section_order: [Summary, Skills, Experience, Projects, Education, Certifications]
+verbs:
+  - Trained
+  - Fine-tuned
+  - Evaluated
+  - Deployed
+  - Served
+  - Engineered
+  - Benchmarked
+  - Optimised
+  - Collected
+  - Annotated
+  - Tuned
+  - Shipped
+  - Integrated
+  - Quantised
+  - Distilled
+  - Monitored
+banned_phrases:
+  - state-of-the-art
+  - cutting-edge AI
+  - AI-powered magic
+  - revolutionary
+  - self-learning
+  - brain-like
+interview_topics: [model selection, overfitting and regularisation, evaluation metrics, data leakage, feature engineering, LLM prompting, RAG architecture, model deployment, responsible AI, experimentation]

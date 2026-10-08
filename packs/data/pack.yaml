@@ -1,0 +1,58 @@
+id: data
+name: Data
+extends: it-core
+keywords:
+  - [PostgreSQL, Postgres, relational database]
+  - [Snowflake, cloud data warehouse, data warehouse]
+  - [BigQuery, analytics warehouse, columnar database]
+  - [Redshift, columnar warehouse, warehouse cluster]
+  - [dbt, data build tool, transformation models]
+  - [Airflow, workflow orchestration, DAG scheduler]
+  - [Spark, Apache Spark, distributed processing]
+  - [Pandas, dataframes, data manipulation]
+  - [ETL, extract transform load, data pipeline]
+  - [Data modelling, dimensional modelling, star schema]
+  - [SQL query optimisation, query tuning, indexing]
+  - [Data quality, data validation, data testing]
+  - [Analytics, business intelligence, BI]
+  - [Dashboard, reporting, visualisation]
+  - [Data lake, data lakehouse, object storage tables]
+  - [Kafka, stream processing, event streaming]
+  - [Python, ETL scripting, pipeline code]
+  - [Data governance, data catalog, metadata management]
+  - [A/B testing, experimentation, statistical testing]
+  - [Machine learning pipeline, feature store, training data pipeline]
+metric_questions:
+  - How many rows, records, or events does the pipeline process?
+  - How much did query or pipeline runtime improve?
+  - How many data sources or tables did you integrate?
+  - What data quality or error rate did you achieve?
+  - How many reports, dashboards, or datasets do you maintain?
+  - How fresh is the data (latency from source to report)?
+  - How much storage or compute cost did you save?
+section_order: [Summary, Skills, Experience, Projects, Education, Certifications]
+verbs:
+  - Built
+  - Modelled
+  - Cleaned
+  - Transformed
+  - Aggregated
+  - Analysed
+  - Visualised
+  - Automated
+  - Optimised
+  - Migrated
+  - Validated
+  - Ingested
+  - Documented
+  - Standardised
+  - Streamed
+  - Queried
+banned_phrases:
+  - actionable insights
+  - single source of truth
+  - data magic
+  - big data
+  - garbage in, garbage out
+  - numbers don't lie
+interview_topics: [data modelling, ETL versus ELT, query optimisation, data quality, pipeline orchestration, streaming versus batch, data governance, dimensional modelling, warehouse versus lake, analytics communication]

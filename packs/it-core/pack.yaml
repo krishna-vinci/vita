@@ -1,0 +1,76 @@
+id: it-core
+name: IT Core
+extends: general
+keywords:
+  - [Linux, Unix, GNU/Linux]
+  - [Git, version control, GitHub]
+  - [Docker, containers, containerisation]
+  - [HTTP, HTTPS, REST]
+  - [API, APIs, web API]
+  - [SQL, relational database, RDBMS]
+  - [Testing, unit tests, automated tests]
+  - [Agile, Scrum, Kanban]
+  - [Debugging, troubleshooting, root cause analysis]
+  - [Monitoring, observability, telemetry]
+  - [Logging, log aggregation, structured logs]
+  - [Authentication, auth, authorisation]
+  - [Networking, TCP/IP, DNS]
+  - [Shell scripting, Bash, command line]
+  - [CI/CD, continuous integration, continuous delivery]
+  - [Cloud computing, cloud platforms, public cloud]
+  - [Caching, cache, memoisation]
+  - [Message queue, queuing, pub/sub]
+  - [Software development, programming, coding]
+  - [Code review, peer review, pull request]
+  - [Technical documentation, technical writing, developer docs]
+  - [Performance optimisation, profiling, tuning]
+  - [Deployment, release management, rollout]
+  - [Incident response, incident management, postmortem]
+  - [Secure coding, security review, secure development]
+  - [Operating system, OS, system administration]
+  - [Data structures, algorithms, complexity]
+metric_questions:
+  - How many users or customers does this serve?
+  - What was the request volume, throughput, or usage per day?
+  - How much did latency or response time improve?
+  - How many services, systems, or repositories did this cover?
+  - How often do you deploy, and how long does a release take?
+  - How many incidents, outages, or bugs did this prevent or resolve?
+  - What uptime, availability, or error rate did you achieve?
+  - How much data does it store or process?
+section_order: [Summary, Skills, Experience, Projects, Education, Certifications]
+verbs:
+  - Automated
+  - Migrated
+  - Refactored
+  - Deployed
+  - Provisioned
+  - Integrated
+  - Optimised
+  - Hardened
+  - Scaled
+  - Instrumented
+  - Debugged
+  - Tested
+  - Monitored
+  - Configured
+  - Shipped
+  - Containerised
+  - Modularised
+  - Standardised
+  - Secured
+  - Upgraded
+  - Scripted
+  - Benchmarked
+  - Prototyped
+  - Troubleshot
+banned_phrases:
+  - ninja
+  - rockstar
+  - guru
+  - wizard
+  - 10x engineer
+  - code monkey
+  - thought leader
+  - hand-coded
+interview_topics: [system design, code review practices, debugging approach, testing strategy, deployment process, incident handling, performance tuning, security fundamentals, working with product managers, technical communication]

@@ -1,0 +1,58 @@
+id: cloud
+name: Cloud
+extends: it-core
+keywords:
+  - [AWS, Amazon Web Services]
+  - [Azure, Microsoft Azure]
+  - [Google Cloud, GCP, Google Cloud Platform]
+  - [S3, object storage, blob storage]
+  - [EC2, virtual machines, compute instances]
+  - [Lambda, serverless, functions as a service]
+  - [RDS, managed database, database service]
+  - [VPC, virtual network, private network]
+  - [IAM, identity and access management, roles and policies]
+  - [CloudFormation, infrastructure templates, stack templates]
+  - [Route 53, managed DNS, DNS zones]
+  - [CloudFront, content delivery network, CDN]
+  - [SNS, event notifications, message topics]
+  - [EKS, managed Kubernetes, AKS]
+  - [Cost optimisation, FinOps, reserved instances]
+  - [Multi-cloud, hybrid cloud, cross-cloud]
+  - [Pulumi, cloud SDK, infrastructure automation]
+  - [CloudWatch, cloud monitoring, metrics and alarms]
+  - [Elastic load balancing, ELB, application load balancer]
+  - [Cloud migration, lift and shift, re-hosting]
+metric_questions:
+  - What was the monthly cloud spend before and after?
+  - How much did you reduce infrastructure cost?
+  - How many accounts, regions, or environments do you manage?
+  - What availability or uptime did the platform achieve?
+  - How many workloads or services did you migrate?
+  - How fast can you provision a new environment?
+  - How much data or traffic does the platform handle?
+section_order: [Summary, Skills, Experience, Projects, Education, Certifications]
+verbs:
+  - Deployed
+  - Migrated
+  - Right-sized
+  - Containerised
+  - Secured
+  - Scaled
+  - Automated
+  - Orchestrated
+  - Provisioned
+  - Templated
+  - Consolidated
+  - Re-architected
+  - Modernised
+  - Standardised
+  - Monitored
+  - Optimised
+banned_phrases:
+  - cloud guru
+  - cloud ninja
+  - infinitely scalable
+  - zero maintenance
+  - plug and play
+  - one-size-fits-all
+interview_topics: [cloud architecture, cost management, networking and VPC design, identity and access, serverless trade-offs, disaster recovery, migration strategy, multi-region design, least privilege, infrastructure as code]
