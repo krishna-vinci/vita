@@ -1,0 +1,139 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-resume: "Crimson Pro", Georgia, serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  color-scheme: light;
+  --radius: 0.625rem;
+  --background: #f6f6f4;
+  --foreground: #17191d;
+  --card: #ffffff;
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: #2f4fd6;
+  --primary-foreground: #ffffff;
+  --secondary: #ebeefd;
+  --secondary-foreground: #2f4fd6;
+  --muted: #eeeef0;
+  --muted-foreground: #5f6570;
+  --accent: #ebeefd;
+  --accent-foreground: #2f4fd6;
+  --destructive: #b42332;
+  --border: #e2e3e0;
+  --input: #cfd1cc;
+  --ring: #2f4fd6;
+  --success: #1d8656;
+  --warning: #9a6410;
+  --sheet: #ffffff;
+  --sheet-ink: #16181c;
+  --sheet-muted: #5b616b;
+  --sheet-highlight: #fbe7ad;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #101215;
+  --foreground: #e8e9ec;
+  --card: #181b20;
+  --primary: #93a6ff;
+  --primary-foreground: #101215;
+  --secondary: #1e2440;
+  --secondary-foreground: #93a6ff;
+  --muted: #22262c;
+  --muted-foreground: #9aa0aa;
+  --accent: #1e2440;
+  --accent-foreground: #93a6ff;
+  --destructive: #ff8f9b;
+  --border: #2a2e35;
+  --input: #3a3f48;
+  --ring: #93a6ff;
+  --success: #55c891;
+  --warning: #e2aa4c;
+  --sheet: #fbfbfa;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+    margin: 0;
+  }
+  button,
+  input,
+  textarea {
+    font: inherit;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p {
+    max-width: 70ch;
+  }
+  a,
+  button,
+  input,
+  textarea {
+    touch-action: manipulation;
+  }
+  [data-slot="select-trigger"] {
+    min-height: 44px;
+  }
+  [data-slot="input"] {
+    min-height: 44px;
+  }
+  [data-slot="select-value"] {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    text-align: left;
+  }
+  [data-slot="select-trigger"] {
+    height: auto;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      /* biome-ignore lint/complexity/noImportantStyles: Respect reduced motion over animation utilities. */
+      animation-duration: 0.01ms !important;
+      /* biome-ignore lint/complexity/noImportantStyles: Respect reduced motion over transition utilities. */
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
