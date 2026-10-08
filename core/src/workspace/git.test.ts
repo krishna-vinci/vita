@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { type Author, commitPaths, ensureRepo, log, undoLast, withRepoLock } from "./git.js";
+import { type Author, commitPaths, ensureRepo, log, undoLast, undoPaths, withRepoLock } from "./git.js";
 import { PathEscapeError } from "./paths.js";
 
 const execFileAsync = promisify(execFile);
@@ -144,6 +144,41 @@ describe("workspace git", () => {
     expect(await log(root, 10)).toHaveLength(2);
     await writeFile(path.join(root, "outline.md"), "committed change\n");
     expect(await undoLast(root, "user")).toMatch(/^[0-9a-f]{40}$/);
+  });
+
+  it("scoped undo restores A while leaving a later change to B intact", async () => {
+    await writeFile(path.join(root, "a.md"), "original");
+    await writeFile(path.join(root, "b.md"), "original");
+    await commitPaths(root, ["a.md", "b.md"], "Initial", "system");
+    await writeFile(path.join(root, "a.md"), "changed A");
+    await commitPaths(root, ["a.md"], "Change A", "writer");
+    await writeFile(path.join(root, "b.md"), "changed B");
+    await commitPaths(root, ["b.md"], "Change B", "writer");
+    expect(await undoPaths(root, ["a.md"], "user")).toMatch(/^[0-9a-f]{40}$/);
+    expect(await readFile(path.join(root, "a.md"), "utf8")).toBe("original");
+    expect(await readFile(path.join(root, "b.md"), "utf8")).toBe("changed B");
+    expect((await log(root, 1))[0]).toMatchObject({ message: "Undo: Change A", author: "user" });
+  });
+
+  it("scoped undo removes a newly created file, including a root commit", async () => {
+    expect(await undoPaths(root, ["new.md"], "user")).toBeNull();
+    await writeFile(path.join(root, "new.md"), "new");
+    await commitPaths(root, ["new.md"], "Create file", "writer");
+    await undoPaths(root, ["new.md"], "user");
+    await expect(readFile(path.join(root, "new.md"))).rejects.toMatchObject({ code: "ENOENT" });
+    expect((await log(root, 1))[0]?.message).toBe("Undo: Create file");
+    await expect(undoPaths(root, [".git/config"], "user")).rejects.toBeInstanceOf(PathEscapeError);
+    await expect(undoPaths(root, [".vita/cache"], "user")).rejects.toBeInstanceOf(PathEscapeError);
+  });
+
+  it("scoped undo refuses uncommitted edits and confines directory restores", async () => {
+    await mkdir(path.join(root, "resource"));
+    await writeFile(path.join(root, "resource/a.md"), "original");
+    await commitPaths(root, ["resource"], "Initial", "system");
+    await writeFile(path.join(root, "resource/a.md"), "external");
+    await expect(undoPaths(root, ["resource"], "user")).rejects.toThrow("uncommitted");
+    expect(await readFile(path.join(root, "resource/a.md"), "utf8")).toBe("external");
+    await expect(undoPaths(root, ["../outside"], "user")).rejects.toBeInstanceOf(PathEscapeError);
   });
 
   it("serialises concurrent scoped commits", async () => {

@@ -6,7 +6,8 @@
   "packageManager": "pnpm@10.28.2",
   "scripts": {
     "lint": "biome check .",
-    "vita": "pnpm --filter @vita/cli exec tsx src/index.ts"
+    "vita": "pnpm --filter @vita/cli exec tsx src/index.ts",
+    "server": "pnpm --filter @vita/server exec tsx src/main.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",

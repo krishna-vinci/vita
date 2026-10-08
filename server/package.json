@@ -1,0 +1,22 @@
+{
+  "name": "@vita/server",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "exports": {
+    ".": "./src/server.ts"
+  },
+  "dependencies": {
+    "hono": "^4.13.10",
+    "@hono/node-server": "^2.1.1",
+    "@vita/core": "workspace:*",
+    "@vita/shared": "workspace:*",
+    "zod": "^4.6.5",
+    "tsx": "^4.23.15"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.2",
+    "@types/node": "^26.6.3"
+  }
+}

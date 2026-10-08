@@ -120,57 +120,92 @@ export async function commitPaths(
   message: string,
   author: Author,
 ): Promise<string | null> {
-  return withRepoLock(root, async () => {
-    const requested = paths.filter((rel) => {
-      const canonical = relFromRoot(root, resolveInWorkspace(root, rel));
-      const lexical = path.relative(path.resolve(root), path.resolve(root, rel));
-      if (lexical.split(path.sep).includes(".git") || canonical.split(path.sep).includes(".git")) {
-        throw new PathEscapeError(`Cannot commit repository metadata: ${rel}`);
-      }
-      return !isCache(lexical) && !isCache(canonical);
-    });
-    if (requested.length === 0) return null;
+  return withRepoLock(root, () => commitPathsUnlocked(root, paths, message, author));
+}
 
-    // Expand directories into literal files so even tracked or force-staged cache files stay excluded.
-    const candidates = await git(root, [
-      "--literal-pathspecs",
-      "ls-files",
-      "--cached",
-      "--others",
-      "--exclude-standard",
-      "-z",
-      "--",
-      ...requested,
-    ]);
-    const staged = await git(root, [
-      "--literal-pathspecs",
-      "diff",
-      "--cached",
-      "--name-only",
-      "--no-renames",
-      "-z",
-      "--",
-      ...requested,
-    ]);
-    const allowed = (rel: string) =>
-      rel !== "" && !isCache(rel) && !isCache(relFromRoot(root, resolveInWorkspace(root, rel)));
-    const toStage = [...new Set(candidates.split("\0").filter(allowed))];
-    const selected = [...new Set([...toStage, ...staged.split("\0").filter(allowed)])];
-    if (selected.length === 0) return null;
-    if (toStage.length > 0) await git(root, ["--literal-pathspecs", "add", "-A", "--", ...toStage]);
-    const changed = await git(root, [
-      "--literal-pathspecs",
-      "diff",
-      "--cached",
-      "--name-only",
-      "-z",
-      "--",
-      ...selected,
-    ]);
-    if (changed === "") return null;
-    // The pathspec also excludes unrelated changes already staged by the user.
-    await git(root, ["--literal-pathspecs", "commit", "--only", "-m", message, "--", ...selected], authorEnv(author));
-    return (await git(root, ["rev-parse", "HEAD"])).trim();
+async function commitPathsUnlocked(
+  root: string,
+  paths: string[],
+  message: string,
+  author: Author,
+): Promise<string | null> {
+  const requested = paths.filter((rel) => {
+    const canonical = relFromRoot(root, resolveInWorkspace(root, rel));
+    const lexical = path.relative(path.resolve(root), path.resolve(root, rel));
+    if (lexical.split(path.sep).includes(".git") || canonical.split(path.sep).includes(".git")) {
+      throw new PathEscapeError(`Cannot commit repository metadata: ${rel}`);
+    }
+    return !isCache(lexical) && !isCache(canonical);
+  });
+  if (requested.length === 0) return null;
+
+  // Expand directories into literal files so even tracked or force-staged cache files stay excluded.
+  const candidates = await git(root, [
+    "--literal-pathspecs",
+    "ls-files",
+    "--cached",
+    "--others",
+    "--exclude-standard",
+    "-z",
+    "--",
+    ...requested,
+  ]);
+  const staged = await git(root, [
+    "--literal-pathspecs",
+    "diff",
+    "--cached",
+    "--name-only",
+    "--no-renames",
+    "-z",
+    "--",
+    ...requested,
+  ]);
+  const allowed = (rel: string) =>
+    rel !== "" && !isCache(rel) && !isCache(relFromRoot(root, resolveInWorkspace(root, rel)));
+  const toStage = [...new Set(candidates.split("\0").filter(allowed))];
+  const selected = [...new Set([...toStage, ...staged.split("\0").filter(allowed)])];
+  if (selected.length === 0) return null;
+  if (toStage.length > 0) await git(root, ["--literal-pathspecs", "add", "-A", "--", ...toStage]);
+  const changed = await git(root, ["--literal-pathspecs", "diff", "--cached", "--name-only", "-z", "--", ...selected]);
+  if (changed === "") return null;
+  // The pathspec also excludes unrelated changes already staged by the user.
+  await git(root, ["--literal-pathspecs", "commit", "--only", "-m", message, "--", ...selected], authorEnv(author));
+  return (await git(root, ["rev-parse", "HEAD"])).trim();
+}
+
+/** Restore a resource's last batch while preserving later edits to other resources. */
+export async function undoPaths(root: string, paths: string[], author: Author): Promise<string | null> {
+  return withRepoLock(root, async () => {
+    for (const rel of paths) {
+      const canonical = relFromRoot(root, resolveInWorkspace(root, rel));
+      if ([rel, canonical].some((value) => value.split(path.sep).some((part) => part === ".git" || part === ".vita")))
+        throw new PathEscapeError(`Cannot undo repository metadata or cache: ${rel}`);
+    }
+    if (!paths.length || !(await hasCommits(root))) return null;
+    const sha = (await git(root, ["--literal-pathspecs", "log", "-1", "--format=%H", "--", ...paths])).trim();
+    if (!sha) return null;
+    const dirty = await git(root, ["--literal-pathspecs", "status", "--porcelain", "--", ...paths]);
+    if (dirty) throw new Error("Cannot undo over uncommitted resource edits");
+    const subject = (await git(root, ["show", "-s", "--format=%s", sha])).trim();
+    const parents = (await git(root, ["show", "-s", "--format=%P", sha])).trim().split(" ").filter(Boolean);
+    const parent = parents[0];
+    const previous = parent
+      ? (await git(root, ["--literal-pathspecs", "ls-tree", "-r", "--name-only", "-z", parent, "--", ...paths]))
+          .split("\0")
+          .filter(Boolean)
+      : [];
+    const current = (await git(root, ["--literal-pathspecs", "ls-files", "-z", "--", ...paths]))
+      .split("\0")
+      .filter(Boolean);
+    for (const rel of [...previous, ...current]) {
+      resolveInWorkspace(root, rel);
+      if (rel.split("/").some((part) => part === ".git" || part === ".vita"))
+        throw new PathEscapeError(`Cannot undo repository metadata or cache: ${rel}`);
+    }
+    const removed = current.filter((rel) => !previous.includes(rel));
+    if (removed.length) await git(root, ["--literal-pathspecs", "rm", "--", ...removed]);
+    if (parent && previous.length) await git(root, ["--literal-pathspecs", "checkout", parent, "--", ...previous]);
+    return commitPathsUnlocked(root, paths, `Undo: ${subject}`, author);
   });
 }
 

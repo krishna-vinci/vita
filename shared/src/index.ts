@@ -1,4 +1,5 @@
 export { JobAnalysis, Requirement } from "./analysis";
+export * from "./api";
 export { BaseConfig } from "./base";
 export { Claim, Evidence, EvidenceKind, ItemMeta, Metric } from "./evidence";
 export { ClaimId, EvidenceId, Slug, slugify } from "./ids";
