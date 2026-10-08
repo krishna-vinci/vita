@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { fileHash, readText, writeTextAtomic } from "./files.js";
+import { fileHash, readText, writeFileAtomic, writeTextAtomic } from "./files.js";
 import { PathEscapeError } from "./paths.js";
 
 describe("workspace files", () => {
@@ -73,4 +73,11 @@ describe("workspace files", () => {
     expect(await readText(root, "target")).toBe("recovered\n");
     await expect(fileHash(root, ".")).rejects.toThrow();
   });
+});
+
+it("writes binary content atomically and byte-for-byte", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "vita-bin-"));
+  const bytes = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x00, 0xff, 0x0a]);
+  await writeFileAtomic(root, "out/resume.pdf", bytes);
+  expect(new Uint8Array(await readFile(path.join(root, "out/resume.pdf")))).toEqual(bytes);
 });

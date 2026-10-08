@@ -1,4 +1,4 @@
-export { fileHash, readText, writeTextAtomic } from "./files.js";
+export { fileHash, readText, writeFileAtomic, writeTextAtomic } from "./files.js";
 export { type Author, commitPaths, ensureRepo, log, undoLast, withRepoLock } from "./git.js";
 export { initWorkspace } from "./init.js";
 export { FileLocks } from "./lock.js";
