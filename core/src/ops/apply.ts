@@ -137,12 +137,22 @@ export function applyOps(
         const variant = op.variantId === undefined ? undefined : ctx.index.variants.get(op.variantId);
         if (op.claimId !== undefined && !claim) throw new OpError("unknown-id", `Unknown claim: ${op.claimId}`);
         if (op.variantId !== undefined && !variant) throw new OpError("unknown-id", `Unknown variant: ${op.variantId}`);
-        const text = variant?.text ?? claim?.text ?? op.text;
+        if (op.claimIds !== undefined) {
+          if (op.text === undefined) throw new OpError("invalid", "claimIds requires text");
+          for (const id of op.claimIds)
+            if (!ctx.index.claims.has(id)) throw new OpError("unknown-id", `Unknown claim: ${id}`);
+        }
+        const text = op.claimIds === undefined ? (variant?.text ?? claim?.text ?? op.text) : op.text;
         if (text === undefined) throw new OpError("invalid", "A new bullet needs text, a claim or a variant");
         const bullet: Bullet = {
           id: nextId(draft, text),
           text,
-          claims: claim ? [claim.id] : [],
+          claims:
+            op.claimIds === undefined
+              ? claim
+                ? [claim.id]
+                : []
+              : [...new Set([...op.claimIds, ...(claim ? [claim.id] : [])])],
           origin: ctx.by,
           locked: ctx.by === "user",
           ...(variant ? { variantOf: variant.id } : {}),
@@ -151,6 +161,17 @@ export function applyOps(
         changed.add(bullet.id);
         break;
       }
+      case "section.add":
+        draft.sections.push({ id: op.id, title: op.title, kind: op.kind, items: [] });
+        break;
+      case "item.add":
+        sectionAt(draft, op.sectionId).items.push({
+          id: op.id,
+          title: op.title,
+          bullets: [],
+          ...(op.source === undefined ? {} : { source: op.source }),
+        });
+        break;
       case "move": {
         const node = find(draft, op.id);
         const bullets = bulletsIn(node);

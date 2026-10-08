@@ -1,4 +1,4 @@
-import type { TemplateMeta } from "@vita/shared";
+import { SectionKind, type TemplateMeta } from "@vita/shared";
 import { z } from "zod";
 import type { ClaimIndex } from "../claims/index.js";
 
@@ -13,8 +13,11 @@ export const ResumeOpSchema = z.discriminatedUnion("op", [
     index: index.optional(),
     text: z.string().optional(),
     claimId: id.optional(),
+    claimIds: z.array(id).optional(),
     variantId: id.optional(),
   }),
+  z.strictObject({ op: z.literal("section.add"), id, title: z.string(), kind: SectionKind }),
+  z.strictObject({ op: z.literal("item.add"), sectionId: id, id, title: z.string(), source: z.string().optional() }),
   z.strictObject({ op: z.literal("bullet.hide"), id, hidden: z.boolean() }),
   z.strictObject({ op: z.literal("bullet.lock"), id, locked: z.boolean() }),
   z.strictObject({ op: z.literal("move"), id, toParent: id, index }),

@@ -54,6 +54,12 @@ describe("API contracts", () => {
     expect(
       ResumeOpsRequest.safeParse({ ops: [{ op: "move", id: "bullet", toParent: "item", index: -1 }] }).success,
     ).toBe(false);
+    const sourceOps = [
+      { op: "section.add", id: "source", title: "Source", kind: "entries" },
+      { op: "item.add", sectionId: "source", id: "item", title: "Item", source: "item" },
+      { op: "bullet.add", itemId: "item", text: "Combined wording", claimIds: ["claim-a", "claim-b"] },
+    ];
+    expect(ResumeOpsRequest.parse({ ops: sourceOps }).ops).toEqual(sourceOps);
     expect(UndoRequest.safeParse({ scope: "resume" }).success).toBe(false);
     expect(UndoRequest.parse({ scope: "outline" }).scope).toBe("outline");
     expect(UndoRequest.safeParse({ scope: "application", id: "../escape" }).success).toBe(false);

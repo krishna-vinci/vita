@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { JobAnalysis } from "./analysis";
 import { Slug } from "./ids";
-import { Resume } from "./resume";
+import { Resume, SectionKind } from "./resume";
 import { Finding, Review } from "./review";
 
 export const ApiError = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
@@ -44,8 +44,11 @@ export const ApiResumeOp = z.discriminatedUnion("op", [
     index: index.optional(),
     text: z.string().optional(),
     claimId: id.optional(),
+    claimIds: z.array(id).optional(),
     variantId: id.optional(),
   }),
+  z.strictObject({ op: z.literal("section.add"), id, title: z.string(), kind: SectionKind }),
+  z.strictObject({ op: z.literal("item.add"), sectionId: id, id, title: z.string(), source: z.string().optional() }),
   z.strictObject({ op: z.literal("bullet.hide"), id, hidden: z.boolean() }),
   z.strictObject({ op: z.literal("bullet.lock"), id, locked: z.boolean() }),
   z.strictObject({ op: z.literal("move"), id, toParent: id, index }),
