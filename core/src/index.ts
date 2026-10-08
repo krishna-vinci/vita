@@ -5,5 +5,6 @@ export * from "./claims/index.js";
 export * from "./lint/index.js";
 export * from "./packs/index.js";
 export * from "./render/index.js";
+export * from "./search/index.js";
 export * from "./source/index.js";
 export * from "./workspace/index.js";
