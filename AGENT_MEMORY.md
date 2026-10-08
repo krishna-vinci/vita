@@ -55,3 +55,4 @@ The orchestrator keeps the rest of this file current. When something under "Open
 
 ## Log
 - 2026-10-09 · M0-T1 (Sol 6.1) · pnpm workspace (shared/core/cli), Studium tsconfig/biome style, `@vita/shared` schemas (ids, evidence, resume, base, pack, template, review) with 19 tests · root `vita` script runs tsx inside cli; orchestrator enabled biome vcs ignore · none open.
+- 2026-10-09 · M0-T2 (Sol 6.1) · `core/src/workspace/{paths,lock,files,git,init}.ts`, 35 tests · `withRepoLock` is non-reentrant (don't call git helpers inside it); git runs with `--work-tree`, hooks disabled, inherited GIT_* env stripped; commits only named paths, never `.vita/` · none open.
