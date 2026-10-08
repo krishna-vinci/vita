@@ -1,15 +1,45 @@
 import { describe, expect, it } from "vitest";
 import {
   AnswersRequest,
+  ChatRequest,
   CreateApplicationRequest,
   ImportLegacyRequest,
   PutMarkdownRequest,
   PutSettingsRequest,
   ResumeOpsRequest,
+  SourceProposal,
   UndoRequest,
 } from "./api";
 
 describe("API contracts", () => {
+  it("validates chat bodies, editor model settings, and exact source proposals", () => {
+    expect(ChatRequest.safeParse({ message: " " }).success).toBe(false);
+    expect(ChatRequest.safeParse({ message: "Edit", history: [] }).success).toBe(false);
+    expect(
+      SourceProposal.safeParse({
+        file: "outline",
+        before: "",
+        after: "Text",
+        summary: "Edit",
+        baseHash: "a".repeat(64),
+      }).success,
+    ).toBe(false);
+    expect(
+      SourceProposal.safeParse({
+        file: "../escape",
+        before: "Text",
+        after: "Text",
+        summary: "Edit",
+        baseHash: "a".repeat(64),
+      }).success,
+    ).toBe(false);
+    expect(
+      PutSettingsRequest.parse({
+        template: "rover-base",
+        models: { default: "faux/default", roles: { "resume-editor": "faux/resume", "source-editor": "faux/source" } },
+      }).models.roles["source-editor"],
+    ).toBe("faux/source");
+  });
   it("requires concurrency hashes for source writes and applied imports", () => {
     expect(PutMarkdownRequest.safeParse({ markdown: "Text" }).success).toBe(false);
     expect(PutMarkdownRequest.parse({ markdown: "Text", baseHash: null }).baseHash).toBeNull();

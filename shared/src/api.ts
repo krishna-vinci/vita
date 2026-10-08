@@ -2,7 +2,7 @@ import { z } from "zod";
 import { JobAnalysis } from "./analysis";
 import { Slug } from "./ids";
 import { Resume } from "./resume";
-import { Review } from "./review";
+import { Finding, Review } from "./review";
 
 export const ApiError = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
 export type ApiError = z.infer<typeof ApiError>;
@@ -149,6 +149,8 @@ export const ApiModelsConfig = z.strictObject({
       writer: model.optional(),
       checker: model.optional(),
       "ats-reviewer": model.optional(),
+      "resume-editor": model.optional(),
+      "source-editor": model.optional(),
     })
     .default({}),
 });
@@ -205,3 +207,29 @@ export type UndoRequest = z.infer<typeof UndoRequest>;
 export type ApiModelsConfig = z.infer<typeof ApiModelsConfig>;
 export const HealthView = z.object({ ok: z.literal(true) });
 export type HealthView = z.infer<typeof HealthView>;
+
+export const ChatTurn = z.strictObject({ role: z.enum(["user", "assistant"]), text: z.string() });
+export type ChatTurn = z.infer<typeof ChatTurn>;
+export const ChatRequest = z.strictObject({ message: z.string().trim().min(1).max(20_000) });
+export type ChatRequest = z.infer<typeof ChatRequest>;
+export const ChatScope = z.enum(["application", "resume"]);
+export const SourceEdit = z.strictObject({
+  file: z.enum(["outline", "projects"]),
+  before: z.string().min(1).max(2_000_000),
+  after: z.string().max(2_000_000),
+  summary: z.string().trim().min(1).max(20_000),
+});
+export const SourceProposal = SourceEdit.extend({ baseHash: z.string().regex(/^[a-f0-9]{64}$/) });
+export type SourceProposal = z.infer<typeof SourceProposal>;
+export const SourceChatReply = z.object({ reply: z.string(), proposal: SourceProposal.nullable() });
+export type SourceChatReply = z.infer<typeof SourceChatReply>;
+export const ResumeChatReply = z.object({
+  reply: z.string(),
+  ops: z.array(ApiResumeOp),
+  applied: z.boolean(),
+  sha: CommitSha,
+  changedBullets: z.array(z.string()),
+  metadata: z.object({ lint: z.array(Finding), blocking: z.array(Finding) }),
+  resource: ResumeResource.optional(),
+});
+export type ResumeChatReply = z.infer<typeof ResumeChatReply>;
