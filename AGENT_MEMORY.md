@@ -42,6 +42,7 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - **Biome via rtk:** the host's rtk hook prints `Linter process terminated abnormally` for biome; run `rtk proxy pnpm exec biome check <files>` to see real output. Biome uses `.gitignore` (vcs enabled).
 - Root `pnpm vita …` runs `tsx` inside `cli/` (cwd is `cli/`), so pass absolute or cli-relative paths.
 - Zod 4: object defaults that contain arrays need explicit array values in `.default({...})`.
+- **rtk hides git exit codes and output** in chained commands. Orchestrator: use `rtk proxy git …` and `git -c commit.gpgsign=false merge …` (merges are signed by default on this host).
 - Codex tool limits (from Studium): `rm -rf` on computed paths is rejected; put test data under a temp dir. If `apply_patch` fails, write the file with a heredoc.
 
 ## Status (2026-10-09)
@@ -56,3 +57,4 @@ The orchestrator keeps the rest of this file current. When something under "Open
 ## Log
 - 2026-10-09 · M0-T1 (Sol 6.1) · pnpm workspace (shared/core/cli), Studium tsconfig/biome style, `@vita/shared` schemas (ids, evidence, resume, base, pack, template, review) with 19 tests · root `vita` script runs tsx inside cli; orchestrator enabled biome vcs ignore · none open.
 - 2026-10-09 · M0-T2 (Sol 6.1) · `core/src/workspace/{paths,lock,files,git,init}.ts`, 35 tests · `withRepoLock` is non-reentrant (don't call git helpers inside it); git runs with `--work-tree`, hooks disabled, inherited GIT_* env stripped; commits only named paths, never `.vita/` · none open.
+- 2026-10-09 · M0-T3 (Sol 6.1) · `core/src/source/{anchors,outline,projects,import-legacy,markdown}.ts`, 11 tests · outline anchoring is byte-preserving and idempotent; legacy verification prose and evidence tables are also kept in `extra`; serialisation closes unclosed fences · orchestrator verified the importer on the owner's real projects.md (5 items, 0 reparse issues).
