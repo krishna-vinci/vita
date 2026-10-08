@@ -54,6 +54,23 @@ it.each(["no-provider", "/no-provider", "provider/", "provider/has whitespace"])
   },
 );
 
+it.each(["resume-editor", "source-editor"] as const)("resolves the %s model and builds its preamble", async (name) => {
+  const config = ModelsConfig.parse({ default: "example/default", roles: { [name]: "other/editor" } });
+  expect(resolveRoleModel(config, name)).toBe("other/editor");
+  expect(resolveRoleModel(ModelsConfig.parse({ default: "example/default" }), name)).toBe("example/default");
+  const prompt = await buildSystemPrompt({
+    root,
+    bundledDir,
+    role: { ...role, name, skills: [] },
+    task: "Edit honestly",
+  });
+  expect(prompt).toContain(`You are Vita's ${name}.`);
+  expect(prompt).not.toContain("undefined");
+  expect(prompt).toContain(
+    name === "resume-editor" ? "Never change locked bullets" : "Never apply source changes yourself",
+  );
+});
+
 it("builds invariants and skill bodies, preferring workspace skills and falling back to bundled skills", async () => {
   await mkdir(path.join(bundledDir, "skills/write-bullets"), { recursive: true });
   await writeFile(

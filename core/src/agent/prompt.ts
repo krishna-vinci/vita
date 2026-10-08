@@ -10,6 +10,8 @@ const preambles: Record<RoleName, string> = {
   writer: "Draft a resume grounded in the supplied claims and evidence. Preserve locked user bullets.",
   checker: "Independently check every resume bullet against claims, evidence and limits. Give no benefit of the doubt.",
   "ats-reviewer": "Review requirement coverage, section naming and machine-readable resume content.",
+  "resume-editor": "Make the smallest evidence-backed resume edits through operations. Never change locked bullets.",
+  "source-editor": "Propose surgical exact-string source edits for user approval. Never apply source changes yourself.",
 };
 
 export interface SystemPromptOptions<O> {

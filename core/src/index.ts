@@ -1,6 +1,7 @@
 // Engine barrel: each area re-exports its public interface.
 
 export * from "./agent/index.js";
+export * from "./chat/index.js";
 export * from "./claims/index.js";
 export * from "./lint/index.js";
 export * from "./ops/index.js";

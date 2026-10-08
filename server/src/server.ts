@@ -18,6 +18,7 @@ import { bodyLimit } from "hono/body-limit";
 import { ZodError, type z } from "zod";
 import { passwordAuth } from "./auth/middleware.js";
 import { ApiFailure } from "./errors.js";
+import { chatRoutes } from "./routes/chat.js";
 import { eventsRoutes } from "./routes/events.js";
 import type { WorkspaceRuntime } from "./runtime.js";
 
@@ -170,6 +171,7 @@ export function createServer(
     return c.json(await runtime.undo(input.scope, input.id));
   });
   app.route("/api/events", eventsRoutes(runtime.hub));
+  app.route("/api/chat", chatRoutes(runtime));
   app.get("/api/settings", async (c) => c.json(await runtime.settings()));
   app.put("/api/settings", async (c) => c.json(await runtime.putSettings(await body(c, PutSettingsRequest))));
   app.get("/api/jobs", (c) => c.json(runtime.jobs.list()));
