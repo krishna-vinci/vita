@@ -314,3 +314,44 @@ describe("applyOps", () => {
     expect(() => applyOps(resume, [], context())).toThrow(expect.objectContaining({ code: "invalid" }));
   });
 });
+
+it("adds a user bullet with text and multiple validated claims, keeping legacy claimId", () => {
+  const ctx = context();
+  const claim = ctx.index.claims.get("project.notes");
+  if (!claim) throw new Error("Missing fixture claim");
+  ctx.index.claims.set("project.other", { ...claim, id: "project.other" });
+  const op = {
+    op: "bullet.add" as const,
+    itemId: "first",
+    text: "Combined user phrasing.",
+    claimIds: ["project.notes", "project.other"],
+  };
+  const result = applyOps(sampleResume(), [op], ctx);
+  expect(bullets(result.resume).at(-1)).toMatchObject({
+    text: op.text,
+    claims: op.claimIds,
+    origin: "user",
+    locked: true,
+  });
+  expect(() => applyOps(sampleResume(), [{ ...op, claimIds: ["missing"] }], ctx)).toThrow("Unknown claim");
+  expect(() => applyOps(sampleResume(), [{ ...op, text: undefined }], ctx)).toThrow("claimIds requires text");
+  const legacy = applyOps(sampleResume(), [{ op: "bullet.add", itemId: "first", claimId: "project.notes" }], ctx);
+  expect(bullets(legacy.resume).at(-1)?.claims).toEqual(["project.notes"]);
+});
+
+it("adds missing section and item containers through ops and rejects duplicate ids", () => {
+  const ops: ResumeOp[] = [
+    { op: "section.add", id: "new-section", title: "Source", kind: "entries" },
+    { op: "item.add", sectionId: "new-section", id: "new-item", title: "New source item", source: "source-item" },
+    { op: "bullet.add", itemId: "new-item", claimId: "project.notes" },
+  ];
+  const result = applyOps(sampleResume(), ops, context("ai"));
+  expect(result.resume.sections.at(-1)?.items[0]).toMatchObject({
+    id: "new-item",
+    source: "source-item",
+    bullets: [{ claims: ["project.notes"], locked: false }],
+  });
+  expect(() =>
+    applyOps(sampleResume(), [{ op: "section.add", id: "experience", title: "Duplicate", kind: "entries" }], context()),
+  ).toThrow("Duplicate id");
+});

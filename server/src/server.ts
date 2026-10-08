@@ -22,6 +22,7 @@ import { chatRoutes } from "./routes/chat.js";
 import { eventsRoutes } from "./routes/events.js";
 import { fitRoutes } from "./routes/fit.js";
 import { prepRoutes } from "./routes/prep.js";
+import { syncRoutes } from "./routes/sync.js";
 import { templateRoutes } from "./routes/templates.js";
 import type { WorkspaceRuntime } from "./runtime.js";
 
@@ -177,6 +178,7 @@ export function createServer(
   app.route("/api", fitRoutes(runtime));
   app.route("/api/applications", prepRoutes(runtime));
   app.route("/api/templates", templateRoutes(runtime));
+  app.route("/api", syncRoutes(runtime));
   app.get("/api/settings", async (c) => c.json(await runtime.settings()));
   app.put("/api/settings", async (c) => c.json(await runtime.putSettings(await body(c, PutSettingsRequest))));
   app.get("/api/jobs", (c) => c.json(runtime.jobs.list()));
