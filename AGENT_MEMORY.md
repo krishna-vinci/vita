@@ -49,7 +49,7 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - Codex tool limits (from Studium): `rm -rf` on computed paths is rejected; put test data under a temp dir. If `apply_patch` fails, write the file with a heredoc.
 
 ## Status (2026-10-09)
-- M0, M1 done; M2 T1 ops + T2 server merged. Running: M1-FIX (real-run findings), M2-T3 web scaffold, M2-T4 chat. Then T5/T6 critical screens (Sonnet).
+- M0, M1 done; M2 T1–T4 merged (ops, server, web scaffold, chat). Running: M2-T5 critical screens (Sonnet), then T6 polish (same Sonnet session).
 
 ## Open gaps
 - Personal absolute paths (/home/krishna/...) in AGENTS.md, AGENT_MEMORY.md and `.claude/skills/codex-orchestrate/` must be generalised before the public release (M5).
@@ -73,3 +73,4 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - 2026-10-09 · M1-FIX (Sol 6.1) · `profile.yaml` (shared `Profile`; header is engine-owned, never model-written), variants indexed as claims, template safe with empty header fields, local dates via `deps.now`, plain gap questions · generation requires a named profile.yaml · core 191 / shared 26 / cli 20 / server 19 tests pass.
 - 2026-10-09 · M2-T4 (Sol 6.1 + 1 scope round) · `core/src/chat` (chatResume, proposeSourceEdit, applySourceEdit), `server/src/routes/chat.ts`, roles resume-editor/source-editor, skills edit-resume/edit-source/metric-interview · chat history: 10 turns per scope in server memory only; chat edits invalidate the prior review (recheck before export) · none open.
 - 2026-10-09 · orchestrator fixes from real master run on owner data · summary/list sections render bullets (`plainItems`/`detailItems`/`paragraphs` in tex context), text check strips list glyphs, `vita render` uses generation page limits, checker ownership rule · real master now renders 2 pages with every bullet found; LocalDocs "Built" was the last overstated flag.
+- 2026-10-09 · M2-T3 (Sol 6.1) · `web/` (Vite, React 19, Tailwind 4, shadcn/ui, typed client/queries, one SSE EventSource, shell Me/Jobs/Settings, Settings + Jobs list); `pnpm web`, `pnpm build:web` · Sonnet replaces `web/src/pages/Placeholders.tsx`; TS7 has no baseUrl; web-local biome config enables Tailwind; 676 KB bundle warning (code-split later) · Chrome-verified 390/1440 light/dark.
