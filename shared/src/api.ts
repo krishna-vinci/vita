@@ -154,6 +154,7 @@ export const ApiModelsConfig = z.strictObject({
       "ats-reviewer": model.optional(),
       "resume-editor": model.optional(),
       "source-editor": model.optional(),
+      researcher: model.optional(),
       interviewer: model.optional(),
       "template-adopter": model.optional(),
     })
@@ -171,7 +172,7 @@ export type SettingsMutation = z.infer<typeof SettingsMutation>;
 
 export const JobView = z.object({
   id: z.string(),
-  kind: z.enum(["master", "base", "tailor", "answers", "prep", "template-adoption"]),
+  kind: z.enum(["master", "base", "tailor", "answers", "prep", "template-adoption", "research"]),
   resourceId: z.string().nullable(),
   status: z.enum(["queued", "running", "done", "failed", "cancelled"]),
   progress: z.string(),
@@ -180,7 +181,18 @@ export const JobView = z.object({
   finishedAt: z.string().nullable(),
   usage: z.array(RoleUsage),
   error: z.string().optional(),
-  result: z.object({ scope: z.enum(["resume", "application", "template"]), id: Slug, sha: CommitSha }).optional(),
+  result: z
+    .object({
+      scope: z.enum(["resume", "application", "template", "research"]),
+      id: Slug,
+      sha: CommitSha,
+      reply: z.string().optional(),
+      proposal: z
+        .lazy(() => SourceProposal)
+        .nullable()
+        .optional(),
+    })
+    .optional(),
 });
 export type JobView = z.infer<typeof JobView>;
 export const JobMutation = z.object({ job: JobView, sha: CommitSha });
@@ -189,7 +201,7 @@ export const VitaEvent = z.discriminatedUnion("type", [
   z.object({ type: z.enum(["job.queued", "job.progress", "job.done", "job.failed"]), job: JobView }),
   z.object({
     type: z.literal("resource.changed"),
-    scope: z.enum(["resume", "application", "outline", "projects", "settings", "template"]),
+    scope: z.enum(["resume", "application", "outline", "projects", "settings", "template", "research"]),
     id: z.string().optional(),
     sha: CommitSha,
   }),
