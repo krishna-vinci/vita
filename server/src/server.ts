@@ -24,6 +24,7 @@ import { fitRoutes } from "./routes/fit.js";
 import { instructionsRoutes } from "./routes/instructions.js";
 import { metricsRoutes } from "./routes/metrics.js";
 import { prepRoutes } from "./routes/prep.js";
+import { researchRoutes } from "./routes/research.js";
 import { syncRoutes } from "./routes/sync.js";
 import { templateRoutes } from "./routes/templates.js";
 import type { WorkspaceRuntime } from "./runtime.js";
@@ -81,6 +82,7 @@ export function createServer(
   });
   app.notFound((c) => c.json({ error: { code: "not-found", message: "Route not found" } }, 404));
   app.get("/api/health", (c) => c.json({ ok: true }));
+  app.route("/api", researchRoutes(runtime));
   app.get("/api/workspace", async (c) => {
     const [outline, resumes, applications, settings] = await Promise.all([
       runtime.markdown("outline.md"),

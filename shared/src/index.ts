@@ -4,6 +4,7 @@ export * from "./api-fit";
 export * from "./api-instructions";
 export * from "./api-metrics";
 export * from "./api-prep";
+export * from "./api-research";
 export * from "./api-sync";
 export * from "./api-templates";
 export { BaseConfig } from "./base";

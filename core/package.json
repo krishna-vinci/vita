@@ -17,6 +17,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "1.25.2",
     "@types/node": "^26.6.3",
     "@types/nunjucks": "3.2.6",
     "vitest": "^5.0.2"
