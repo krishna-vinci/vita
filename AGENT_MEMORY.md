@@ -49,7 +49,7 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - Codex tool limits (from Studium): `rm -rf` on computed paths is rejected; put test data under a temp dir. If `apply_patch` fails, write the file with a heredoc.
 
 ## Status (2026-10-09)
-- 2026-10-09 pause (owner usage limit): M0–M3 backend + M2 screens merged; M4-T2 IT packs merged. IN FLIGHT (uncommitted): Sonnet M2-T6 polish + M3 screens in main tree `web/` (brief: see SendMessage text = bugs 1–4 + screens 5–9 listed in this memory's M2-T5 entry and docs/plans/2026-10-09-m3-depth.md); Codex M4-T1 research, M4-T3 instructions, M4-T4 metrics in ~/vita-worktrees/m4-*. Resume: review each `.claude/codex-runs/m4-*/last.md`, merge; check `git status web/` for Sonnet's partial work. Then M4 screens (Sonnet) and M5 release (Docker, README, docs, path scrub).
+- M0–M4 backend merged. In progress: Sonnet M2-T6 polish + M3/M4 screens (`web/`). Then M5 release (Docker, README, docs, path scrub).
 
 ## Open gaps
 - Personal absolute paths (/home/krishna/...) in AGENTS.md, AGENT_MEMORY.md and `.claude/skills/codex-orchestrate/` must be generalised before the public release (M5).
@@ -79,3 +79,7 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - 2026-10-09 · M3-T1 prep (Sol 6.1) · `core/src/prep`, interviewer role, `skills/interview-prep`, `POST/GET /api/applications/:id/prep` · unsupported STAR results become null and are flagged.
 - 2026-10-09 · M3-T2 templates (Sol 6.1) · `core/src/templates` (upload, compileOriginal, proposeAdoption, approveTemplate), template-adopter role, `skills/adopt-template`, `/api/templates/*` · previews cache in `.vita/template-previews/`; warm-up uses bundle cat.
 - 2026-10-09 · M3-T3 sync (Sol 6.1 + ops extension) · `core/src/sync` (suggestDownstream, applySuggestions, promoteBullet), `/api/sync/*`, `/api/promote`; `bullet.add` accepts `claimIds` · keep `pendingSync` next to `syncedAt` in resume meta.yaml.
+- 2026-10-09 · M4-T1 research (Sol 6.1) · `core/src/research`, researcher role (read-only MCP tools only, codemode, allow-listed web_fetch), `/api/research`, `/api/settings/mcp`, `skills/research-evidence` · use Pi defaultTools for research (tools: restricts MCP); orchestrator wired sources to `loadInstructions` and added researcher to `promptRoles`.
+- 2026-10-09 · M4-T2 IT packs (DeepSeek) · 13 packs under `packs/`, bundled pack test.
+- 2026-10-09 · M4-T3 instructions (Sol 6.1) · `core/src/instructions` (layers, guard, effective prompt), rules-extra lint (required-section, section-order, date-format), `/api/instructions`, `/api/rules`, `/api/prompts/:role` · Zod 4 applies inner defaults through `.optional()`.
+- 2026-10-09 · M4-T4 metrics (Sol 6.1) · `core/src/metrics`, `/api/metrics/*`; projects.md YAML stores `metrics` by claim id and `metric_answers` by question id; dismissals in `config/dismissed-questions.yaml`.
