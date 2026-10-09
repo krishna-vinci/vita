@@ -6,6 +6,30 @@ import { parseProjects, serializeProjects } from "./index";
 const fixture = readFileSync(new URL("./fixtures/projects-basic.md", import.meta.url), "utf8");
 
 describe("projects", () => {
+  it("persists claim metrics in item YAML and reloads them without dropping metadata or user text", () => {
+    const parsed = parseProjects(fixture);
+    const item = parsed.doc.items[0];
+    const claim = item?.claims[0];
+    if (!item || !claim) throw new Error("Missing fixture claim");
+    const metric = { value: "30", kind: "measured" as const, evidence: ["ev-usage"] };
+    claim.metrics.push(metric);
+    const recovered = parseProjects(serializeProjects(parsed.doc));
+    expect(recovered.issues).toEqual([]);
+    expect(recovered.doc.items[0]?.claims).toEqual(item.claims);
+    expect(recovered.doc.items[0]?.meta.metrics).toEqual({ [claim.id]: [metric] });
+    expect(recovered.doc.items[0]?.extra).toEqual(item.extra);
+    expect(serializeProjects(recovered.doc)).toBe(serializeProjects(parsed.doc));
+  });
+
+  it("preserves malformed metric metadata as user text instead of accepting unsourced metrics", () => {
+    const source =
+      "## Workshop\n```yaml\nmetrics:\n  workshop-work: [{ value: '30', kind: measured, evidence: [] }]\n```\n### Claims\n- Prepared work. <!-- c:workshop-work -->\n";
+    const parsed = parseProjects(source);
+    expect(parsed.issues).toHaveLength(1);
+    expect(parsed.doc.items[0]?.claims[0]?.metrics).toEqual([]);
+    expect(serializeProjects(parsed.doc)).toContain("evidence: []");
+  });
+
   it("round-trips canonical items including metadata, claims, labels, extras, and source lines", () => {
     const first = parseProjects(fixture);
     expect(first.issues).toEqual([]);
