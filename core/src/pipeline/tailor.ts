@@ -41,6 +41,7 @@ export async function tailor(
     const metadata = existingDir
       ? z.record(z.string(), z.unknown()).parse(parseYaml(await readText(ws.root, `${existingDir}/meta.yaml`)))
       : {};
+    const notes = input.notes ?? z.string().optional().parse(metadata.notes);
     const requestedBaseId = input.baseId ?? existing?.parent ?? undefined;
     const answers = { ...z.record(z.string(), z.string()).parse(metadata.answers ?? {}), ...input.answers };
     const ctx = await loadContext(ws);
@@ -48,11 +49,10 @@ export async function tailor(
       const usage: RoleUsage[] = [];
       deps.onProgress?.({ stage: "analyse" });
       const general = await effectivePack(ctx);
-      let analysis: JobAnalysis = await roleRunner(
-        ctx,
-        deps,
-        usage,
-      )(
+      let analysis: JobAnalysis = await roleRunner(ctx, deps, usage, undefined, {
+        applicationId: input.applicationId,
+        jobNotes: notes,
+      })(
         analystRole,
         [
           "Analyse the job requirements and score every supplied base. Return JobAnalysis through submit_analysis.",
@@ -124,7 +124,7 @@ export async function tailor(
           gaps,
           jobText: input.jobText,
           answers,
-          notes: input.notes,
+          notes,
         },
         deps,
         usage,
@@ -138,7 +138,7 @@ export async function tailor(
         usage,
         {
           [`${applicationDir}/job.md`]: input.jobText,
-          ...(input.notes === undefined ? {} : { [`${applicationDir}/notes.md`]: input.notes }),
+          ...(notes === undefined ? {} : { [`${applicationDir}/notes.md`]: notes }),
           [`${applicationDir}/analysis.json`]: `${JSON.stringify(analysis, null, 2)}\n`,
         },
         expected,
@@ -149,7 +149,7 @@ export async function tailor(
           company: analysis.company,
           baseId: existing?.parent ?? base?.id ?? (seed ? "master" : null),
           answers,
-          notes: input.notes,
+          notes,
         },
         existingDir ? `Rerun ${id} with answers` : undefined,
       );

@@ -36,6 +36,9 @@ export async function chatResume(
           role: resumeEditorRole,
           root: ws.root,
           bundledDir: ws.bundledDir,
+          applicationId: input.scope === "application" ? input.id : undefined,
+          chat: input.message,
+          onWarning: (message) => deps.onProgress?.({ stage: "warning", message }),
           task: "Answer the resume chat request with operations or an honest refusal. Never grant user overrides.",
         }),
         task: [
@@ -128,7 +131,7 @@ export async function chatResume(
       if ((await fileHash(ws.root, rel)) !== expected)
         throw new ChatConflictError("stale-hash", "Resume changed during this request. Reload before trying again.");
       const lint = lintResume(result.resume, { index: ctx.index, pack, rules: ctx.rules }).filter(
-        (finding) => finding.bulletId && changed.has(finding.bulletId),
+        (finding) => !finding.bulletId || changed.has(finding.bulletId),
       );
       const blocking = lint.filter((finding) => finding.severity === "block");
       const reviewText = await optionalText(ws.root, `${prefix}/review.json`);
@@ -141,7 +144,7 @@ export async function chatResume(
           render: null,
           checks: previous.checks.filter((note) => !changed.has(note.bulletId)),
           overrides: previous.overrides.filter((note) => !rewritten.has(note.bulletId)),
-          lint: [...previous.lint.filter((finding) => !finding.bulletId || !changed.has(finding.bulletId)), ...lint],
+          lint: [...previous.lint.filter((finding) => finding.bulletId && !changed.has(finding.bulletId)), ...lint],
           blocking: ["Resume changed; checking and rendering required."],
         });
         await writeTextAtomic(ws.root, `${prefix}/review.json`, `${JSON.stringify(review, null, 2)}\n`);

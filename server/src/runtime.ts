@@ -319,6 +319,7 @@ export class WorkspaceRuntime {
               role: checkerRole,
               root: this.ws.root,
               bundledDir: this.ws.bundledDir,
+              applicationId: scope === "application" ? id : undefined,
               task: "Check changed bullets independently, including locked user bullets.",
             }),
             task: [

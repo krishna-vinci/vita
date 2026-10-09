@@ -14,6 +14,7 @@ import { Type } from "typebox";
 import { z } from "zod";
 import { buildSystemPrompt, modelWarnings, type RoleSpec, runRole, wrapUntrusted } from "../agent/index.js";
 import { atsReviewerRole, checkerRole, writerRole } from "../agent/roles.js";
+import { enforcePageLimit } from "../instructions/rules.js";
 import { lintResume } from "../lint/index.js";
 import { checkRender, compileTex, loadTemplate, pdfText, renderMarkdown, renderTex } from "../render/index.js";
 import type { Selection } from "../search/index.js";
@@ -34,19 +35,26 @@ export function effectiveModels(deps: PipelineDeps): PipelineDeps["models"] {
   return models;
 }
 
-export function roleRunner(ctx: Context, deps: PipelineDeps, usage: RoleUsage[], models = effectiveModels(deps)) {
+export function roleRunner(
+  ctx: Context,
+  deps: PipelineDeps,
+  usage: RoleUsage[],
+  models = effectiveModels(deps),
+  guidance: { applicationId?: string; jobNotes?: string; onWarning?: (message: string) => void } = {},
+) {
   return async <O>(role: RoleSpec<O>, task: string, resume?: Resume, analysis?: JobAnalysis): Promise<O> => {
     deps.signal?.throwIfAborted();
-    let system = await buildSystemPrompt({
+    const system = await buildSystemPrompt({
       role,
+      ...guidance,
+      onWarning: (message) => {
+        guidance.onWarning?.(message);
+        deps.onProgress?.({ stage: "warning", message });
+      },
       root: ctx.ws.root,
       bundledDir: ctx.ws.bundledDir,
       task: "Follow the generation task in the user message.",
     });
-    if (role.name === "checker") {
-      system +=
-        "\n\nCore review policy: check every visible bullet, including locked user bullets. Only recorded user overrides may excuse a verdict. This policy takes precedence over skill guidance to skip locked bullets.";
-    }
     return runRole({
       role,
       task,
@@ -160,8 +168,15 @@ export async function generate(
     },
   };
   const models = effectiveModels(deps);
-  const run = roleRunner(ctx, deps, usage, models);
+  input = { ...input, maxPages: enforcePageLimit(input.maxPages, ctx.lockedMaxPages) };
   const warnings: string[] = [];
+  const run = roleRunner(ctx, deps, usage, models, {
+    applicationId: input.kind === "job" ? input.id : undefined,
+    jobNotes: input.notes,
+    onWarning: (message) => {
+      if (!warnings.includes(message)) warnings.push(message);
+    },
+  });
   const reportModelWarnings = () => {
     for (const message of modelWarnings(models)) {
       if (warnings.includes(message)) continue;
@@ -229,17 +244,6 @@ export async function generate(
     );
     deps.onProgress?.({ stage: "lint", round });
     const lint: Finding[] = lintResume(resume, { index: ctx.index, pack: input.pack, rules: ctx.rules });
-    for (const title of ctx.rules.required_sections ?? []) {
-      if (!resume.sections.some((section) => !section.hidden && section.title === title))
-        lint.push({ rule: "required-section", severity: "warn", message: `Missing section: ${title}` });
-    }
-    const order = ctx.rules.section_order ?? input.pack.section_order;
-    const positions = resume.sections
-      .filter((section) => !section.hidden)
-      .map((section) => order.indexOf(section.title))
-      .filter((position) => position >= 0);
-    if (positions.some((position, index) => index > 0 && position < (positions[index - 1] ?? 0)))
-      lint.push({ rule: "section-order", severity: "warn", message: "Sections differ from the configured order." });
     if (lint.length)
       deps.onProgress?.({
         stage: "lint",

@@ -1,11 +1,12 @@
-import { type Finding, type Pack, type Resume, visibleBullets } from "@vita/shared";
+import { type Finding, type Pack, type Resume, type Rules, visibleBullets } from "@vita/shared";
 import type { ClaimIndex, IndexedClaim } from "../claims/index.js";
 import { extractNumbers, normalizeNumber } from "./numbers.js";
+import { lintExtraRules } from "./rules-extra.js";
 
 export interface LintContext {
   index: ClaimIndex;
   pack: Pack;
-  rules: { max_bullet_chars?: number; banned_phrases?: string[] };
+  rules: Partial<Rules>;
 }
 
 function supportedNumbers(claims: IndexedClaim[]): Set<string> {
@@ -37,7 +38,10 @@ function containsPhrase(text: string, phrase: string): boolean {
 }
 
 export function lintResume(resume: Resume, ctx: LintContext): Finding[] {
-  const findings: Finding[] = [];
+  const findings = lintExtraRules(resume, {
+    ...ctx.rules,
+    section_order: ctx.rules.section_order ?? ctx.pack.section_order,
+  });
   const banned = [
     ...new Set(
       [...ctx.pack.banned_phrases, ...(ctx.rules.banned_phrases ?? [])]

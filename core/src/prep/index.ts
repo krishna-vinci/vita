@@ -41,6 +41,8 @@ export async function generatePrep(ws: WorkspaceHandle, applicationId: string, d
           role: interviewerRole,
           root: ws.root,
           bundledDir: ws.bundledDir,
+          applicationId,
+          onWarning: (message) => deps.onProgress?.({ stage: "warning", message }),
           task: "Prepare an interview for the supplied application using only supplied job text and evidence.",
         }),
         task: [
