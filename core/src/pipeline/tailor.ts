@@ -14,7 +14,7 @@ import { analystRole } from "../agent/roles.js";
 import { selectEvidence } from "../search/index.js";
 import { fileHash, readText, resolveInWorkspace } from "../workspace/index.js";
 import { answerClaimId, effectivePack, findGaps, loadContext, mergeKeywords, optionalText } from "./context.js";
-import { answerFact, expandGroup, requirementLabel } from "./coverage.js";
+import { answerFact, expandGroup, gapQuestion, requirementLabel } from "./coverage.js";
 import { localDate } from "./date.js";
 import { data, generate, roleRunner } from "./generate.js";
 import { withGenerationLock } from "./lock.js";
@@ -171,6 +171,32 @@ export async function tailor(
         usage,
         profile,
       );
+      // A must-have the writer could not honestly show becomes a question for the person, not a dead end:
+      // answering "yes" adds a claim and the next run can cover it (principle 3).
+      const uncovered = result.review.blocking
+        .filter((line) => line.startsWith("Uncovered must-have: "))
+        .map((line) => line.slice("Uncovered must-have: ".length).split(":")[0]?.trim() ?? "");
+      if (uncovered.length > 0) {
+        const asked = new Set(result.review.gaps.map((gap) => gap.slice(0, gap.indexOf(":"))));
+        for (const requirement of analysis.requirements) {
+          const answer = answers[requirement.id];
+          // A "yes" means the writer must use that answer; "no" or "skip" keeps it as an acknowledged gap.
+          if (
+            !uncovered.includes(requirement.id) ||
+            asked.has(requirement.id) ||
+            (answer !== undefined && answerFact(answer) !== null)
+          )
+            continue;
+          result.review.gaps.push(`${requirement.id}: ${gapQuestion(requirement)}`);
+        }
+        const gapIds = new Set(result.review.gaps.map((gap) => gap.slice(0, gap.indexOf(":"))));
+        result.review.blocking = result.review.blocking.filter((line) => {
+          if (!line.startsWith("Uncovered must-have: ")) return true;
+          const id = line.slice("Uncovered must-have: ".length).split(":")[0]?.trim() ?? "";
+          return !gapIds.has(id);
+        });
+        result.review.done = result.review.blocking.length === 0;
+      }
       await persist(
         ws,
         applicationDir,
