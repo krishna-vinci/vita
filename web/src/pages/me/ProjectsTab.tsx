@@ -1,4 +1,5 @@
-import { FileUp, FolderOpen, PencilLine } from "lucide-react";
+import { slugify } from "@vita/shared";
+import { FileUp, FolderOpen, Link2, PencilLine, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { api } from "@/api/client";
 import { useProjects, useSaveProjects } from "@/api/queries";
@@ -11,6 +12,8 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/
 import { type ProjectCard, parseProjects, plural } from "@/lib/projects-view";
 import { ImportDialog } from "./ImportDialog";
 import { MarkdownEditor } from "./MarkdownEditor";
+import { MetricCard } from "./MetricCard";
+import { ResearchDialog } from "./ResearchDialog";
 import { SourceChat } from "./SourceChat";
 
 export default function ProjectsTab() {
@@ -47,6 +50,13 @@ export default function ProjectsTab() {
       </p>
       <div className="flex flex-wrap gap-3">
         {toggle}
+        <ResearchDialog
+          trigger={
+            <Button variant="outline" className="h-11">
+              <Link2 /> Add from GitHub or a link
+            </Button>
+          }
+        />
         <ImportDialog
           trigger={
             <Button variant="outline" className="h-11">
@@ -55,6 +65,7 @@ export default function ProjectsTab() {
           }
         />
       </div>
+      <MetricCard />
       {cards.length === 0 ? (
         <Empty className="min-h-64 border">
           <EmptyHeader>
@@ -97,6 +108,17 @@ function ProjectItem({ card }: { card: ProjectCard }) {
           {card.variants > 0 && (
             <Badge variant="outline">{plural(card.variants, "ready-made wording", "ready-made wordings")}</Badge>
           )}
+        </div>
+        <div>
+          <ResearchDialog
+            title={`Refresh ${card.title} from its source`}
+            initial={{ target: card.title, itemSlug: slugify(card.title) }}
+            trigger={
+              <Button variant="ghost" size="sm" className="-ml-2">
+                <RefreshCw /> Refresh from source
+              </Button>
+            }
+          />
         </div>
         {card.limits.length > 0 && (
           <div>

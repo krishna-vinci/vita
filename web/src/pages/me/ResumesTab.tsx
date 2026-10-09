@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { progressStep, progressSteps } from "@/lib/resume-view";
 import { NewBaseDialog } from "./NewBaseDialog";
+import { SyncBanner } from "./SyncBanner";
 
 const busy = (job: JobView) => job.status === "queued" || job.status === "running";
 
@@ -40,6 +41,7 @@ export default function ResumesTab() {
         Your master resume holds your best of everything. Base resumes lead with one kind of work, ready to start a job
         resume from.
       </p>
+      <SyncBanner />
       {!workspace.data?.hasOutline && (
         <Alert>
           <AlertDescription>

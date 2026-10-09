@@ -139,3 +139,32 @@ export function download(name: string, mime: string, content: string): void {
 export function formatCost(usd: number): string {
   return usd < 0.01 ? "under $0.01" : `$${usd.toFixed(2)}`;
 }
+
+/** Same whole-word, case-insensitive rule the engine uses to decide a keyword is present. */
+export function keywordMatches(text: string, keyword: string): boolean {
+  if (!keyword.trim()) return false;
+  const escaped = keyword.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?<![\\p{L}\\p{N}_])${escaped}(?![\\p{L}\\p{N}_])`, "iu").test(text);
+}
+
+/** Everything a reader sees on the resume: titles, summaries, visible lines. */
+export function visibleText(resume: Resume): string {
+  return resume.sections
+    .filter((section) => !section.hidden)
+    .flatMap((section) => [
+      section.title,
+      section.text ?? "",
+      ...section.items
+        .filter((item) => !item.hidden)
+        .flatMap((item) => [
+          item.title,
+          item.subtitle ?? "",
+          ...item.bullets.filter((b) => !b.hidden).map((b) => b.text),
+        ]),
+    ])
+    .join("\n");
+}
+
+export function requirementCovered(text: string, keywords: string[][]): boolean {
+  return keywords.length > 0 && keywords.every((group) => group.some((keyword) => keywordMatches(text, keyword)));
+}

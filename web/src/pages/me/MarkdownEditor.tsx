@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { restoreAnchors, stripAnchors } from "@/lib/outline-anchors";
 import { cn } from "@/lib/utils";
 
 const remember = {
@@ -26,6 +27,10 @@ const remember = {
   },
 };
 
+function viewOf(markdown: string, hide: boolean) {
+  return hide ? stripAnchors(markdown) : { display: markdown, table: new Map<string, string[]>() };
+}
+
 /** A plain Markdown editor: save needs the hash it was opened with, and a clash offers two clear ways out. */
 export function MarkdownEditor({
   resource,
@@ -35,6 +40,8 @@ export function MarkdownEditor({
   onDirty,
   placeholder,
   className,
+  hideAnchors = false,
+  compact = false,
 }: {
   resource: MarkdownResource;
   label: string;
@@ -43,30 +50,37 @@ export function MarkdownEditor({
   onDirty?: (dirty: boolean) => void;
   placeholder?: string;
   className?: string;
+  /** Show text without `<!-- c:… -->` markers; they are put back on matching lines when saving. */
+  hideAnchors?: boolean;
+  /** A shorter box, for small files. */
+  compact?: boolean;
 }) {
-  const [draft, setDraft] = useState(resource.markdown);
+  const view = (markdown: string) => viewOf(markdown, hideAnchors);
+  const shown = view(resource.markdown).display;
+  const [draft, setDraft] = useState(shown);
   const [baseHash, setBaseHash] = useState(resource.hash);
   const [conflict, setConflict] = useState(false);
   const [saving, setSaving] = useState(false);
   const [mono, setMono] = useState(remember.get);
-  const dirty = draft !== resource.markdown;
+  const dirty = draft !== shown;
   const last = useRef(resource);
   // Pick up changes from elsewhere (chat, undo) only while there is nothing unsaved.
   useEffect(() => {
     if (last.current.hash === resource.hash) return;
-    const wasClean = draft === last.current.markdown;
+    const wasClean = draft === viewOf(last.current.markdown, hideAnchors).display;
     last.current = resource;
     if (wasClean) {
-      setDraft(resource.markdown);
+      setDraft(viewOf(resource.markdown, hideAnchors).display);
       setBaseHash(resource.hash);
     }
-  }, [resource, draft]);
+  }, [resource, draft, hideAnchors]);
   useEffect(() => onDirty?.(dirty), [dirty, onDirty]);
 
   const submit = async (hash: string | null) => {
     setSaving(true);
     try {
-      const saved = await save({ markdown: draft, baseHash: hash });
+      const markdown = hideAnchors ? restoreAnchors(draft, view(last.current.markdown).table) : draft;
+      const saved = await save({ markdown, baseHash: hash });
       last.current = saved;
       setBaseHash(saved.hash);
       setConflict(false);
@@ -105,7 +119,10 @@ export function MarkdownEditor({
         placeholder={placeholder}
         spellCheck
         aria-label={label}
-        className={cn("min-h-[55dvh] leading-relaxed", mono ? "font-mono text-sm" : "text-base")}
+        className={cn(
+          compact ? "min-h-48 leading-relaxed" : "min-h-[55dvh] leading-relaxed",
+          mono ? "font-mono text-sm" : "text-base",
+        )}
       />
       {conflict && (
         <Alert variant="destructive">
@@ -118,7 +135,7 @@ export function MarkdownEditor({
                 onClick={async () => {
                   const latest = await fetchLatest();
                   last.current = latest;
-                  setDraft(latest.markdown);
+                  setDraft(view(latest.markdown).display);
                   setBaseHash(latest.hash);
                   setConflict(false);
                 }}
@@ -137,7 +154,7 @@ export function MarkdownEditor({
           {saving ? "Saving…" : "Save"}
         </Button>
         {dirty && (
-          <Button variant="ghost" className="h-11" onClick={() => setDraft(resource.markdown)}>
+          <Button variant="ghost" className="h-11" onClick={() => setDraft(shown)}>
             Discard changes
           </Button>
         )}

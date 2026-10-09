@@ -1,14 +1,20 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import AppShell from "@/layouts/AppShell";
-import JobsPage from "@/pages/JobsPage";
-import NewJobPage from "@/pages/jobs/NewJobPage";
-import MeLayout from "@/pages/me/MeLayout";
-import OutlineTab from "@/pages/me/OutlineTab";
-import ProjectsTab from "@/pages/me/ProjectsTab";
-import ResumesTab from "@/pages/me/ResumesTab";
-import NotFoundPage from "@/pages/NotFoundPage";
-import SettingsPage from "@/pages/SettingsPage";
-import WorkspacePage from "@/pages/workspace/WorkspacePage";
+
+// Pages load on demand so the first screen stays small; the shell stays eager.
+const page = (load: () => Promise<{ default: React.ComponentType<object> }>) => ({
+  lazy: async () => ({ Component: (await load()).default }),
+});
+const scoped = (
+  load: () => Promise<{ default: React.ComponentType<{ scope: "application" | "resume" }> }>,
+  scope: "application" | "resume",
+) => ({
+  lazy: async () => {
+    const Page = (await load()).default;
+    return { Component: () => <Page scope={scope} /> };
+  },
+});
+const workspace = () => import("@/pages/workspace/WorkspacePage");
 
 export const routes = [
   {
@@ -17,20 +23,21 @@ export const routes = [
       { path: "/", element: <Navigate to="/me/outline" replace /> },
       {
         path: "/me",
-        element: <MeLayout />,
+        ...page(() => import("@/pages/me/MeLayout")),
         children: [
           { index: true, element: <Navigate to="/me/outline" replace /> },
-          { path: "outline", element: <OutlineTab /> },
-          { path: "projects", element: <ProjectsTab /> },
-          { path: "resumes", element: <ResumesTab /> },
+          { path: "outline", ...page(() => import("@/pages/me/OutlineTab")) },
+          { path: "projects", ...page(() => import("@/pages/me/ProjectsTab")) },
+          { path: "resumes", ...page(() => import("@/pages/me/ResumesTab")) },
         ],
       },
-      { path: "/me/resumes/:id", element: <WorkspacePage scope="resume" /> },
-      { path: "/jobs", element: <JobsPage /> },
-      { path: "/jobs/new", element: <NewJobPage /> },
-      { path: "/jobs/:id", element: <WorkspacePage scope="application" /> },
-      { path: "/settings", element: <SettingsPage /> },
-      { path: "*", element: <NotFoundPage /> },
+      { path: "/me/resumes/:id", ...scoped(workspace, "resume") },
+      { path: "/jobs", ...page(() => import("@/pages/JobsPage")) },
+      { path: "/jobs/new", ...page(() => import("@/pages/jobs/NewJobPage")) },
+      { path: "/jobs/:id", ...scoped(workspace, "application") },
+      { path: "/jobs/:id/prep", ...page(() => import("@/pages/prep/PrepPage")) },
+      { path: "/settings", ...page(() => import("@/pages/SettingsPage")) },
+      { path: "*", ...page(() => import("@/pages/NotFoundPage")) },
     ],
   },
 ];

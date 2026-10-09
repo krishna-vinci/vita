@@ -45,6 +45,7 @@ export default function OutlineTab() {
         save={save.mutateAsync}
         fetchLatest={() => api.outline.get()}
         onDirty={setDirty}
+        hideAnchors
         placeholder={
           "# Your name\n\n## Experience\n\n### Company — Role\n2023–2026\n\n- What you did, in your own words"
         }

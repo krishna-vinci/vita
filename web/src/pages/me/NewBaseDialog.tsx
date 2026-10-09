@@ -1,9 +1,10 @@
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useCreateBase } from "@/api/queries";
+import { useCreateBase, usePacks } from "@/api/queries";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -21,13 +22,16 @@ export function NewBaseDialog({ disabled }: { disabled?: boolean }) {
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const create = useCreateBase();
+  const packs = usePacks();
+  const [chosen, setChosen] = useState<string[]>([]);
   const submit = async () => {
     setError("");
     try {
-      await create.mutateAsync({ name: name.trim() });
+      await create.mutateAsync({ name: name.trim(), ...(chosen.length ? { packs: chosen } : {}) });
       toast.success(`Writing "${name.trim()}" now.`);
       setOpen(false);
       setName("");
+      setChosen([]);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "Could not start. Please try again.");
     }
@@ -69,6 +73,32 @@ export function NewBaseDialog({ disabled }: { disabled?: boolean }) {
               required
             />
           </div>
+          {packs.data && packs.data.length > 0 && (
+            <fieldset className="flex flex-col gap-2">
+              <legend className="mb-1 text-sm font-medium">Profession presets (optional)</legend>
+              <p className="text-sm text-muted-foreground">Presets add the usual keywords and questions for a field.</p>
+              <div className="grid max-h-44 gap-2 overflow-y-auto sm:grid-cols-2">
+                {packs.data
+                  .filter((pack) => pack.id !== "general")
+                  .map((pack) => (
+                    <label
+                      key={pack.id}
+                      htmlFor={`pack-${pack.id}`}
+                      className="flex min-h-11 cursor-pointer items-center gap-2 text-sm"
+                    >
+                      <Checkbox
+                        id={`pack-${pack.id}`}
+                        checked={chosen.includes(pack.id)}
+                        onCheckedChange={(on) =>
+                          setChosen((all) => (on ? [...all, pack.id] : all.filter((id) => id !== pack.id)))
+                        }
+                      />
+                      {pack.name}
+                    </label>
+                  ))}
+              </div>
+            </fieldset>
+          )}
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>

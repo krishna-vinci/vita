@@ -1,4 +1,6 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
+import { useMetricQuestions } from "@/api/queries";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const tabs = [
@@ -9,6 +11,7 @@ const tabs = [
 
 export default function MeLayout() {
   const { pathname } = useLocation();
+  const questions = useMetricQuestions().data?.length ?? 0;
   const current = tabs.find((tab) => pathname.startsWith(`/me/${tab.value}`))?.value ?? "outline";
   return (
     <div className="flex flex-col gap-8">
@@ -20,7 +23,17 @@ export default function MeLayout() {
         <TabsList className="h-11">
           {tabs.map((tab) => (
             <TabsTrigger key={tab.value} value={tab.value} asChild>
-              <Link to={`/me/${tab.value}`}>{tab.label}</Link>
+              <Link to={`/me/${tab.value}`}>
+                {tab.label}
+                {tab.value === "projects" && questions > 0 && (
+                  <Badge variant="secondary" className="ml-1.5 px-1.5">
+                    <span aria-hidden="true">{questions}</span>
+                    <span className="sr-only">
+                      {questions === 1 ? "1 question for you" : `${questions} questions for you`}
+                    </span>
+                  </Badge>
+                )}
+              </Link>
             </TabsTrigger>
           ))}
         </TabsList>

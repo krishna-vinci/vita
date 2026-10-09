@@ -6,6 +6,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,7 +29,7 @@ export function BulletLine({
   bullet: Bullet;
   flag?: Flag;
   ctx: SheetContext;
-  position: { itemId: string; index: number; count: number };
+  position: { itemId: string; itemSlug: string; index: number; count: number };
   onDragStart: (id: string) => void;
   onDropHere: (itemId: string, index: number) => void;
 }) {
@@ -167,6 +168,20 @@ export function BulletLine({
                   {bullet.hidden ? <Eye /> : <EyeOff />}
                   {bullet.hidden ? "Show this line" : "Hide this line"}
                 </DropdownMenuItem>
+                {actions.promote && !bullet.hidden && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      disabled={!ctx.canPromoteParent}
+                      onSelect={() => actions.promote?.(bullet.id, "parent", position.itemSlug)}
+                    >
+                      Use this wording in my base resume
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => actions.promote?.(bullet.id, "variant", position.itemSlug)}>
+                      Save as a wording option in Projects
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

@@ -98,3 +98,60 @@ export const useResumeChat = (scope: "application" | "resume", id: string) => {
 export const useSourceChat = () => useMutation({ mutationFn: api.chat.source });
 export const useApplySource = () =>
   useApiMutation(api.chat.applySource, [queryKeys.outline, queryKeys.projects, queryKeys.workspace]);
+
+export const usePrep = (id: string, enabled = true) =>
+  useQuery({
+    queryKey: queryKeys.prep(id),
+    queryFn: ({ signal }) => api.prep.get(id, signal),
+    enabled: !!id && enabled,
+    retry: false,
+  });
+export const useStartPrep = (id: string) => useApiMutation(() => api.prep.start(id), [queryKeys.jobs]);
+export const useFit = (scope: "resume" | "application", id: string) =>
+  useMutation({ mutationFn: (maxPages?: number) => api.fit(scope, id, maxPages) });
+export const useTemplates = () =>
+  useQuery({ queryKey: queryKeys.templates, queryFn: ({ signal }) => api.templates.list(signal) });
+export const useTemplateUpload = (id: string) =>
+  useQuery({
+    queryKey: queryKeys.template(id),
+    queryFn: ({ signal }) => api.templates.get(id, signal),
+    enabled: !!id,
+    retry: false,
+  });
+export const useUploadTemplate = () => useApiMutation(api.templates.upload, [queryKeys.templates]);
+export const useProposeTemplate = () => useApiMutation(api.templates.propose, [queryKeys.jobs]);
+export const useApproveTemplate = () =>
+  useApiMutation(
+    (input: { id: string; proposal: Parameters<typeof api.templates.approve>[1] }) =>
+      api.templates.approve(input.id, input.proposal),
+    [queryKeys.templates, queryKeys.settings],
+  );
+export const useDiscardTemplate = () => useApiMutation(api.templates.discard, [queryKeys.templates]);
+export const useSyncSuggestions = () =>
+  useQuery({ queryKey: queryKeys.sync, queryFn: ({ signal }) => api.sync.suggestions(signal), retry: false });
+export const useApplySync = () =>
+  useApiMutation(api.sync.apply, [queryKeys.sync, queryKeys.resumes, queryKeys.workspace]);
+export const usePromote = () => useApiMutation(api.promote, [queryKeys.sync, queryKeys.projects, queryKeys.resumes]);
+
+export const useStartResearch = () => useApiMutation(api.research, [queryKeys.jobs]);
+export const useMetricQuestions = () =>
+  useQuery({ queryKey: queryKeys.metrics, queryFn: ({ signal }) => api.metrics.questions(signal), retry: false });
+export const useAnswerMetric = () => useMutation({ mutationFn: api.metrics.answer });
+export const useDismissMetric = () => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: api.metrics.dismiss,
+    onSuccess: (data) => client.setQueryData(queryKeys.metrics, data.questions),
+  });
+};
+export const useInstructions = () =>
+  useQuery({ queryKey: queryKeys.instructions, queryFn: ({ signal }) => api.instructions.get(signal) });
+export const useSaveInstructions = () => useApiMutation(api.instructions.save, [queryKeys.instructions]);
+export const useRules = () => useQuery({ queryKey: queryKeys.rules, queryFn: ({ signal }) => api.rules.get(signal) });
+export const useSaveRules = () => useApiMutation(api.rules.save, [queryKeys.rules]);
+export const usePrompt = (role: string, enabled: boolean) =>
+  useQuery({ queryKey: ["prompt", role], queryFn: ({ signal }) => api.prompt(role, signal), enabled });
+export const useMcp = () => useQuery({ queryKey: queryKeys.mcp, queryFn: ({ signal }) => api.mcp.get(signal) });
+export const useSaveMcp = () => useApiMutation(api.mcp.save, [queryKeys.mcp]);
+export const usePacks = () =>
+  useQuery({ queryKey: queryKeys.packs, queryFn: ({ signal }) => api.packs(signal), retry: false });

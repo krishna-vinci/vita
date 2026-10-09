@@ -1,4 +1,4 @@
-import type { Item, Resume, Section } from "@vita/shared";
+import { type Item, type Resume, type Section, slugify } from "@vita/shared";
 import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -137,7 +137,12 @@ function ItemView({
               bullet={bullet}
               flag={flags.get(bullet.id)}
               ctx={ctx}
-              position={{ itemId: item.id, index, count: item.bullets.length }}
+              position={{
+                itemId: item.id,
+                itemSlug: item.source ?? slugify(item.title),
+                index,
+                count: item.bullets.length,
+              }}
               onDragStart={onDragStart}
               onDropHere={onDropHere}
             />

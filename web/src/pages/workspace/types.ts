@@ -10,12 +10,15 @@ export interface SheetActions {
   move(id: string, toParent: string, index: number): void;
   vouch(id: string, note: string): void;
   ask(message: string): void;
+  /** Only for job resumes. */
+  promote?(bulletId: string, to: "parent" | "variant", itemSlug: string): void;
 }
 
 export interface SheetContext {
   actions: SheetActions;
   details: boolean;
   busy: boolean;
+  canPromoteParent?: boolean;
   changed: ReadonlySet<string>;
   claims: ReadonlyMap<string, SourceClaim>;
   checks: ReadonlyMap<string, CheckNote>;

@@ -35,16 +35,26 @@ export function subscribeVitaEvents(listener: Listener): () => void {
 export function invalidateEvent(client: QueryClient, event: VitaEvent): void {
   const invalidate = (queryKey: readonly string[]) => void client.invalidateQueries({ queryKey });
   if (event.type === "resource.changed") {
+    const scoped = { resume: "resumes", application: "applications", template: "templates" } as const;
     invalidate(
-      queryKeys[event.scope === "resume" ? "resumes" : event.scope === "application" ? "applications" : event.scope],
+      queryKeys[event.scope in scoped ? scoped[event.scope as keyof typeof scoped] : (event.scope as "outline")],
     );
+    if (event.scope === "outline" || event.scope === "resume") invalidate(queryKeys.sync);
+    if (event.scope === "application") invalidate(["prep"]);
+    if (event.scope === "settings")
+      for (const key of [queryKeys.instructions, queryKeys.rules, queryKeys.mcp, queryKeys.metrics]) invalidate(key);
+    if (event.scope === "projects") invalidate(queryKeys.metrics);
     invalidate(queryKeys.workspace);
     return;
   }
   client.setQueryData(queryKeys.job(event.job.id), event.job);
   invalidate(queryKeys.jobs);
   if (event.job.kind === "master" || event.job.kind === "base") invalidate(queryKeys.resumes);
-  else invalidate(queryKeys.applications);
+  else if (event.job.kind === "template-adoption") invalidate(queryKeys.templates);
+  else {
+    invalidate(queryKeys.applications);
+    if (event.job.kind === "prep") invalidate(["prep"]);
+  }
   invalidate(queryKeys.workspace);
 }
 

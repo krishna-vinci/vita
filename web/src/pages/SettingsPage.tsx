@@ -1,7 +1,7 @@
 import { PutSettingsRequest, type SettingsView } from "@vita/shared";
 import { type FormEvent, useState } from "react";
 import { toast } from "sonner";
-import { useSaveSettings, useSettings } from "@/api/queries";
+import { useSaveSettings, useSettings, useTemplates } from "@/api/queries";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { AdvancedSection } from "./settings/AdvancedSection";
+import { TemplatesSection } from "./settings/TemplatesSection";
 
 const roles = [
   { id: "analyst", label: "Reading the job" },
@@ -25,6 +27,7 @@ function SettingsForm({ settings }: { settings: SettingsView }) {
   const [advanced, setAdvanced] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const save = useSaveSettings();
+  const templates = useTemplates();
   const [choices] = useState(() => [...new Set([settings.models.default, ...Object.values(settings.models.roles)])]);
   const [selections, setSelections] = useState<Record<string, string>>(() =>
     Object.fromEntries(roles.map(({ id }) => [id, settings.models.roles[id] ?? "__default__"])),
@@ -60,14 +63,33 @@ function SettingsForm({ settings }: { settings: SettingsView }) {
         </Field>
         <Field>
           <FieldLabel htmlFor="template">Default template</FieldLabel>
-          <Input
-            id="template"
-            value={draft.template}
-            onChange={(event) => setDraft({ ...draft, template: event.target.value })}
-            required
-            disabled={save.isPending}
-          />
-          <FieldDescription>The ID of an installed resume template, such as rover-base.</FieldDescription>
+          {templates.data?.length ? (
+            <Select
+              value={draft.template}
+              onValueChange={(template) => setDraft({ ...draft, template })}
+              disabled={save.isPending}
+            >
+              <SelectTrigger id="template" className="w-full sm:w-80">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[...new Set([draft.template, ...templates.data.map((entry) => entry.id)])].map((id) => (
+                  <SelectItem key={id} value={id}>
+                    {templates.data.find((entry) => entry.id === id)?.meta.name ?? id}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              id="template"
+              value={draft.template}
+              onChange={(event) => setDraft({ ...draft, template: event.target.value })}
+              required
+              disabled={save.isPending}
+            />
+          )}
+          <FieldDescription>Used for new resumes. Add your own below.</FieldDescription>
         </Field>
       </FieldGroup>
       <Separator />
@@ -201,7 +223,11 @@ export default function SettingsPage() {
       ) : query.isError ? (
         <PageError error={query.error} retry={() => void query.refetch()} />
       ) : (
-        <SettingsForm settings={query.data} />
+        <>
+          <SettingsForm settings={query.data} />
+          <TemplatesSection />
+          <AdvancedSection />
+        </>
       )}
     </div>
   );

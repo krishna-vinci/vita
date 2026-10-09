@@ -64,7 +64,14 @@ describe("shared SSE", () => {
     ] as const) {
       spy.mockClear();
       invalidateEvent(client, { type: "resource.changed", scope, id: "sample", sha: null });
-      expect(spy.mock.calls.map(([filter]) => filter?.queryKey)).toEqual([key, queryKeys.workspace]);
+      expect(spy.mock.calls.map(([filter]) => filter?.queryKey)).toEqual([
+        key,
+        ...(scope === "outline" || scope === "resume" ? [queryKeys.sync] : []),
+        ...(scope === "application" ? [["prep"]] : []),
+        ...(scope === "settings" ? [queryKeys.instructions, queryKeys.rules, queryKeys.mcp, queryKeys.metrics] : []),
+        ...(scope === "projects" ? [queryKeys.metrics] : []),
+        queryKeys.workspace,
+      ]);
     }
     expect(client.getQueryState(queryKeys.application("sample"))?.isInvalidated).toBe(true);
     expect(client.getQueryState(queryKeys.resume("master"))?.isInvalidated).toBe(true);

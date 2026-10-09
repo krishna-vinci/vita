@@ -10,9 +10,11 @@ import {
   useCancelJob,
   useCreateApplication,
   useExportApplication,
+  useFit,
   useJobs,
   useOutline,
   useProjects,
+  usePromote,
   useResume,
   useResumeOps,
   useResumes,
@@ -30,8 +32,10 @@ import {
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { download, flagsFor, parseClaims, resumeToMarkdown } from "@/lib/resume-view";
 import { JobProgress } from "../jobs/JobProgress";
+import { SyncBanner } from "../me/SyncBanner";
 import { ChatPanel } from "./ChatPanel";
 import { DetailsPanel } from "./DetailsPanel";
+import { FitDialog, type FitState } from "./FitDialog";
 import { parseGaps, Questions } from "./Questions";
 import { ResumeSheet } from "./ResumeSheet";
 import { Toolbar } from "./Toolbar";
@@ -130,6 +134,17 @@ function Loaded({
   const outline = useOutline();
   const projects = useProjects();
   const thread = useChatThread(scope, id, data.resume);
+  const fitter = useFit(scope, id);
+  const promoter = usePromote();
+  const [fit, setFit] = useState<FitState | null>(null);
+  const startFit = async (pages: number) => {
+    setFit({ pages, loading: true });
+    try {
+      setFit({ pages, loading: false, ops: await fitter.mutateAsync(pages) });
+    } catch (error) {
+      setFit({ pages, loading: false, error: error instanceof Error ? error.message : "Could not try that." });
+    }
+  };
 
   const flags = useMemo(() => flagsFor(data.resume, data.review), [data.resume, data.review]);
   const claims = useMemo(
@@ -164,6 +179,19 @@ function Loaded({
     move: (bulletId, toParent, index) => void run([{ op: "move", id: bulletId, toParent, index }]),
     vouch: (bulletId, note) => void run([{ op: "bullet.override", id: bulletId, reason: "user-attested", note }]),
     ask,
+    promote: isJob
+      ? (bulletId, to, itemSlug) =>
+          promoter.mutate(
+            {
+              from: { scope, id, bulletId },
+              to: to === "parent" ? { kind: "parent" } : { kind: "variant", itemSlug },
+            },
+            {
+              onSuccess: () => toast.success(to === "parent" ? "Added to your base resume." : "Saved in Projects."),
+              onError: (error) => toast.error(error.message),
+            },
+          )
+      : undefined,
   };
 
   const gaps = parseGaps(app?.gaps ?? []).filter((gap) => !handled.includes(gap.id));
@@ -284,6 +312,7 @@ function Loaded({
           </p>
         )}
       </header>
+      {!isJob && <SyncBanner resumeId={id} />}
       <Toolbar
         details={details}
         onDetails={(on) => {
@@ -307,9 +336,17 @@ function Loaded({
         onMarkdown={() => download(`${id}.md`, "text/markdown", resumeToMarkdown(data.resume))}
         exporting={exporter.isPending}
         canPdf={isJob || !!pdfUrl}
+        prepTo={isJob ? `/jobs/${encodeURIComponent(id)}/prep` : undefined}
+        overBy={
+          data.review?.render?.maxPages && data.review.render.pages > data.review.render.maxPages
+            ? data.review.render.maxPages
+            : undefined
+        }
+        onFit={(pages) => void startFit(pages)}
       />
       {details && (
         <DetailsPanel
+          resume={data.resume}
           analysis={app?.analysis}
           gaps={app?.gaps ?? []}
           review={data.review}
@@ -324,6 +361,7 @@ function Loaded({
             actions,
             details,
             busy: ops.isPending,
+            canPromoteParent: !!data.resume.parent,
             changed: new Set([...changed, ...thread.changed]),
             claims,
             checks,
@@ -339,6 +377,18 @@ function Loaded({
       >
         <MessageSquareText /> Ask for a change
       </Button>
+      <FitDialog
+        state={fit}
+        resume={data.resume}
+        applying={ops.isPending}
+        onClose={() => setFit(null)}
+        onApply={async (list) => {
+          if (await run(list)) {
+            toast.success("Done. Undo is one click away.");
+            setFit(null);
+          }
+        }}
+      />
       <Sheet open={chatOpen} onOpenChange={setChatOpen}>
         <SheetContent side="bottom" className="h-[80dvh] gap-2 p-4">
           <SheetHeader className="p-0">

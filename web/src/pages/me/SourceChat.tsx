@@ -3,6 +3,7 @@ import { SendHorizontal } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useApplySource, useSourceChat } from "@/api/queries";
+import { Diff } from "@/components/ProposalDiff";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -129,26 +130,6 @@ export function SourceChat({ dirty, className }: { dirty: boolean; className?: s
         </Button>
       </form>
     </section>
-  );
-}
-
-/** Before and after as plain text: removed lines struck through, added lines marked. */
-function Diff({ before, after }: { before: string; after: string }) {
-  return (
-    <div className="flex flex-col gap-1 rounded-md border bg-background p-2 font-mono text-xs break-words whitespace-pre-wrap">
-      {before && (
-        <p className="rounded-sm bg-destructive/10 px-1 text-destructive line-through decoration-destructive/40">
-          <span className="sr-only">Removed: </span>
-          {before}
-        </p>
-      )}
-      {after && (
-        <p className="rounded-sm bg-success/15 px-1 text-success">
-          <span className="sr-only">Added: </span>
-          {after}
-        </p>
-      )}
-    </div>
   );
 }
 
