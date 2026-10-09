@@ -27,6 +27,8 @@ export async function proposeSourceEdit(
         role: sourceEditorRole,
         root: ws.root,
         bundledDir: ws.bundledDir,
+        chat: input.message,
+        onWarning: (message) => deps.onProgress?.({ stage: "warning", message }),
         task: "Answer the source chat request. Proposals require explicit user approval before any write.",
       }),
       task: [

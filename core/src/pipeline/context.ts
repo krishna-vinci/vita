@@ -1,26 +1,15 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
+import type { Rules } from "@vita/shared";
 import { BaseConfig, type JobAnalysis, type Pack, Resume, Slug } from "@vita/shared";
 import { parse as parseYaml } from "yaml";
-import { z } from "zod";
 import { buildClaimIndex, type ClaimIndex } from "../claims/index.js";
+import { loadRules } from "../instructions/rules.js";
 import { resolvePacks } from "../packs/index.js";
 import { EvidenceSearch, selectEvidence } from "../search/index.js";
 import { assignOutlineAnchors, parseOutline, parseProjects } from "../source/index.js";
 import { readText, resolveInWorkspace } from "../workspace/index.js";
 import type { WorkspaceHandle } from "./types.js";
-
-export const Rules = z
-  .object({
-    max_pages: z.number().int().min(1).max(4).default(1),
-    max_bullet_chars: z.number().int().positive().optional(),
-    banned_phrases: z.array(z.string()).optional(),
-    required_sections: z.array(z.string()).optional(),
-    section_order: z.array(z.string()).optional(),
-    date_format: z.string().optional(),
-    locale: z.string().optional(),
-  })
-  .passthrough();
 
 export interface Base {
   id: string;
@@ -34,7 +23,8 @@ export interface Context {
   projectsText: string;
   index: ClaimIndex;
   search: EvidenceSearch;
-  rules: z.infer<typeof Rules>;
+  rules: Rules;
+  lockedMaxPages?: number;
   bases: Base[];
   master: Resume | undefined;
 }
@@ -49,10 +39,10 @@ export async function optionalText(root: string, rel: string): Promise<string | 
 }
 
 export async function loadContext(ws: WorkspaceHandle): Promise<Context> {
-  const [outlineText, projectsText, ruleText, masterText] = await Promise.all([
+  const [outlineText, projectsText, ruleConfig, masterText] = await Promise.all([
     readText(ws.root, "outline.md"),
     readText(ws.root, "projects.md"),
-    optionalText(ws.root, "config/rules.yaml"),
+    loadRules(ws),
     optionalText(ws.root, "resumes/master/resume.json"),
   ]);
   const outline = parseOutline(assignOutlineAnchors(outlineText).markdown);
@@ -74,7 +64,7 @@ export async function loadContext(ws: WorkspaceHandle): Promise<Context> {
       resume: Resume.parse(JSON.parse(await readText(ws.root, `resumes/${id}/resume.json`))),
     });
   }
-  const rules = Rules.parse(ruleText === undefined ? {} : parseYaml(ruleText));
+  const rules = ruleConfig.rules;
   const master = masterText === undefined ? undefined : Resume.parse(JSON.parse(masterText));
   return {
     ws,
@@ -84,6 +74,7 @@ export async function loadContext(ws: WorkspaceHandle): Promise<Context> {
     bases,
     search: EvidenceSearch.build(index, outline),
     rules,
+    lockedMaxPages: ruleConfig.lockedMaxPages,
     master,
   };
 }

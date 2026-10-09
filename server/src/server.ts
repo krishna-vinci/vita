@@ -21,6 +21,7 @@ import { ApiFailure } from "./errors.js";
 import { chatRoutes } from "./routes/chat.js";
 import { eventsRoutes } from "./routes/events.js";
 import { fitRoutes } from "./routes/fit.js";
+import { instructionsRoutes } from "./routes/instructions.js";
 import { prepRoutes } from "./routes/prep.js";
 import { syncRoutes } from "./routes/sync.js";
 import { templateRoutes } from "./routes/templates.js";
@@ -179,6 +180,7 @@ export function createServer(
   app.route("/api/applications", prepRoutes(runtime));
   app.route("/api/templates", templateRoutes(runtime));
   app.route("/api", syncRoutes(runtime));
+  app.route("/api", instructionsRoutes(runtime));
   app.get("/api/settings", async (c) => c.json(await runtime.settings()));
   app.put("/api/settings", async (c) => c.json(await runtime.putSettings(await body(c, PutSettingsRequest))));
   app.get("/api/jobs", (c) => c.json(runtime.jobs.list()));

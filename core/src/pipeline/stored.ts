@@ -1,3 +1,4 @@
+import { enforcePageLimit } from "../instructions/rules.js";
 import { fileHash } from "../workspace/index.js";
 import { type Context, effectivePack, loadContext } from "./context.js";
 import { type GenerationInput, generate } from "./generate.js";
@@ -39,7 +40,10 @@ export async function loadReviewContext(ws: WorkspaceHandle, resume: import("@vi
       index: ctx.index,
       rules: ctx.rules,
       pack: await effectivePack(ctx, base),
-      maxPages: resume.kind === "master" ? 2 : (base?.config.rules.max_pages ?? ctx.rules.max_pages),
+      maxPages: enforcePageLimit(
+        resume.kind === "master" ? 2 : (base?.config.rules.max_pages ?? ctx.rules.max_pages),
+        ctx.lockedMaxPages,
+      ),
     };
   } finally {
     ctx.search.close();
