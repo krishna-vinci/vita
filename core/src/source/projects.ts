@@ -104,11 +104,12 @@ export function parseProjects(markdown: string): { doc: ProjectsDoc; issues: Par
         item.extra.push(text);
         continue;
       }
+      const id = anchor?.claim ?? factId(item.name, claimText, used);
       item.claims.push({
-        id: anchor?.claim ?? factId(item.name, claimText, used),
+        id,
         text: claimText,
         evidence: anchor?.evidence ?? [],
-        metrics: [],
+        metrics: item.meta.metrics?.[id] ?? [],
       });
       if (anchor?.variant) item.extra.push(text);
     } else if (bullet?.trim() && mode === "Limits") {
@@ -131,10 +132,15 @@ export function serializeProjects(doc: ProjectsDoc): string {
   // No implicit blank lines: every blank line retained in extra/preamble is emitted once.
   const lines = [...doc.preamble];
   for (const item of doc.items) {
+    const metrics = { ...item.meta.metrics };
+    for (const claim of item.claims) {
+      if (claim.metrics.length) metrics[claim.id] = claim.metrics;
+    }
+    const meta = Object.keys(metrics).length ? { ...item.meta, metrics } : item.meta;
     lines.push(
       `## ${item.name}`,
       "```yaml",
-      ...stringify(ItemMeta.parse(item.meta), { lineWidth: 0 }).trimEnd().split("\n"),
+      ...stringify(ItemMeta.parse(meta), { lineWidth: 0 }).trimEnd().split("\n"),
       "```",
     );
     let extraFence: string | undefined;

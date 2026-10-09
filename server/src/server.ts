@@ -21,6 +21,7 @@ import { ApiFailure } from "./errors.js";
 import { chatRoutes } from "./routes/chat.js";
 import { eventsRoutes } from "./routes/events.js";
 import { fitRoutes } from "./routes/fit.js";
+import { metricsRoutes } from "./routes/metrics.js";
 import { prepRoutes } from "./routes/prep.js";
 import { syncRoutes } from "./routes/sync.js";
 import { templateRoutes } from "./routes/templates.js";
@@ -175,6 +176,7 @@ export function createServer(
   });
   app.route("/api/events", eventsRoutes(runtime.hub));
   app.route("/api/chat", chatRoutes(runtime));
+  app.route("/api/metrics", metricsRoutes(runtime));
   app.route("/api", fitRoutes(runtime));
   app.route("/api/applications", prepRoutes(runtime));
   app.route("/api/templates", templateRoutes(runtime));

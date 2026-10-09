@@ -3,6 +3,16 @@ import { Claim, Evidence, ItemMeta, Metric } from "./evidence";
 import { ClaimId, EvidenceId, Slug, slugify } from "./ids";
 
 describe("evidence schemas", () => {
+  it("validates optional persisted metrics by claim id while keeping legacy metadata defaults", () => {
+    const metrics = { "workshop-work": [{ value: "30", kind: "measured", evidence: ["ev-usage"] }] };
+    expect(ItemMeta.parse({ metrics }).metrics).toEqual(metrics);
+    expect(ItemMeta.parse({}).metrics).toBeUndefined();
+    expect(ItemMeta.safeParse({ metrics: { "bad id": metrics["workshop-work"] } }).success).toBe(false);
+    expect(
+      ItemMeta.safeParse({ metrics: { "workshop-work": [{ value: "30", kind: "measured", evidence: [] }] } }).success,
+    ).toBe(false);
+  });
+
   it("keeps unknown item metadata and fills defaults", () => {
     expect(ItemMeta.parse({ custom: { preserved: true } })).toEqual({
       kind: "project",

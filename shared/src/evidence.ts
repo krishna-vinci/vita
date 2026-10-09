@@ -36,6 +36,7 @@ export const ItemMeta = z
     period: z.string().optional(),
     verified: z.object({ at: z.string(), ref: z.string().optional() }).optional(),
     evidence: z.array(Evidence).default([]),
+    metrics: z.record(ClaimId, z.array(Metric)).optional(),
   })
   .passthrough();
 export type ItemMeta = z.infer<typeof ItemMeta>;
