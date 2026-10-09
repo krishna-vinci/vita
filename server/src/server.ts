@@ -46,10 +46,10 @@ function id(c: Context): string {
 
 export function createServer(
   runtime: WorkspaceRuntime,
-  options: { passwordHash?: string; webDist?: string } = {},
+  options: { passwordHash?: string; webDist?: string; publicOrigins?: string[] } = {},
 ): Hono {
   const app = new Hono();
-  app.use("*", passwordAuth(options.passwordHash));
+  app.use("*", passwordAuth(options.passwordHash, options.publicOrigins ?? []));
   app.use("/api/*", (c, next) =>
     bodyLimit({
       maxSize: c.req.path === "/api/templates/upload" ? 11 * 1024 * 1024 : 2_500_000,

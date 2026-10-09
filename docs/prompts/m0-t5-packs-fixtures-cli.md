@@ -1,6 +1,6 @@
 # Task: M0-T5 Packs, profession fixtures and CLI
 
-You are the IMPLEMENTER in /home/krishna/project-remote/vita on branch main. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
+You are the IMPLEMENTER in <repo> on branch main. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
 
 ## Goal
 Add the pack loader with `extends` merging and the bundled `general` pack; four fictional profession fixture workspaces (developer, nurse, teacher, accountant) that pass checks and render to one page; and the CLI commands `init`, `import`, `render`, `check`. Add a profession-neutrality test. This completes M0.

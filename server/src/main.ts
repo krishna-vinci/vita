@@ -19,7 +19,11 @@ try {
   const settings = await runtime.settings();
   for (const warning of settings.warnings) console.warn(warning);
   const webDist = path.join(bundledDir, "web/dist");
-  const app = createServer(runtime, { passwordHash, ...(existsSync(webDist) ? { webDist } : {}) });
+  const publicOrigins = (process.env.VITA_PUBLIC_ORIGIN ?? "")
+    .split(",")
+    .map((value) => value.trim().replace(/\/$/, ""))
+    .filter(Boolean);
+  const app = createServer(runtime, { passwordHash, publicOrigins, ...(existsSync(webDist) ? { webDist } : {}) });
   const server = serve({ fetch: app.fetch, port, hostname: host }, (info) =>
     console.log(`Vita listening on http://${host}:${info.port} (workspace: ${root})`),
   );

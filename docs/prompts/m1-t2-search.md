@@ -1,6 +1,6 @@
 # Task: M1-T2 Evidence search and selection (core/src/search)
 
-You are the IMPLEMENTER in /home/krishna/vita-worktrees/m1-t2-search on branch codex/m1-t2-search. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
+You are the IMPLEMENTER in <worktree-root>/m1-t2-search on branch codex/m1-t2-search. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
 
 ## Goal
 In-memory SQLite FTS5 search over claims, variants, evidence text and outline content, and deterministic evidence selection for a job (synonym groups, lead items, locked bullets, claim cap).

@@ -1,6 +1,6 @@
 # Task: M1-FIX Findings from the first real-model runs
 
-You are the IMPLEMENTER in /home/krishna/project-remote/vita on branch main. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
+You are the IMPLEMENTER in <repo> on branch main. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
 
 ## Goal
 Fix five issues found by running the pipeline with real models on real data. Each fix gets a focused test.

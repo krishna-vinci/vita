@@ -1,6 +1,6 @@
 # Task: M2-T1 Resume edit operations (core/src/ops)
 
-You are the IMPLEMENTER in /home/krishna/vita-worktrees/m2-t1-ops on branch codex/m2-t1-ops. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
+You are the IMPLEMENTER in <worktree-root>/m2-t1-ops on branch codex/m2-t1-ops. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
 
 ## Goal
 One pure module that applies typed edit operations to a `Resume`, used later by the UI, the chat editor and the pipeline, plus a workspace helper that reads, applies, validates, writes and commits. Locked-bullet protection and layout clamping are enforced here.

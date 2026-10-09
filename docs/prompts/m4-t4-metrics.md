@@ -1,6 +1,6 @@
 # Task: M4-T4 Metric interview
 
-You are the IMPLEMENTER in /home/krishna/vita-worktrees/m4-t4-metrics on branch codex/m4-t4-metrics. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
+You are the IMPLEMENTER in <worktree-root>/m4-t4-metrics on branch codex/m4-t4-metrics. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
 
 ## Goal
 Implement **Task 4** of `docs/plans/2026-10-09-m4-intelligence.md` exactly, including its tests. Read the plan's Global Constraints.

@@ -1,6 +1,6 @@
 # Task: M2-T3 Web scaffold (web/) with shadcn/ui
 
-You are the IMPLEMENTER in /home/krishna/vita-worktrees/m2-t3-web on branch codex/m2-t3-web. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
+You are the IMPLEMENTER in <worktree-root>/m2-t3-web on branch codex/m2-t3-web. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
 
 ## Goal
 Set up the frontend so a Sonnet agent can build the critical screens next: Vite + React 19 + TypeScript, Tailwind 4, shadcn/ui initialised with the primitives listed in the plan, typed API client and TanStack Query hooks over `@vita/shared` DTOs, one shared SSE connection that invalidates queries, the app shell (Me / Jobs / Settings; top bar on desktop, bottom tabs on phone), routes, a working Settings page and Jobs list, and calm empty states for pages the next task fills.
@@ -9,7 +9,7 @@ Set up the frontend so a Sonnet agent can build the critical screens next: Vite 
 - Read first: `AGENTS.md`, `AGENT_MEMORY.md`, spec §4 and §16, and the visual draft `docs/design/vita-draft.html` (open it in a text editor: colours, type, three places, job flow).
 - The full task is **Task 3** in `docs/plans/2026-10-09-m2-app.md`; read its Global Constraints (shadcn only, 390/1440 px, light/dark, plain language).
 - API contract: `shared/src/api.ts` (merged from M2-T2) and `server/src/routes/*`. Run the server for manual checks with `VITA_WORKSPACE=<temp copy of fixtures/developer> pnpm server` (it binds 127.0.0.1).
-- Reference (read-only): Studium `/home/krishna/learny/web/` — `vite.config.ts`, `src/main.tsx`, `src/router.tsx`, `src/api/client.ts`, `src/api/queries.ts`, `src/api/events.ts`, `src/index.css` token structure. Studium uses base-ui; Vita uses **shadcn/ui** (run `pnpm dlx shadcn@latest init` then `add` the components; keep generated files under `web/src/components/ui`).
+- Reference (read-only): Studium `<studium-checkout>/web/` — `vite.config.ts`, `src/main.tsx`, `src/router.tsx`, `src/api/client.ts`, `src/api/queries.ts`, `src/api/events.ts`, `src/index.css` token structure. Studium uses base-ui; Vita uses **shadcn/ui** (run `pnpm dlx shadcn@latest init` then `add` the components; keep generated files under `web/src/components/ui`).
 - Fonts and tokens from the draft: display "Bricolage Grotesque", body "IBM Plex Sans", mono "IBM Plex Mono", resume preview "Crimson Pro"; cobalt accent; cool neutral background. Map them to shadcn CSS variables (light + dark).
 - Vite dev server proxies `/api` to `http://127.0.0.1:4317` (server default port; check `server/src/main.ts`).
 

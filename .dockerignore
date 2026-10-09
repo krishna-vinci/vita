@@ -1,0 +1,17 @@
+.git
+.claude
+.env
+.env.*
+**/node_modules
+**/dist
+**/coverage
+**/*.log
+**/.vita
+vita-data
+.pi
+.pi-agent
+AGENT_MEMORY.md
+docs
+fixtures
+**/*.test.ts
+**/*.test.tsx

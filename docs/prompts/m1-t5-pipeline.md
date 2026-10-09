@@ -1,6 +1,6 @@
 # Task: M1-T5 Pipeline, master generation and CLI
 
-You are the IMPLEMENTER in /home/krishna/project-remote/vita on branch main. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
+You are the IMPLEMENTER in <repo> on branch main. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
 
 ## Goal
 Implement the generation pipeline end to end: analyse → gap questions → select → write → lint → check → ATS + render → revise (≤ 2 rounds) → done criteria, writing application folders and committing; master-resume generation; and `vita master` / `vita tailor` CLI commands. Tested end to end with Pi's faux provider.

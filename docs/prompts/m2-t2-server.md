@@ -1,6 +1,6 @@
 # Task: M2-T2 Server: API, jobs, SSE and auth (server/, shared/src/api.ts)
 
-You are the IMPLEMENTER in /home/krishna/vita-worktrees/m2-t2-server on branch codex/m2-t2-server. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
+You are the IMPLEMENTER in <worktree-root>/m2-t2-server on branch codex/m2-t2-server. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
 
 ## Goal
 A Hono server over the engine: workspace runtime, every route in the plan, an in-process job runner for master/tailor/base generation with SSE progress, file serving for PDFs, undo, settings, loopback-only bind unless a password hash is configured. Shared API DTOs in `shared/src/api.ts` so the web app is typed against the same contract.
@@ -9,7 +9,7 @@ A Hono server over the engine: workspace runtime, every route in the plan, an in
 - Read first: `AGENTS.md`, `AGENT_MEMORY.md`, spec §15, §17, §18.
 - The full task — route list, behaviour and constraints — is **Task 2** in `docs/plans/2026-10-09-m2-app.md`. Read its "Global Constraints".
 - Engine (merged; read `core/src/index.ts` and each barrel): workspace IO + git (`readText`, `writeTextAtomic`, `fileHash`, `commitPaths`, `undoLast`, `log`, `initWorkspace`, `FileLocks`, `resolveInWorkspace`), source parsing, render, packs, claims, lint, search, agent (`loadModelsConfig`, `modelWarnings`), pipeline (`tailor`, `generateMaster`, `PipelineDeps`), ops (`applyResumeOps`, `ResumeOp`).
-- Reference patterns (read-only): Studium `/home/krishna/learny/server/src/events.ts` (EventHub), `server/src/routes/events.ts` (SSE), `server/src/jobs/runner.ts` (job runner), `server/src/auth/` (password hash, loopback rule), `server/src/main.ts` (startup). Adapt; Vita is single-user, single workspace.
+- Reference patterns (read-only): Studium `<studium-checkout>/server/src/events.ts` (EventHub), `server/src/routes/events.ts` (SSE), `server/src/jobs/runner.ts` (job runner), `server/src/auth/` (password hash, loopback rule), `server/src/main.ts` (startup). Adapt; Vita is single-user, single workspace.
 - Workspace root: `VITA_WORKSPACE` env (default `./vita-data` relative to cwd); on startup, if missing, `initWorkspace` it. Bundled dir = repo root (packs/, templates/, skills/).
 - Model runtime: Pi `ModelRuntime.create()` with default auth/models paths (see `core/src/agent` and Studium `server/src/agent/models.ts`). Tests inject a faux runtime.
 

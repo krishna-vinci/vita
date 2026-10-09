@@ -1,6 +1,6 @@
 # Task: M1-T1 Claim index and lint (core/src/claims, core/src/lint)
 
-You are the IMPLEMENTER in /home/krishna/vita-worktrees/m1-t1-lint on branch codex/m1-t1-lint. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
+You are the IMPLEMENTER in <worktree-root>/m1-t1-lint on branch codex/m1-t1-lint. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
 
 ## Goal
 Build the claim index from parsed projects and outline, and the lint engine that enforces the honesty rules: unsourced numbers, missing/unknown claims, limit breaches, banned phrases, bullet length. This is the core honesty guarantee and a high-risk area: false negatives let invented numbers through.

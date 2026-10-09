@@ -1,6 +1,6 @@
 # Task: M2-T4 Chat backends: resume editor and source editor
 
-You are the IMPLEMENTER in /home/krishna/vita-worktrees/m2-t4-chat on branch codex/m2-t4-chat. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
+You are the IMPLEMENTER in <worktree-root>/m2-t4-chat on branch codex/m2-t4-chat. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
 
 ## Goal
 Two chat roles on the M1 runtime and their API routes: the **resume editor** turns a user's request into `ResumeOp[]` applied immediately with `by: "ai"` (undoable), or refuses with an honest alternative; the **source editor** proposes exact-string edits to `outline.md` or `projects.md` that are applied only after the user approves. Plus three skills that teach these roles.
