@@ -78,6 +78,6 @@ it("renders bullets placed in summary and list sections", async () => {
   const tpl = await loadTemplate([fileURLToPath(new URL("../../../templates", import.meta.url))], "rover-base");
   const tex = renderTex(resume, tpl);
   expect(tex).toContain("Calm planner.\\par");
-  expect(tex).toContain("\\textbf{Tools}: Spreadsheets; Rostering\\par");
+  expect(tex).toContain("\\textbf{Tools}: Spreadsheets, Rostering\\par");
   expect(tex).toContain("First aid\\par");
 });
