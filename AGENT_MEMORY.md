@@ -50,7 +50,7 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - Codex tool limits (from Studium): `rm -rf` on computed paths is rejected; put test data under a temp dir. If `apply_patch` fails, write the file with a heredoc.
 
 ## Status (2026-10-09)
-- M0–M4 backend merged. In progress: Sonnet M2-T6 polish + M3/M4 screens (`web/`). Then M5 release (Docker, README, docs, path scrub).
+- M0–M4 merged (engine, server, all screens). In progress: M5 release (Docker, CI, docs, path scrub) in ~/vita-worktrees/m5-t1-release.
 
 ## Open gaps
 - Personal absolute paths (/home/krishna/...) in AGENTS.md, AGENT_MEMORY.md and `.claude/skills/codex-orchestrate/` must be generalised before the public release (M5).
@@ -85,3 +85,4 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - 2026-10-09 · M4-T2 IT packs (DeepSeek) · 13 packs under `packs/`, bundled pack test.
 - 2026-10-09 · M4-T3 instructions (Sol 6.1) · `core/src/instructions` (layers, guard, effective prompt), rules-extra lint (required-section, section-order, date-format), `/api/instructions`, `/api/rules`, `/api/prompts/:role` · Zod 4 applies inner defaults through `.optional()`.
 - 2026-10-09 · M4-T4 metrics (Sol 6.1) · `core/src/metrics`, `/api/metrics/*`; projects.md YAML stores `metrics` by claim id and `metric_answers` by question id; dismissals in `config/dismissed-questions.yaml`.
+- 2026-10-09 · M2-T6 + M3/M4 screens (Sonnet) · prep, fit, templates, sync, promote, research, metrics, Settings › Advanced, packs select; lazy routes + vendor chunks; `GET /api/packs` · shadcn CLI adds stray `cn` dep (revert) · open: fit dialog ops-list state untested visually; not every flow clicked in all four width/theme combos.
