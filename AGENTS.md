@@ -4,14 +4,14 @@ Instructions for coding agents (Codex, Claude, others) working in this repo.
 
 Vita is an open-source, self-hosted resume studio: a person keeps one honest outline of their work plus an evidence inventory; agents turn it into a master resume, base resumes per career direction, and checked job resumes rendered to PDF through LaTeX.
 
-Read `/home/krishna/project-remote/vita/AGENT_MEMORY.md` first: owner rules, system map, gotchas, status, open gaps. Do NOT edit it yourself (parallel agents would collide): put a 5-line log entry and any new gotchas in your final report; the orchestrator adds them to AGENT_MEMORY.md.
+Read `<repo>/AGENT_MEMORY.md` first: owner rules, system map, gotchas, status, open gaps. Do NOT edit it yourself (parallel agents would collide): put a 5-line log entry and any new gotchas in your final report; the orchestrator adds them to AGENT_MEMORY.md.
 
 Read before planning or claiming behaviour:
 
 - `docs/specs/2026-10-09-vita-design.md` — the design spec. §3 lists the principles; they are non-negotiable.
 - `docs/decisions/` — locked decisions (override the spec where they conflict).
 - Plans: `docs/plans/`. Task prompts: `docs/prompts/`.
-- Reference implementation (read-only, never edit): Studium at `/home/krishna/learny` — role runtime `server/src/agent/run-role.ts` and `roles.ts`, jobs/SSE, git auto-commit, skill sync. Studium uses Pi 1.0.0; Vita uses Pi 1.1.
+- Reference implementation (read-only, never edit): Studium at `<studium-checkout>` — role runtime `server/src/agent/run-role.ts` and `roles.ts`, jobs/SSE, git auto-commit, skill sync. Studium uses Pi 1.0.0; Vita uses Pi 1.1.
 
 ## Repo layout (pnpm workspaces, TypeScript, ESM)
 
@@ -38,7 +38,7 @@ Some directories do not exist until their milestone lands; create only what your
 - If the task is ambiguous or blocked, or a step does not fit the real code, stop and report (file:line, what you saw) instead of guessing.
 - Exception: minimal integration edits outside the listed scope that the task strictly needs (registrations, barrel exports, type unions, route wiring, CLI flag registration) are allowed without stopping, and so are small backwards-compatible additions to engine modules your task strictly needs (a new optional field, an extra exported helper), each with a test. List each with its reason in the final report. Stop only for real design conflicts.
 - Never delete or modify committed files you did not change for your task.
-- Never read or copy the owner's personal resume files outside this repo (`/home/krishna/project-remote/*.md`) unless the task names them; never commit personal data. Fixtures are fictional.
+- Never read or copy the owner's personal resume files outside this repo (`<personal-resume-dir>/*.md`) unless the task names them; never commit personal data. Fixtures are fictional.
 - Do not add dependencies beyond those the task names. Pin exact versions for `@earendil-works/*` (Pi SDK).
 - No profession-specific terms in `core/`, `server/` or `shared/` logic. Profession knowledge belongs in `packs/` (spec §7).
 

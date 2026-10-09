@@ -14,7 +14,7 @@
 
 - Licence `AGPL-3.0-only` in every `package.json`; package names `@vita/<pkg>`; `"type": "module"`; `"private": true`.
 - Packages export source: `"exports": { ".": "./src/index.ts" }`. No build step.
-- `tsconfig.base.json` copies Studium's (`/home/krishna/learny/tsconfig.base.json`): strict, `noUncheckedIndexedAccess`, `verbatimModuleSyntax`, `moduleResolution: bundler`, `noEmit`.
+- `tsconfig.base.json` copies Studium's (`<studium-checkout>/tsconfig.base.json`): strict, `noUncheckedIndexedAccess`, `verbatimModuleSyntax`, `moduleResolution: bundler`, `noEmit`.
 - Biome config copies Studium's `biome.json` style (2 spaces, line width 120, double quotes), excluding `fixtures/**/*.pdf`, `docs/plans`, `.claude`.
 - No profession-specific vocabulary in `shared/`, `core/` or `cli/` code (spec §7).
 - Parsers never drop user text (spec §6.1, §18).
@@ -169,7 +169,7 @@ export const RenderCheck = z.object({
 ### Task 2: Workspace IO + git (`core/src/workspace/`) — high-risk area
 
 **Spec:** §6 (layout, auto-commit authors), §17 (confinement), §18 (external edits).
-**Reference (read-only):** Studium `server/src/tree/paths.ts`, `lock.ts`, `git.ts`, `init.ts` and their tests in `/home/krishna/learny`.
+**Reference (read-only):** Studium `server/src/tree/paths.ts`, `lock.ts`, `git.ts`, `init.ts` and their tests in `<studium-checkout>`.
 
 **Files:** create `core/src/workspace/{paths,lock,git,init,files,index}.ts` with tests `{paths,lock,git,init,files}.test.ts`.
 
@@ -266,7 +266,7 @@ Legacy style to support (see fixture): `## Name`, `**Professional framing:** …
 
 ### Task 4: Templates, rendering and checks (`core/src/render/`, `templates/`) — high-risk area
 
-**Spec:** §11, §12. **Source template:** `/home/krishna/project-remote/rover-resume/templates/base rover/base-rover.tex` (Rover, CC BY 4.0, https://github.com/subidit/rover-resume).
+**Spec:** §11, §12. **Source template:** `<rover-checkout>/templates/base rover/base-rover.tex` (Rover, CC BY 4.0, https://github.com/subidit/rover-resume).
 
 **Files:** create `core/src/render/{escape,nunjucks,tex,markdown,compile,prescan,textcheck,templates,index}.ts` + tests; `templates/rover-base/{template.yaml,main.tex.njk}`; `NOTICE`; test fixture `core/src/render/fixtures/resume-basic.json` (fictional, includes `& % $ # _ { } ~ ^ \` and Unicode quotes/dashes in text).
 

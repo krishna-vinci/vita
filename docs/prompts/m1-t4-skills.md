@@ -1,6 +1,6 @@
 # Task: M1-T4 Bundled skills text (skills/)
 
-You are the IMPLEMENTER in /home/krishna/vita-worktrees/m1-t4-skills on branch codex/m1-t4-skills. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
+You are the IMPLEMENTER in <worktree-root>/m1-t4-skills on branch codex/m1-t4-skills. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
 
 ## Goal
 Write four profession-neutral Agent Skills used by the M1 roles: analyze-job, write-bullets, check-claims, ats-review.
@@ -10,7 +10,7 @@ Write four profession-neutral Agent Skills used by the M1 roles: analyze-job, wr
 - The full task — files, exact interfaces, behaviour and tests — is **Task 4** in `docs/plans/2026-10-09-m1-engine.md`. Implement it exactly. Read "Global Constraints" there too.
 - M0 is merged: `@vita/shared` schemas; `core/src/workspace`, `core/src/source` (`parseOutline`, `parseProjects`, `ProjectsDoc`, `Outline`, …), `core/src/render`. NOT yet merged (M0-T5 is running in parallel): `core/src/packs` and `fixtures/`. Use the `Pack` type from `@vita/shared` and build synthetic test data inline. Read the merged barrels before use.
 - Other M1 tasks run in parallel in separate worktrees (claims+lint, search, agent runtime, skills). Stay in your own directories. Do NOT edit `core/src/index.ts`; the orchestrator wires barrels while merging.
-- Skill format reference (read-only): /home/krishna/learny/skills/*/SKILL.md (frontmatter name + description, then body). Tools named in skills: analyst `submit_analysis`, writer `submit_resume`, checker `submit_checks`, ats-reviewer `submit_ats`; read tools `read_outline`, `read_projects`, `search_evidence`, `read_resume`, `read_analysis`.
+- Skill format reference (read-only): <studium-checkout>/skills/*/SKILL.md (frontmatter name + description, then body). Tools named in skills: analyst `submit_analysis`, writer `submit_resume`, checker `submit_checks`, ats-reviewer `submit_ats`; read tools `read_outline`, `read_projects`, `search_evidence`, `read_resume`, `read_analysis`.
 
 ## Scope
 - Change: skills/{analyze-job,write-bullets,check-claims,ats-review}/SKILL.md (new). Nothing else.

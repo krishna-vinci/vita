@@ -1,6 +1,6 @@
 # Task: M4-T2 IT profession packs (data only)
 
-You are the IMPLEMENTER in /home/krishna/vita-worktrees/m4-t2-packs on branch codex/m4-t2-packs. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
+You are the IMPLEMENTER in <worktree-root>/m4-t2-packs on branch codex/m4-t2-packs. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
 
 ## Goal
 Implement **Task 2** of `docs/plans/2026-10-09-m4-intelligence.md` exactly, including its tests. Read the plan's Global Constraints.

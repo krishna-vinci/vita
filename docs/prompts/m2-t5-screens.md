@@ -1,6 +1,6 @@
 # Task: M2-T5 Critical screens (Sonnet)
 
-You are the frontend IMPLEMENTER in /home/krishna/project-remote/vita on branch main. Do not commit; the orchestrator reviews and commits. Do not spawn sub-agents.
+You are the frontend IMPLEMENTER in <repo> on branch main. Do not commit; the orchestrator reviews and commits. Do not spawn sub-agents.
 
 ## Goal
 Build the screens that make Vita feel simple on the surface and honest underneath: the job flow (paste → questions → resume workspace → export) and Me (outline, projects, base resumes). Match the visual draft and its philosophy: plain language by default, detail one toggle away.

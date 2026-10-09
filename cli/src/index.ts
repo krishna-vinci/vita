@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command, Option } from "commander";
 import { checkCommand } from "./commands/check";
+import { hashPasswordCommand } from "./commands/hash-password";
 import { importCommand } from "./commands/import";
 import { initCommand } from "./commands/init";
 import { masterCommand } from "./commands/master";
@@ -41,6 +42,10 @@ export function createProgram(): Command {
       if (!(await checkCommand(dir, opts)).ok) process.exitCode = 1;
     });
   program.command("setup").description("Warm the package cache for bundled templates.").action(setupCommand);
+  program
+    .command("hash-password")
+    .description("Read a password from stdin and print its scrypt hash.")
+    .action(() => hashPasswordCommand());
   program
     .command("master <dir>")
     .description("Generate and check the master resume.")

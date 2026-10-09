@@ -1,17 +1,17 @@
 # Task: M0-T2 Workspace IO and git (core/src/workspace)
 
-You are the IMPLEMENTER in /home/krishna/vita-worktrees/m0-t2-workspace on branch codex/m0-t2-workspace. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
+You are the IMPLEMENTER in <worktree-root>/m0-t2-workspace on branch codex/m0-t2-workspace. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
 
 ## Goal
 Confined workspace file IO (realpath, no symlink escape), per-file FIFO locks, atomic writes, git auto-commit with role authors, revert-based undo, log, and initWorkspace — with tests. This is a high-risk area.
 
 ## Context
-- Read first: `AGENTS.md`, `AGENT_MEMORY.md` (in /home/krishna/project-remote/vita; your worktree has copies), and the spec `docs/specs/2026-10-09-vita-design.md`.
+- Read first: `AGENTS.md`, `AGENT_MEMORY.md` (in <repo>; your worktree has copies), and the spec `docs/specs/2026-10-09-vita-design.md`.
 - The full task — files, exact exported interfaces, behaviour and tests — is **Task 2** in `docs/plans/2026-10-09-m0-foundation.md`. Implement it exactly. Read "Global Constraints" there too.
 - Types come from `@vita/shared` (already implemented in T1: `Resume`, `Bullet`, `Item`, `Section`, `ItemMeta`, `Claim`, `Evidence`, `Metric`, `TemplateMeta`, `RenderCheck`, `slugify`, …). Import them; don't redefine.
 - All M0 dependencies are already installed. Do NOT edit any package.json or the lockfile. Do NOT edit `core/src/index.ts`; the orchestrator wires your barrel in while merging.
 - Other parallel tasks are writing `core/src/workspace`, `core/src/source` and `core/src/render`; stay in your own directory.
-- Reference implementation (read-only): /home/krishna/learny/server/src/tree/{paths,lock,git,init}.ts and their tests. Adapt, don't copy Studium-specific concepts (sets, library, cards).
+- Reference implementation (read-only): <studium-checkout>/server/src/tree/{paths,lock,git,init}.ts and their tests. Adapt, don't copy Studium-specific concepts (sets, library, cards).
 
 ## Scope
 - Change: core/src/workspace/** only (new files) plus `core/src/workspace/index.ts` barrel.

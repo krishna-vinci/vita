@@ -1,6 +1,6 @@
 # Task: M4-T1 Researcher with GitHub MCP, codemode and web fetch
 
-You are the IMPLEMENTER in /home/krishna/vita-worktrees/m4-t1-research on branch codex/m4-t1-research. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
+You are the IMPLEMENTER in <worktree-root>/m4-t1-research on branch codex/m4-t1-research. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
 
 ## Goal
 Implement **Task 1** of `docs/plans/2026-10-09-m4-intelligence.md` exactly, including its tests. Read the plan's Global Constraints.
@@ -8,7 +8,7 @@ Implement **Task 1** of `docs/plans/2026-10-09-m4-intelligence.md` exactly, incl
 ## Context
 - Read first: `AGENTS.md` (integration edits and small backwards-compatible engine additions are allowed — list them), `AGENT_MEMORY.md` (gotchas), spec `docs/specs/2026-10-09-vita-design.md`.
 - Engine barrel `core/src/index.ts`; server `server/src/server.ts` and existing route files with tests (e.g. `server/src/routes/prep.ts`) show the patterns.
-- Pi 1.1 SDK docs: node_modules/@earendil-works/pi-coding-agent/docs/{sdk,mcp,codemode}.md and examples/sdk/14-codemode-mcp.ts. Reference fake MCP server (read-only): /home/krishna/learny/server/src/mcp/fake-server.test-helper.ts.
+- Pi 1.1 SDK docs: node_modules/@earendil-works/pi-coding-agent/docs/{sdk,mcp,codemode}.md and examples/sdk/14-codemode-mcp.ts. Reference fake MCP server (read-only): <studium-checkout>/server/src/mcp/fake-server.test-helper.ts.
 - Other M4 tasks run in parallel; a Sonnet agent edits `web/` in the main tree. Never touch `web/`.
 
 ## Scope

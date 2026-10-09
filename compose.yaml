@@ -1,0 +1,16 @@
+services:
+  vita:
+    image: vita:local
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      VITA_HOST: 0.0.0.0
+      VITA_PORT: "4317"
+      VITA_WORKSPACE: /data
+    ports:
+      - "127.0.0.1:4317:4317"
+    volumes:
+      - ./vita-data:/data
+      # Optional Pi OAuth/subscription logins; prepare this dir on the host first.
+      # - ${HOME}/.pi/agent:/pi-agent:ro

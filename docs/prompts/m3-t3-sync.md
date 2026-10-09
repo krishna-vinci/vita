@@ -1,6 +1,6 @@
 # Task: M3-T3 Layer sync down and up
 
-You are the IMPLEMENTER in /home/krishna/vita-worktrees/m3-t3-sync on branch codex/m3-t3-sync. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
+You are the IMPLEMENTER in <worktree-root>/m3-t3-sync on branch codex/m3-t3-sync. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
 
 ## Goal
 Implement **Task 3** of `docs/plans/2026-10-09-m3-depth.md` exactly: interfaces, behaviour, routes and tests as written there. Read its Global Constraints (each task uses its own route file and its own `shared/src/api-<area>.ts`, plus one registration line in `server/src/server.ts`).

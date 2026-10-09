@@ -7,7 +7,7 @@ description: Plan a feature or change, then execute it by dispatching Codex agen
 
 Claude plans, dispatches, reviews, and integrates. Codex agents implement. Codex agents never commit; Claude commits after review.
 
-Script: `.claude/skills/codex-orchestrate/dispatch.sh` (run from repo root `/home/krishna/project-remote/vita`).
+Script: `.claude/skills/codex-orchestrate/dispatch.sh` (run from repo root `<repo>`).
 Run logs: `.claude/codex-runs/<task-id>/` (`last.md`, `events.jsonl`, `stderr.log`, `thread_id`).
 Plans: `docs/plans/YYYY-MM-DD-<feature>.md`. Design specs the plans argue from: `docs/*.md`, decisions in `docs/decisions/LOG.md`.
 
@@ -55,13 +55,13 @@ The user can override the model per task.
 
 ## 3. Choose isolation per task
 
-- **Current tree** (`/home/krishna/project-remote/vita`): sequential tasks, tasks that need uncommitted work in the tree, or small single tasks. Never run two agents in the current tree at once.
+- **Current tree** (`<repo>`): sequential tasks, tasks that need uncommitted work in the tree, or small single tasks. Never run two agents in the current tree at once.
 - **Worktree**: every parallel task gets its own worktree and `codex/<task-id>` branch. Worktrees branch from HEAD, so uncommitted changes are **not** visible — commit first or use the current tree.
   ```bash
   git worktree add ~/vita-worktrees/<task-id> -b codex/<task-id>
   cd ~/vita-worktrees/<task-id> && pnpm install --frozen-lockfile --prefer-offline
   ```
-  Studium (`/home/krishna/learny`) is the reference implementation for role runtime, jobs/SSE, git auto-commit and skills sync: point agents at exact files there (read-only, never edit). Note Studium is on Pi 1.0.0; Vita uses Pi 1.1 (native MCP, codemode).
+  Studium (`<studium-checkout>`) is the reference implementation for role runtime, jobs/SSE, git auto-commit and skills sync: point agents at exact files there (read-only, never edit). Note Studium is on Pi 1.0.0; Vita uses Pi 1.1 (native MCP, codemode).
 
 ## 4. Write the task prompt
 
@@ -90,7 +90,7 @@ You are the IMPLEMENTER in <workdir> on branch <branch>. Do not load orchestrato
 <exact targeted test command(s) per AGENTS.md testing policy; which new tests, if any, to add>
 
 If a step does not fit the real code, stop and report the mismatch (file:line, what you saw) instead of improvising.
-Follow /home/krishna/project-remote/vita/AGENTS.md. Do not commit. End with the AGENTS.md final report.
+Follow <repo>/AGENTS.md. Do not commit. End with the AGENTS.md final report.
 ```
 
 Be specific: exact paths, function names, and expected behavior. Codex has none of this conversation's context.

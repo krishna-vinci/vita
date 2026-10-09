@@ -1,0 +1,56 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Install PDF tools (Tectonic 0.17.0)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends poppler-utils
+          curl -fsSL --connect-timeout 20 --max-time 300 --retry 3 \
+            https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.17.0/tectonic-0.17.0-x86_64-unknown-linux-musl.tar.gz \
+            -o "$RUNNER_TEMP/tectonic.tar.gz"
+          printf '%s  %s\n' 8533d07f9ccbd7a65824b9e0459041bca34af1eb33daba48f59215593753a3b7 "$RUNNER_TEMP/tectonic.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/tectonic.tar.gz" -C "$RUNNER_TEMP" tectonic
+          sudo install -m 0755 "$RUNNER_TEMP/tectonic" /usr/local/bin/tectonic
+          tectonic --version
+      - name: Cache TeX packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/tectonic
+          key: tectonic-0.17.0-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('templates/**') }}
+      - run: pnpm vita setup
+      - run: pnpm exec biome check .
+      - name: Typecheck every package
+        run: |
+          pnpm --filter @vita/shared exec tsc --noEmit
+          pnpm --filter @vita/core exec tsc --noEmit
+          pnpm --filter @vita/cli exec tsc --noEmit
+          pnpm --filter @vita/server exec tsc --noEmit
+          pnpm --filter @vita/web exec tsc --noEmit
+      # CI intentionally runs full suites; local runs follow AGENTS.md's scoped policy.
+      - name: Test every package (including real PDF renders)
+        run: |
+          pnpm --filter @vita/shared exec vitest run
+          pnpm --filter @vita/core exec vitest run
+          pnpm --filter @vita/cli exec vitest run
+          pnpm --filter @vita/server exec vitest run
+          pnpm --filter @vita/web exec vitest run
+      - run: pnpm build:web
