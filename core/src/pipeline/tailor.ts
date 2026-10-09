@@ -14,7 +14,7 @@ import { analystRole } from "../agent/roles.js";
 import { selectEvidence } from "../search/index.js";
 import { fileHash, readText, resolveInWorkspace } from "../workspace/index.js";
 import { answerClaimId, effectivePack, findGaps, loadContext, mergeKeywords, optionalText } from "./context.js";
-import { answerFact } from "./coverage.js";
+import { answerFact, expandGroup, requirementLabel } from "./coverage.js";
 import { localDate } from "./date.js";
 import { data, generate, roleRunner } from "./generate.js";
 import { withGenerationLock } from "./lock.js";
@@ -108,6 +108,21 @@ export async function tailor(
       deps.onProgress?.({ stage: "gaps" });
       const gaps = findGaps(ctx, analysis);
       for (const message of gaps) deps.onProgress?.({ stage: "gaps", message });
+      // Must-haves the profile can support: tell the writer which claims cover each, so none is silently dropped.
+      const gapIds = new Set(gaps.map((gap) => gap.slice(0, gap.indexOf(":"))));
+      const mustCover = analysis.requirements
+        .filter((requirement) => requirement.importance === "must" && !gapIds.has(requirement.id))
+        .map((requirement) => ({
+          requirementId: requirement.id,
+          requirement: requirementLabel(requirement),
+          claimIds: selectEvidence(ctx.search, ctx.index, {
+            keywords: requirement.keywords.map(expandGroup),
+            lead: [],
+            locked: [],
+            maxClaims: 3,
+          }).claimIds,
+        }))
+        .filter((entry) => entry.claimIds.length > 0);
       deps.onProgress?.({ stage: "select" });
       const selection = selectEvidence(ctx.search, ctx.index, {
         keywords: [...analysis.requirements.flatMap((requirement) => requirement.keywords), ...pack.keywords],
@@ -142,6 +157,7 @@ export async function tailor(
           gaps,
           jobText: input.jobText,
           answers,
+          mustCover,
           answerClaims: input.applicationId
             ? Object.entries(answers)
                 .filter(([, value]) => answerFact(value) !== null)

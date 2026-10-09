@@ -78,9 +78,42 @@ export function expandGroup(group: string[]): string[] {
   return [...terms];
 }
 
+const SUFFIXES = [
+  "izations",
+  "ization",
+  "ations",
+  "ation",
+  "ments",
+  "ment",
+  "ings",
+  "ing",
+  "ions",
+  "ion",
+  "ed",
+  "es",
+  "s",
+];
+
+/** Crude stem so "Monitored" meets "monitoring" and "Automated" meets "automation". */
+export function stem(word: string): string {
+  const lower = word.toLowerCase();
+  for (const suffix of SUFFIXES) {
+    if (lower.endsWith(suffix) && lower.length - suffix.length >= 4) return lower.slice(0, -suffix.length);
+  }
+  return lower;
+}
+
+function termMatches(text: string, term: string): boolean {
+  if (keywordMatches(text, term)) return true;
+  // Single words also match other forms of the same stem; phrases stay exact.
+  if (/\s/.test(term.trim()) || term.trim().length < 5) return false;
+  const root = stem(term.trim()).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?<![\\p{L}\\p{N}_])${root}[\\p{L}]*(?![\\p{L}\\p{N}_])`, "iu").test(text);
+}
+
 /** Requirements list alternatives ("AWS, GCP or Azure"): any one group with a match covers it. */
 export function requirementCoveredByText(text: string, requirement: Requirement): boolean {
-  return requirement.keywords.some((group) => expandGroup(group).some((term) => keywordMatches(text, term)));
+  return requirement.keywords.some((group) => expandGroup(group).some((term) => termMatches(text, term)));
 }
 
 export function requirementLabel(requirement: Requirement): string {

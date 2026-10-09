@@ -142,6 +142,8 @@ export interface GenerationInput {
   gaps: string[];
   jobText?: string;
   answers?: Record<string, string>;
+  /** Must-haves with supporting claims; each needs a bullet or skill entry citing one of them. */
+  mustCover?: { requirementId: string; requirement: string; claimIds: string[] }[];
   /** User-attested facts from "yes" gap answers, citable as claims. */
   answerClaims?: { id: string; text: string }[];
   direction?: string;
@@ -217,6 +219,7 @@ export async function generate(
     data("job.md", input.jobText ?? ""),
     data("answers", input.answers ?? {}),
     data("answer claims (user-attested, citable)", input.answerClaims ?? []),
+    data("must-haves to cover", input.mustCover ?? []),
     data("user notes", input.notes ?? ""),
   ].join("\n\n");
   // Two checked drafts total: initial draft plus one revision.
@@ -226,7 +229,7 @@ export async function generate(
       writer,
       [
         `Generate a ${input.kind} resume with id ${input.id}, parent ${input.parent ?? "null"}, template ${input.template}, at most ${input.maxPages} pages.`,
-        "Preserve locked bullets exactly, including visibility. Answer claims are the person's own dated statements from gap questions: you may cite their ids for bullets or skills, using only what they say (never inflate a basic understanding into expertise). Other answers (no, skip) are gaps: never write them as experience. Never invent claim IDs or grant overrides.",
+        "Preserve locked bullets exactly, including visibility. Answer claims are the person's own dated statements from gap questions: you may cite their ids for bullets or skills, using only what they say (never inflate a basic understanding into expertise). Other answers (no, skip) are gaps: never write them as experience. Never invent claim IDs or grant overrides. Cover every entry in \"must-haves to cover\" with a bullet (or a skills entry) that cites one of its claim ids and uses the requirement's wording where the claim supports it; recruiters and ATS look for that wording.",
         ...(input.kind === "base"
           ? [
               "Select and order content from the master resume for the direction in the following data.",

@@ -38,3 +38,15 @@ it("asks with the short label and reads yes answers as facts", () => {
   expect(answerFact("no")).toBeNull();
   expect(answerFact("skip")).toBeNull();
 });
+
+it("matches other word forms of single terms", () => {
+  const requirement = {
+    id: "r",
+    text: "Monitoring tools",
+    importance: "must" as const,
+    keywords: [["monitoring tools"], ["automation"]],
+  };
+  expect(requirementCoveredByText("Monitored services with Uptime Kuma.", requirement)).toBe(true);
+  expect(requirementCoveredByText("Automated releases.", { ...requirement, keywords: [["automation"]] })).toBe(true);
+  expect(requirementCoveredByText("Wrote release notes.", requirement)).toBe(false);
+});

@@ -92,7 +92,7 @@ describe("evaluateDone", () => {
     expect(
       evaluateDone({
         ...input,
-        analysis: { ...input.analysis, requirements: [{ ...requirement, keywords: [["record"]] }] },
+        analysis: { ...input.analysis, requirements: [{ ...requirement, keywords: [["ledger"]] }] },
       }).done,
     ).toBe(false);
   });
