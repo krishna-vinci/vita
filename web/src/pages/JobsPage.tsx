@@ -1,4 +1,4 @@
-import { ArrowUpRight, BriefcaseBusiness, Plus } from "lucide-react";
+import { ArrowUpRight, BriefcaseBusiness, GraduationCap, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useApplications } from "@/api/queries";
 import { PageError, PageLoading } from "@/components/PageState";
@@ -46,10 +46,10 @@ export default function JobsPage() {
       ) : (
         <ul className="divide-y rounded-xl border bg-card">
           {query.data.map((application) => (
-            <li key={application.id}>
+            <li key={application.id} className="flex flex-wrap items-center gap-2 pr-3 sm:flex-nowrap">
               <Link
                 to={`/jobs/${encodeURIComponent(application.id)}`}
-                className="flex min-h-24 items-center justify-between gap-4 rounded-lg p-5 focus-visible:outline-2 focus-visible:outline-ring"
+                className="flex min-h-24 min-w-0 basis-full items-center sm:basis-0 sm:flex-1 justify-between gap-4 rounded-lg p-5 focus-visible:outline-2 focus-visible:outline-ring"
               >
                 <div className="flex min-w-0 flex-col gap-1">
                   <h2 className="font-display text-lg font-medium break-words">{application.title}</h2>
@@ -62,6 +62,11 @@ export default function JobsPage() {
                 </div>
                 <ArrowUpRight className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
               </Link>
+              <Button asChild variant="outline" className="mb-3 ml-5 h-11 sm:m-0">
+                <Link to={`/jobs/${encodeURIComponent(application.id)}/prep`}>
+                  <GraduationCap /> Interview prep
+                </Link>
+              </Button>
             </li>
           ))}
         </ul>

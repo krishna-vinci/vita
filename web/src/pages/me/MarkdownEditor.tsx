@@ -2,6 +2,7 @@ import type { MarkdownMutation, MarkdownResource, PutMarkdownRequest } from "@vi
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ApiError } from "@/api/client";
+import { Markdown } from "@/components/Markdown";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -60,6 +61,7 @@ export function MarkdownEditor({
   const [draft, setDraft] = useState(shown);
   const [baseHash, setBaseHash] = useState(resource.hash);
   const [conflict, setConflict] = useState(false);
+  const [preview, setPreview] = useState(false);
   const [saving, setSaving] = useState(false);
   const [mono, setMono] = useState(remember.get);
   const dirty = draft !== shown;
@@ -112,18 +114,48 @@ export function MarkdownEditor({
           </Label>
         </div>
       </div>
-      <Textarea
-        id="editor"
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        placeholder={placeholder}
-        spellCheck
-        aria-label={label}
-        className={cn(
-          compact ? "min-h-48 leading-relaxed" : "min-h-[55dvh] leading-relaxed",
-          mono ? "font-mono text-sm" : "text-base",
-        )}
-      />
+      <fieldset className="flex gap-1 border-0 p-0" aria-label="View">
+        <Button
+          type="button"
+          size="sm"
+          variant={preview ? "ghost" : "secondary"}
+          aria-pressed={!preview}
+          onClick={() => setPreview(false)}
+        >
+          Write
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={preview ? "secondary" : "ghost"}
+          aria-pressed={preview}
+          onClick={() => setPreview(true)}
+        >
+          Preview
+        </Button>
+      </fieldset>
+      {preview ? (
+        <Markdown
+          text={draft || "_Nothing written yet._"}
+          className={cn(
+            "overflow-auto rounded-md border bg-card p-4 text-base",
+            compact ? "min-h-48" : "min-h-[55dvh]",
+          )}
+        />
+      ) : (
+        <Textarea
+          id="editor"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder={placeholder}
+          spellCheck
+          aria-label={label}
+          className={cn(
+            compact ? "min-h-48 leading-relaxed" : "min-h-[55dvh] leading-relaxed",
+            mono ? "font-mono text-sm" : "text-base",
+          )}
+        />
+      )}
       {conflict && (
         <Alert variant="destructive">
           <AlertTitle>This changed somewhere else</AlertTitle>

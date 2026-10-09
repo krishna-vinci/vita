@@ -1,3 +1,5 @@
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type { Bullet, CheckNote } from "@vita/shared";
 import { Eye, EyeOff, GripVertical, MoreHorizontal, Pencil } from "lucide-react";
 import { useState } from "react";
@@ -23,20 +25,16 @@ export function BulletLine({
   flag,
   ctx,
   position,
-  onDragStart,
-  onDropHere,
 }: {
   bullet: Bullet;
   flag?: Flag;
   ctx: SheetContext;
   position: { itemId: string; itemSlug: string; index: number; count: number };
-  onDragStart: (id: string) => void;
-  onDropHere: (itemId: string, index: number) => void;
 }) {
   const { actions, details, busy, changed, claims, checks } = ctx;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(bullet.text);
-  const [over, setOver] = useState(false);
+  const sortable = useSortable({ id: bullet.id });
   const start = () => {
     setDraft(bullet.text);
     setEditing(true);
@@ -108,37 +106,27 @@ export function BulletLine({
   const sources = bullet.claims.map((id) => ({ id, claim: claims.get(id) }));
   return (
     <li
+      ref={sortable.setNodeRef}
+      style={{ transform: CSS.Translate.toString(sortable.transform), transition: sortable.transition }}
       className={cn(
         "group/line relative -ml-6 flex list-none flex-col rounded-sm py-0.5 pl-6",
         changed.has(bullet.id) && "bg-primary/10",
-        over && "outline-2 outline-primary/60 outline-dashed",
+        sortable.isDragging && "z-10 opacity-40",
       )}
-      onDragOver={(event) => {
-        event.preventDefault();
-        setOver(true);
-      }}
-      onDragLeave={() => setOver(false)}
-      onDrop={(event) => {
-        event.preventDefault();
-        setOver(false);
-        onDropHere(position.itemId, position.index);
-      }}
     >
       <div className="flex items-start gap-1">
         <span aria-hidden="true" className="absolute top-2.5 left-[18px] size-1 rounded-full bg-sheet-ink" />
         <div className="min-w-0 flex-1 pl-3 break-words">{body}</div>
         {!editing && (
-          <div className="flex shrink-0 items-center opacity-100 transition-opacity md:opacity-0 md:group-focus-within/line:opacity-100 md:group-hover/line:opacity-100">
+          <div className="flex shrink-0 items-center">
             <button
               type="button"
-              draggable
+              ref={sortable.setActivatorNodeRef}
               aria-label="Drag to reorder"
-              title="Drag to reorder"
-              className="hidden size-8 cursor-grab items-center justify-center rounded-md text-sheet-muted hover:bg-black/5 md:flex"
-              onDragStart={(event) => {
-                event.dataTransfer.effectAllowed = "move";
-                onDragStart(bullet.id);
-              }}
+              title="Drag to reorder, or press space then use the arrow keys"
+              className="flex size-9 touch-none cursor-grab items-center justify-center rounded-md text-sheet-muted hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-primary active:cursor-grabbing"
+              {...sortable.attributes}
+              {...sortable.listeners}
             >
               <GripVertical className="size-4" />
             </button>
@@ -154,13 +142,13 @@ export function BulletLine({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   disabled={position.index === 0}
-                  onSelect={() => actions.move(bullet.id, position.itemId, position.index - 1)}
+                  onSelect={() => void actions.move(bullet.id, position.itemId, position.index - 1)}
                 >
                   Move up
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   disabled={position.index >= position.count - 1}
-                  onSelect={() => actions.move(bullet.id, position.itemId, position.index + 1)}
+                  onSelect={() => void actions.move(bullet.id, position.itemId, position.index + 1)}
                 >
                   Move down
                 </DropdownMenuItem>

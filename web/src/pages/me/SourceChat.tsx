@@ -3,6 +3,7 @@ import { SendHorizontal } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useApplySource, useSourceChat } from "@/api/queries";
+import { Markdown } from "@/components/Markdown";
 import { Diff } from "@/components/ProposalDiff";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,12 +54,13 @@ export function SourceChat({ dirty, className }: { dirty: boolean; className?: s
         {turns.map((turn, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: append-only list
           <Bubble key={index} from={turn.role}>
-            {turn.text}
+            {turn.role === "assistant" ? <Markdown text={turn.text} /> : turn.text}
             {turn.proposal && (
               <div className="mt-3 flex flex-col gap-2">
                 <p className="text-xs font-medium text-muted-foreground">
                   Proposed change to {fileName[turn.proposal.file]}
                 </p>
+                {turn.proposal.summary && <Markdown text={turn.proposal.summary} className="text-sm" />}
                 <Diff before={turn.proposal.before} after={turn.proposal.after} />
                 {turn.state === "open" ? (
                   <>

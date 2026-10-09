@@ -1,6 +1,7 @@
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useApproveTemplate, useDiscardTemplate, useJobs, useProposeTemplate, useTemplateUpload } from "@/api/queries";
+import { Markdown } from "@/components/Markdown";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -78,7 +79,7 @@ export function TemplateAdoption({ id, onClose }: { id: string; onClose: () => v
               <ul className="list-disc pl-5 text-sm text-muted-foreground">
                 {proposal.notes.map((note) => (
                   <li key={note} className="break-words">
-                    {note}
+                    <Markdown inline text={note} />
                   </li>
                 ))}
               </ul>

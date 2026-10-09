@@ -3,6 +3,7 @@ import { FileUp, FolderOpen, Link2, PencilLine, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { api } from "@/api/client";
 import { useProjects, useSaveProjects } from "@/api/queries";
+import { Markdown } from "@/components/Markdown";
 import { PageError, PageLoading } from "@/components/PageState";
 import { SplitWithChat } from "@/components/SplitWithChat";
 import { Badge } from "@/components/ui/badge";
@@ -125,7 +126,9 @@ function ProjectItem({ card }: { card: ProjectCard }) {
             <p className="font-medium">What you may not claim</p>
             <ul className="list-disc pl-5 text-muted-foreground">
               {card.limits.map((limit) => (
-                <li key={limit}>{limit}</li>
+                <li key={limit}>
+                  <Markdown inline text={limit} />
+                </li>
               ))}
             </ul>
           </div>

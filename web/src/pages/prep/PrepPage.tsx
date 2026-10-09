@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ApiError } from "@/api/client";
 import { useApplication, useJobs, usePrep, useStartPrep } from "@/api/queries";
+import { Markdown } from "@/components/Markdown";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -76,7 +77,7 @@ export default function PrepPage() {
             </p>
           )}
           <Button className="h-11 w-fit" onClick={make} disabled={start.isPending}>
-            Make my interview prep
+            Start my interview prep
           </Button>
         </div>
       ) : prep.isError ? (
@@ -98,7 +99,7 @@ function Points({ items }: { items: string[] }) {
     <ul className="list-disc pl-5 text-sm">
       {items.map((item) => (
         <li key={item} className="break-words">
-          {item}
+          <Markdown inline text={item} />
         </li>
       ))}
     </ul>
@@ -130,7 +131,7 @@ function PrepBody({
                       <CardTitle className="font-display text-base font-medium break-words">
                         {question.question}
                       </CardTitle>
-                      <p className="text-sm text-muted-foreground">{question.why}</p>
+                      <Markdown text={question.why} className="text-sm text-muted-foreground" />
                     </CardHeader>
                     <CardContent className="flex flex-col gap-2">
                       <Points items={question.talkingPoints} />
@@ -155,25 +156,27 @@ function PrepBody({
               <li key={story.id}>
                 <Card className="h-full">
                   <CardHeader>
-                    <CardTitle className="font-display text-base font-medium break-words">{story.title}</CardTitle>
+                    <CardTitle className="font-display text-base font-medium break-words">
+                      <Markdown inline text={story.title} />
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="flex flex-col gap-2 text-sm">
                     <p>
                       <strong>The situation. </strong>
-                      {story.situation}
+                      <Markdown inline text={story.situation} />
                     </p>
                     <p>
                       <strong>Your job. </strong>
-                      {story.task}
+                      <Markdown inline text={story.task} />
                     </p>
                     <p>
                       <strong>What you did. </strong>
-                      {story.action}
+                      <Markdown inline text={story.action} />
                     </p>
                     {story.result ? (
                       <p>
                         <strong>The result. </strong>
-                        {story.result}
+                        <Markdown inline text={story.result} />
                       </p>
                     ) : (
                       <p className="rounded-md border border-dashed p-2 text-muted-foreground">
@@ -207,15 +210,15 @@ function PrepBody({
                   <CardContent className="flex flex-col gap-2 text-sm">
                     <p>
                       <strong>The honest answer. </strong>
-                      {gap.honestAnswer}
+                      <Markdown inline text={gap.honestAnswer} />
                     </p>
                     <p>
                       <strong>What you can bridge from. </strong>
-                      {gap.bridge}
+                      <Markdown inline text={gap.bridge} />
                     </p>
                     <p>
                       <strong>Your plan. </strong>
-                      {gap.plan}
+                      <Markdown inline text={gap.plan} />
                     </p>
                   </CardContent>
                 </Card>

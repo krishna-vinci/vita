@@ -1,11 +1,41 @@
-import { type Item, type Resume, type Section, slugify } from "@vita/shared";
+import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  type DragOverEvent,
+  DragOverlay,
+  type DragStartEvent,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { type Bullet, type Item, type Resume, type Section, slugify } from "@vita/shared";
 import { Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { Flag } from "@/lib/resume-view";
 import { cn } from "@/lib/utils";
 import { BulletLine } from "./BulletLine";
 import type { SheetContext } from "./types";
+
+type Order = Record<string, string[]>;
+
+/** Bullet ids per item, in document order. */
+function orderOf(resume: Resume): Order {
+  const order: Order = {};
+  for (const section of resume.sections)
+    for (const item of section.items) order[item.id] = item.bullets.map((bullet) => bullet.id);
+  return order;
+}
 
 /** The resume as HTML, mirroring the PDF's structure. Every line renders as text. */
 export function ResumeSheet({
@@ -17,31 +47,104 @@ export function ResumeSheet({
   flags: ReadonlyMap<string, Flag>;
   ctx: SheetContext;
 }) {
-  const [dragId, setDragId] = useState<string | null>(null);
-  const contact = resume.header.contact.map((entry) => entry.value).filter(Boolean);
-  const onDropHere = (itemId: string, index: number) => {
-    if (dragId) ctx.actions.move(dragId, itemId, index);
-    setDragId(null);
+  const server = useMemo(() => orderOf(resume), [resume]);
+  // While dragging, and until the server confirms a move, the order shown is local. A failed move drops it.
+  const [local, setLocal] = useState<Order | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const order = local ?? server;
+  const bullets = useMemo(() => {
+    const map = new Map<string, Bullet>();
+    for (const section of resume.sections)
+      for (const item of section.items) for (const bullet of item.bullets) map.set(bullet.id, bullet);
+    return map;
+  }, [resume]);
+  const sectionOf = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const section of resume.sections) for (const item of section.items) map.set(item.id, section.id);
+    return map;
+  }, [resume]);
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    // A short press-and-hold, so scrolling a phone still works.
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  const containerOf = (id: string, from: Order) =>
+    id in from ? id : Object.keys(from).find((key) => from[key]?.includes(id));
+
+  const onDragStart = (event: DragStartEvent) => setActiveId(String(event.active.id));
+  const onDragOver = ({ active, over }: DragOverEvent) => {
+    if (!over) return;
+    const current = local ?? server;
+    const from = containerOf(String(active.id), current);
+    const to = containerOf(String(over.id), current);
+    if (!from || !to || from === to || sectionOf.get(from) !== sectionOf.get(to)) return;
+    const target = current[to] ?? [];
+    const overIndex = target.indexOf(String(over.id));
+    const index = overIndex < 0 ? target.length : overIndex;
+    setLocal({
+      ...current,
+      [from]: (current[from] ?? []).filter((id) => id !== String(active.id)),
+      [to]: [...target.slice(0, index), String(active.id), ...target.slice(index)],
+    });
   };
+  const onDragEnd = async ({ active, over }: DragEndEvent) => {
+    setActiveId(null);
+    const id = String(active.id);
+    let next = local ?? server;
+    const container = containerOf(id, next);
+    if (over && container) {
+      const overId = String(over.id);
+      const overContainer = containerOf(overId, next);
+      if (overContainer === container && overId !== id) {
+        const list = next[container] ?? [];
+        next = { ...next, [container]: arrayMove(list, list.indexOf(id), Math.max(list.indexOf(overId), 0)) };
+      }
+    }
+    const to = containerOf(id, next);
+    const index = to ? (next[to] ?? []).indexOf(id) : -1;
+    if (!to || index < 0 || JSON.stringify(next) === JSON.stringify(server)) return setLocal(null);
+    setLocal(next);
+    const ok = await ctx.actions.move(id, to, index);
+    // On success the refreshed resume carries the new order; on failure the old order comes back.
+    void ok;
+    setLocal(null);
+  };
+  const contact = resume.header.contact.map((entry) => entry.value).filter(Boolean);
+  const active = activeId ? bullets.get(activeId) : undefined;
   return (
-    <article
-      aria-label="Your resume"
-      className="mx-auto flex w-full max-w-[720px] flex-col gap-2 rounded-sm bg-sheet px-5 py-7 font-resume text-[16px] leading-snug text-sheet-ink shadow-[0_1px_3px_rgba(0,0,0,.12),0_6px_20px_rgba(0,0,0,.06)] sm:px-10 sm:py-9"
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDragEnd={(event) => void onDragEnd(event)}
+      onDragCancel={() => {
+        setActiveId(null);
+        setLocal(null);
+      }}
     >
-      <h2 className="text-center text-[26px] leading-none font-semibold">{resume.header.name}</h2>
-      {resume.header.headline && <p className="text-center text-sheet-muted">{resume.header.headline}</p>}
-      {contact.length > 0 && <p className="text-center text-sm break-words text-sheet-muted">{contact.join(" · ")}</p>}
-      {resume.sections.map((section) => (
-        <SectionView
-          key={section.id}
-          section={section}
-          flags={flags}
-          ctx={ctx}
-          onDragStart={setDragId}
-          onDropHere={onDropHere}
-        />
-      ))}
-    </article>
+      <article
+        aria-label="Your resume"
+        className="mx-auto flex w-full max-w-[720px] flex-col gap-2 rounded-sm bg-sheet px-5 py-7 font-resume text-[16px] leading-snug text-sheet-ink shadow-[0_1px_3px_rgba(0,0,0,.12),0_6px_20px_rgba(0,0,0,.06)] sm:px-10 sm:py-9"
+      >
+        <h2 className="text-center text-[26px] leading-none font-semibold">{resume.header.name}</h2>
+        {resume.header.headline && <p className="text-center text-sheet-muted">{resume.header.headline}</p>}
+        {contact.length > 0 && (
+          <p className="text-center text-sm break-words text-sheet-muted">{contact.join(" · ")}</p>
+        )}
+        {resume.sections.map((section) => (
+          <SectionView key={section.id} section={section} flags={flags} ctx={ctx} order={order} bullets={bullets} />
+        ))}
+      </article>
+      <DragOverlay>
+        {active ? (
+          <div className="rounded-md border bg-sheet px-3 py-2 font-resume text-[16px] text-sheet-ink shadow-lg">
+            {active.text}
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }
 
@@ -49,14 +152,14 @@ function SectionView({
   section,
   flags,
   ctx,
-  onDragStart,
-  onDropHere,
+  order,
+  bullets,
 }: {
   section: Section;
   flags: ReadonlyMap<string, Flag>;
   ctx: SheetContext;
-  onDragStart: (id: string) => void;
-  onDropHere: (itemId: string, index: number) => void;
+  order: Order;
+  bullets: ReadonlyMap<string, Bullet>;
 }) {
   return (
     <section aria-label={section.title} className={cn("mt-2 flex flex-col gap-1.5", section.hidden && "opacity-60")}>
@@ -79,14 +182,7 @@ function SectionView({
         <>
           {section.text && <p className="break-words whitespace-pre-line">{section.text}</p>}
           {section.items.map((item) => (
-            <ItemView
-              key={item.id}
-              item={item}
-              flags={flags}
-              ctx={ctx}
-              onDragStart={onDragStart}
-              onDropHere={onDropHere}
-            />
+            <ItemView key={item.id} item={item} flags={flags} ctx={ctx} ids={order[item.id] ?? []} bullets={bullets} />
           ))}
         </>
       )}
@@ -98,17 +194,19 @@ function ItemView({
   item,
   flags,
   ctx,
-  onDragStart,
-  onDropHere,
+  ids,
+  bullets,
 }: {
   item: Item;
   flags: ReadonlyMap<string, Flag>;
   ctx: SheetContext;
-  onDragStart: (id: string) => void;
-  onDropHere: (itemId: string, index: number) => void;
+  ids: string[];
+  bullets: ReadonlyMap<string, Bullet>;
 }) {
   const heading = [item.title, item.subtitle].filter(Boolean).join(", ");
   const when = [item.period, item.location].filter(Boolean).join(" · ");
+  // The list itself accepts drops, so a line can be dragged into an item that has no lines yet.
+  const { setNodeRef } = useDroppable({ id: item.id });
   return (
     <div className={cn("flex flex-col gap-1", item.hidden && "opacity-60")}>
       {(heading || when) && (
@@ -130,24 +228,22 @@ function ItemView({
         </div>
       )}
       {!item.hidden && (
-        <ul className="m-0 flex flex-col gap-1 pl-4">
-          {item.bullets.map((bullet, index) => (
-            <BulletLine
-              key={bullet.id}
-              bullet={bullet}
-              flag={flags.get(bullet.id)}
-              ctx={ctx}
-              position={{
-                itemId: item.id,
-                itemSlug: item.source ?? slugify(item.title),
-                index,
-                count: item.bullets.length,
-              }}
-              onDragStart={onDragStart}
-              onDropHere={onDropHere}
-            />
-          ))}
-        </ul>
+        <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+          <ul ref={setNodeRef} className="m-0 flex min-h-3 flex-col gap-1 pl-4">
+            {ids.map((id, index) => {
+              const bullet = bullets.get(id);
+              return bullet ? (
+                <BulletLine
+                  key={id}
+                  bullet={bullet}
+                  flag={flags.get(id)}
+                  ctx={ctx}
+                  position={{ itemId: item.id, itemSlug: item.source ?? slugify(item.title), index, count: ids.length }}
+                />
+              ) : null;
+            })}
+          </ul>
+        </SortableContext>
       )}
     </div>
   );

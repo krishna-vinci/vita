@@ -1,5 +1,5 @@
 import type { ApiResumeOp, ApplicationResource, ResumeResource } from "@vita/shared";
-import { ArrowLeft, MessageSquareText } from "lucide-react";
+import { ArrowLeft, GraduationCap, MessageSquareText } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -21,6 +21,7 @@ import {
   useUndo,
 } from "@/api/queries";
 import { PageError, PageLoading } from "@/components/PageState";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -115,13 +116,23 @@ function Loaded({
   const [details, setDetails] = useState(() => store.get("vita:details") === "1");
   const [changed, setChanged] = useState<ReadonlySet<string>>(new Set());
   const [chatOpen, setChatOpen] = useState(false);
-  const [handled, setHandled] = useState<string[]>(() => {
+  // Skipped questions are remembered for this tab only. Answers live on the server (`app.answers`).
+  const skipKey = `vita:skipped:${id}`;
+  const [skipped, setSkipped] = useState<string[]>(() => {
     try {
-      return JSON.parse(store.get(`vita:answered:${id}`) ?? "[]") as string[];
+      return JSON.parse(sessionStorage.getItem(skipKey) ?? "[]") as string[];
     } catch {
       return [];
     }
   });
+  const rememberSkipped = (ids: string[]) => {
+    setSkipped(ids);
+    try {
+      sessionStorage.setItem(skipKey, JSON.stringify(ids));
+    } catch {
+      /* Fine: they will be offered again. */
+    }
+  };
   const appOps = useApplicationOps(isJob ? id : "");
   const baseOps = useResumeOps(isJob ? "" : id);
   const ops = isJob ? appOps : baseOps;
@@ -176,7 +187,7 @@ function Loaded({
     hide: (bulletId, hidden) => void run([{ op: "bullet.hide", id: bulletId, hidden }]),
     hideSection: (sectionId, hidden) => void run([{ op: "section.hide", id: sectionId, hidden }]),
     hideItem: (itemId, hidden) => void run([{ op: "item.hide", id: itemId, hidden }]),
-    move: (bulletId, toParent, index) => void run([{ op: "move", id: bulletId, toParent, index }]),
+    move: (bulletId, toParent, index) => run([{ op: "move", id: bulletId, toParent, index }]),
     vouch: (bulletId, note) => void run([{ op: "bullet.override", id: bulletId, reason: "user-attested", note }]),
     ask,
     promote: isJob
@@ -194,25 +205,35 @@ function Loaded({
       : undefined,
   };
 
-  const gaps = parseGaps(app?.gaps ?? []).filter((gap) => !handled.includes(gap.id));
-  const markHandled = (list: { id: string }[]) => {
-    const next = [...new Set([...handled, ...list.map((gap) => gap.id)])];
-    store.set(`vita:answered:${id}`, JSON.stringify(next));
-    setHandled(next);
-  };
+  // A failed update stays visible until a later one succeeds, so a quiet failure never looks like a loop.
+  const mine = (jobs.data ?? [])
+    .filter((job) => job.resourceId === id)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const failure = mine[0]?.status === "failed" ? mine[0] : undefined;
+  const failureNote = failure ? (
+    <Alert variant="destructive">
+      <AlertTitle>The last update didn't work</AlertTitle>
+      <AlertDescription>{failure.error ?? "Something went wrong. Please try again."}</AlertDescription>
+    </Alert>
+  ) : null;
+  const answered = app?.answers ?? {};
+  const unanswered = parseGaps(app?.gaps ?? []).filter((gap) => !(gap.id in answered));
+  const gaps = unanswered.filter((gap) => !skipped.includes(gap.id));
   if (isJob && gaps.length)
     return (
       <div className="flex flex-col gap-4">
         <BackLink {...back} />
+        {failureNote}
         <Questions
           gaps={gaps}
           pending={answers.isPending}
-          onSkipAll={() => markHandled(gaps)}
+          onSkipAll={() => rememberSkipped([...skipped, ...gaps.map((gap) => gap.id)])}
           onSubmit={async (given) => {
-            if (!Object.keys(given).length) return markHandled(gaps);
+            if (!Object.keys(given).length) return rememberSkipped([...skipped, ...gaps.map((gap) => gap.id)]);
             try {
               await answers.mutateAsync({ answers: given });
-              markHandled(gaps);
+              // Anything left unanswered stays skipped for now, so only new questions come back.
+              rememberSkipped([...skipped, ...gaps.filter((gap) => !(gap.id in given)).map((gap) => gap.id)]);
             } catch (error) {
               toast.error(error instanceof Error ? error.message : "Your answers could not be sent.");
             }
@@ -236,7 +257,10 @@ function Loaded({
     try {
       const result = await exporter.mutateAsync();
       saveUrl(result.pdfUrl);
-      toast.success("Your PDF is ready.");
+      toast.success("Your PDF is ready.", {
+        action: { label: "Prepare for the interview", onClick: () => navigate(`/jobs/${encodeURIComponent(id)}/prep`) },
+        duration: 10_000,
+      });
     } catch (error) {
       toast.error(
         issues
@@ -261,6 +285,7 @@ function Loaded({
   return (
     <div className="flex flex-col gap-6">
       <BackLink {...back} />
+      {failureNote}
       <header className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-display text-3xl font-bold break-words">{title}</h1>
@@ -272,6 +297,15 @@ function Loaded({
                 : "Checked again when you download"}
           </Badge>
         </div>
+        {isJob && (
+          <div>
+            <Button asChild variant="outline" className="h-11">
+              <Link to={`/jobs/${encodeURIComponent(id)}/prep`}>
+                <GraduationCap /> Prepare for the interview
+              </Link>
+            </Button>
+          </div>
+        )}
         {isJob && (
           <p className="text-muted-foreground">
             Started from {parent ? parent.name : "your master resume"}
@@ -324,9 +358,10 @@ function Loaded({
           undo.mutate(
             { scope, id },
             {
-              onSuccess: () => {
+              onSuccess: (result) => {
                 setChanged(new Set());
-                toast.success("Undid the last change.");
+                if (result.sha) toast.success("Undid the last change.");
+                else toast.info("Nothing left to undo. This is the first version.");
               },
               onError: (error) => toast.error(error.message),
             },
@@ -336,7 +371,6 @@ function Loaded({
         onMarkdown={() => download(`${id}.md`, "text/markdown", resumeToMarkdown(data.resume))}
         exporting={exporter.isPending}
         canPdf={isJob || !!pdfUrl}
-        prepTo={isJob ? `/jobs/${encodeURIComponent(id)}/prep` : undefined}
         overBy={
           data.review?.render?.maxPages && data.review.render.pages > data.review.render.maxPages
             ? data.review.render.maxPages
@@ -351,6 +385,10 @@ function Loaded({
           gaps={app?.gaps ?? []}
           review={data.review}
           jobs={(jobs.data ?? []).filter((job) => job.result?.id === id)}
+          jobText={app?.jobText}
+          skipped={unanswered.filter((gap) => skipped.includes(gap.id)).length}
+          onAnswerSkipped={() => rememberSkipped([])}
+          answers={answered}
         />
       )}
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">

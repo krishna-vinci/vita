@@ -1,5 +1,6 @@
 import { api } from "@/api/client";
 import { useInstructions, useSaveInstructions } from "@/api/queries";
+import { Markdown } from "@/components/Markdown";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { MarkdownEditor } from "../me/MarkdownEditor";
@@ -28,7 +29,9 @@ export function InstructionsEditor() {
               <AlertDescription>
                 <ul className="list-disc pl-5">
                   {query.data.warnings.map((warning) => (
-                    <li key={warning}>{warning}</li>
+                    <li key={warning}>
+                      <Markdown inline text={warning} />
+                    </li>
                   ))}
                 </ul>
               </AlertDescription>

@@ -2,6 +2,7 @@ import type { SourceProposal } from "@vita/shared";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useApplySource } from "@/api/queries";
+import { Markdown } from "@/components/Markdown";
 import { Button } from "@/components/ui/button";
 import { changedLines } from "@/lib/diff";
 
@@ -44,6 +45,7 @@ export function ProposalReview({
   return (
     <div className="flex flex-col gap-2">
       <p className="text-xs font-medium text-muted-foreground">Proposed change to {fileName[proposal.file]}</p>
+      {proposal.summary && <Markdown text={proposal.summary} className="text-sm" />}
       <Diff before={proposal.before} after={proposal.after} />
       {state === "open" ? (
         <>

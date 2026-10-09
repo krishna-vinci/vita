@@ -506,7 +506,13 @@ export class WorkspaceRuntime {
       if (this.jobs.hasActive())
         throw new ApiFailure(409, "workspace-busy", "Wait for generation before undoing a change");
       const paths = scope === "outline" || scope === "projects" ? [`${scope}.md`] : [this.prefix(scope, id ?? "")];
-      const sha = await undoPaths(this.ws.root, paths, "user");
+      // A resume or job can be undone back to its generated first version, never past it.
+      const sha = await undoPaths(
+        this.ws.root,
+        paths,
+        "user",
+        scope === "resume" || scope === "application" ? ["writer", "system", "importer"] : [],
+      );
       this.changed(scope, sha, id);
       let resource: ResumeResource | ApplicationResource | Awaited<ReturnType<WorkspaceRuntime["markdown"]>> | null;
       if (scope === "outline" || scope === "projects") resource = await this.markdown(`${scope}.md`);

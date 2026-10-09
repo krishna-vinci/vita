@@ -1,5 +1,6 @@
 import { SendHorizontal } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { Markdown } from "@/components/Markdown";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -39,7 +40,7 @@ export function ChatPanel({
         {messages.map((message, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: append-only list
           <Bubble key={index} from={message.role}>
-            {message.text}
+            {message.role === "assistant" ? <Markdown text={message.text} /> : message.text}
             {message.changes && message.changes.length > 0 && (
               <ul className="mt-2 flex flex-col gap-2 border-t pt-2 text-xs">
                 {message.changes.map((change) => (

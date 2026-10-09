@@ -2,6 +2,7 @@ import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useCancelJob, useJob, useStartResearch } from "@/api/queries";
+import { Markdown } from "@/components/Markdown";
 import { ProposalReview } from "@/components/ProposalDiff";
 import { Button } from "@/components/ui/button";
 import {
@@ -110,7 +111,7 @@ export function ResearchDialog({
           </div>
         ) : status === "done" ? (
           <div className="flex flex-col gap-3">
-            {result?.reply && <p className="text-sm break-words whitespace-pre-line">{result.reply}</p>}
+            {result?.reply && <Markdown text={result.reply} className="text-sm" />}
             {result?.proposal ? (
               <ProposalReview proposal={result.proposal} onDone={(accepted) => accepted && setOpen(false)} />
             ) : (

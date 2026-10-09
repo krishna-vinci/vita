@@ -160,6 +160,37 @@ describe("workspace git", () => {
     expect((await log(root, 1))[0]).toMatchObject({ message: "Undo: Change A", author: "user" });
   });
 
+  it("repeated scoped undo steps back one change at a time and then stops", async () => {
+    const file = path.join(root, "a.md");
+    await writeFile(file, "v0");
+    await commitPaths(root, ["a.md"], "Initial", "system");
+    for (const text of ["v1", "v2", "v3"]) {
+      await writeFile(file, text);
+      await commitPaths(root, ["a.md"], `Edit ${text}`, "user");
+    }
+    for (const expected of ["v2", "v1", "v0"]) {
+      await undoPaths(root, ["a.md"], "user");
+      expect(await readFile(file, "utf8")).toBe(expected);
+    }
+    // A new edit after undoing is itself undoable, and does not resurrect the undone ones.
+    await writeFile(file, "v4");
+    await commitPaths(root, ["a.md"], "Edit v4", "user");
+    await undoPaths(root, ["a.md"], "user");
+    expect(await readFile(file, "utf8")).toBe("v0");
+  });
+
+  it("scoped undo never goes back past a stop author", async () => {
+    const file = path.join(root, "a.md");
+    await writeFile(file, "generated");
+    await commitPaths(root, ["a.md"], "Generate", "writer");
+    await writeFile(file, "edited");
+    await commitPaths(root, ["a.md"], "Edit", "user");
+    expect(await undoPaths(root, ["a.md"], "user", ["writer", "system"])).toMatch(/^[0-9a-f]{40}$/);
+    expect(await readFile(file, "utf8")).toBe("generated");
+    expect(await undoPaths(root, ["a.md"], "user", ["writer", "system"])).toBeNull();
+    expect(await readFile(file, "utf8")).toBe("generated");
+  });
+
   it("scoped undo removes a newly created file, including a root commit", async () => {
     expect(await undoPaths(root, ["new.md"], "user")).toBeNull();
     await writeFile(path.join(root, "new.md"), "new");

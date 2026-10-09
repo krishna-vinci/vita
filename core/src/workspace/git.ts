@@ -173,8 +173,41 @@ async function commitPathsUnlocked(
   return (await git(root, ["rev-parse", "HEAD"])).trim();
 }
 
+/**
+ * The newest change to these paths that has not been undone yet. An "Undo: ..." commit cancels the live change
+ * just before it, so repeated undo walks back one change at a time instead of toggling between two states.
+ */
+async function lastLiveChange(root: string, paths: string[], stopAt: Author[]): Promise<string> {
+  const out = await git(root, [
+    "--literal-pathspecs",
+    "log",
+    "-z",
+    "-n500",
+    "--format=%H%x00%s%x00%an",
+    "--",
+    ...paths,
+  ]);
+  const fields = out.split("\0");
+  let cancelled = 0;
+  for (let i = 0; i + 2 < fields.length; i += 3) {
+    const sha = (fields[i] ?? "").trim();
+    const subject = fields[i + 1] ?? "";
+    const name = fields[i + 2] ?? "";
+    if (subject.startsWith("Undo: ")) cancelled++;
+    else if (cancelled > 0) cancelled--;
+    else return stopAt.some((author) => authorEnv(author).GIT_AUTHOR_NAME === name) ? "" : sha;
+  }
+  return "";
+}
+
 /** Restore a resource's last batch while preserving later edits to other resources. */
-export async function undoPaths(root: string, paths: string[], author: Author): Promise<string | null> {
+export async function undoPaths(
+  root: string,
+  paths: string[],
+  author: Author,
+  /** Changes by these authors are never undone (for example, the generated first version of a resume). */
+  stopAt: Author[] = [],
+): Promise<string | null> {
   return withRepoLock(root, async () => {
     for (const rel of paths) {
       const canonical = relFromRoot(root, resolveInWorkspace(root, rel));
@@ -182,7 +215,7 @@ export async function undoPaths(root: string, paths: string[], author: Author): 
         throw new PathEscapeError(`Cannot undo repository metadata or cache: ${rel}`);
     }
     if (!paths.length || !(await hasCommits(root))) return null;
-    const sha = (await git(root, ["--literal-pathspecs", "log", "-1", "--format=%H", "--", ...paths])).trim();
+    const sha = await lastLiveChange(root, paths, stopAt);
     if (!sha) return null;
     const dirty = await git(root, ["--literal-pathspecs", "status", "--porcelain", "--", ...paths]);
     if (dirty) throw new Error("Cannot undo over uncommitted resource edits");

@@ -7,7 +7,7 @@ export interface SheetActions {
   hide(id: string, hidden: boolean): void;
   hideSection(id: string, hidden: boolean): void;
   hideItem(id: string, hidden: boolean): void;
-  move(id: string, toParent: string, index: number): void;
+  move(id: string, toParent: string, index: number): Promise<boolean>;
   vouch(id: string, note: string): void;
   ask(message: string): void;
   /** Only for job resumes. */

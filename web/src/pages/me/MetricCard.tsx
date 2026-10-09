@@ -2,6 +2,7 @@ import type { SourceProposal } from "@vita/shared";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAnswerMetric, useDismissMetric, useMetricQuestions } from "@/api/queries";
+import { Markdown } from "@/components/Markdown";
 import { ProposalReview } from "@/components/ProposalDiff";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -35,11 +36,16 @@ export function MetricCard() {
       <p className="text-sm font-medium text-primary">Got a minute?</p>
       <div className="flex flex-col gap-1">
         <h2 className="font-display text-lg font-medium break-words">
-          {question.question.startsWith(question.itemName)
-            ? question.question
-            : `${question.itemName}: ${question.question}`}
+          <Markdown
+            inline
+            text={
+              question.question.startsWith(question.itemName)
+                ? question.question
+                : `${question.itemName}: ${question.question}`
+            }
+          />
         </h2>
-        <p className="text-sm text-muted-foreground">{question.why}</p>
+        <Markdown text={question.why} className="text-sm text-muted-foreground" />
       </div>
       <form
         className="flex flex-col gap-3"

@@ -1,4 +1,6 @@
 import type { ApplicationResource, JobView, Resume, Review } from "@vita/shared";
+import { Markdown } from "@/components/Markdown";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCost, requirementCovered, visibleText } from "@/lib/resume-view";
 
@@ -9,12 +11,20 @@ export function DetailsPanel({
   gaps,
   review,
   jobs,
+  jobText,
+  skipped = 0,
+  onAnswerSkipped,
+  answers = {},
 }: {
   resume: Resume;
   analysis?: ApplicationResource["analysis"];
   gaps: string[];
   review: Review | null;
   jobs: JobView[];
+  jobText?: string;
+  skipped?: number;
+  onAnswerSkipped?: () => void;
+  answers?: Record<string, string>;
 }) {
   const text = visibleText(resume);
   const gapIds = new Set(gaps.map((gap) => gap.split(":")[0]));
@@ -100,6 +110,40 @@ export function DetailsPanel({
             </p>
           </div>
         </div>
+        {skipped > 0 && onAnswerSkipped && (
+          <div className="flex flex-col items-start gap-2 md:col-span-2">
+            <p className="text-muted-foreground">
+              You skipped {skipped} {skipped === 1 ? "question" : "questions"} about this job.
+            </p>
+            <Button size="sm" variant="outline" onClick={onAnswerSkipped}>
+              Answer them now
+            </Button>
+          </div>
+        )}
+        {Object.keys(answers).length > 0 && (
+          <div className="md:col-span-2">
+            <h3 className="font-medium">Your answers</h3>
+            <ul className="list-disc pl-5 text-muted-foreground">
+              {Object.entries(answers).map(([requirement, answer]) => (
+                <li key={requirement}>
+                  {analysis?.requirements.find((entry) => entry.id === requirement)?.label ??
+                    analysis?.requirements.find((entry) => entry.id === requirement)?.text ??
+                    requirement}
+                  : {answer}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {jobText && (
+          <details className="md:col-span-2">
+            <summary className="cursor-pointer font-medium">The job post</summary>
+            <Markdown
+              text={jobText}
+              className="mt-2 max-h-80 overflow-auto rounded-md border bg-background p-3 text-muted-foreground"
+            />
+          </details>
+        )}
       </CardContent>
     </Card>
   );
