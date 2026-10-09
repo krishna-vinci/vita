@@ -9,6 +9,7 @@ import {
 } from "../agent/roles.js";
 import { resumeEditorRole, sourceEditorRole } from "../chat/roles.js";
 import type { WorkspaceHandle } from "../pipeline/types.js";
+import { researcherRole } from "../research/role.js";
 import { templateAdopterRole } from "../templates/adopt.js";
 
 export const promptRoles = {
@@ -20,6 +21,7 @@ export const promptRoles = {
   "source-editor": sourceEditorRole,
   interviewer: interviewerRole,
   "template-adopter": templateAdopterRole,
+  researcher: researcherRole,
 };
 
 export async function effectivePrompt(ws: WorkspaceHandle, role: RoleName, applicationId?: string): Promise<string> {

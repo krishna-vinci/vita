@@ -1,6 +1,4 @@
 import { type ResearchReply, ResearchRequest } from "@vita/shared";
-import { parse as parseYaml } from "yaml";
-import { z } from "zod";
 import {
   buildSystemPrompt,
   type McpTransportFactory,
@@ -9,7 +7,8 @@ import {
   wrapUntrusted,
 } from "../agent/index.js";
 import { ChatConflictError } from "../chat/index.js";
-import { loadContext, optionalText } from "../pipeline/context.js";
+import { loadInstructions } from "../instructions/index.js";
+import { loadContext } from "../pipeline/context.js";
 import type { PipelineDeps, WorkspaceHandle } from "../pipeline/types.js";
 import { parseProjects } from "../source/index.js";
 import { fileHash, resolveInWorkspace } from "../workspace/index.js";
@@ -28,20 +27,6 @@ export interface ResearchDeps extends PipelineDeps {
   createMcpTransport?: McpTransportFactory;
   /** Effective job/instance/user sources can be supplied by the instructions loader. */
   sources?: { urls: string[]; mcp: string[] };
-}
-
-async function instructionSources(root: string): Promise<{ urls: string[]; mcp: string[] }> {
-  const text = await optionalText(root, "instructions.md");
-  const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(text ?? "");
-  if (!frontmatter) return { urls: [], mcp: [] };
-  const data = z
-    .object({
-      roles: z.array(z.string()).optional(),
-      sources: z.object({ urls: z.array(z.url()).default([]), mcp: z.array(z.string()).default([]) }).optional(),
-    })
-    .parse(parseYaml(frontmatter[1] ?? "") ?? {});
-  if (data.roles && !data.roles.includes("researcher")) return { urls: [], mcp: [] };
-  return data.sources ?? { urls: [], mcp: [] };
 }
 
 export async function researchItem(
@@ -67,7 +52,8 @@ export async function researchItem(
         );
     if (request.itemSlug && !item) throw new Error(`Research item not found: ${request.itemSlug}`);
     const config = await readMcpConfig(ws.root);
-    const sources = deps.sources ?? (await instructionSources(ws.root));
+    // Instance + user (+ job) layers decide which URLs and MCP servers research may use.
+    const sources = deps.sources ?? (await loadInstructions({ root: ws.root }, { role: "researcher" })).sources;
     // Effective sources can enable only servers explicitly configured in the workspace.
     for (const name of sources.mcp) {
       const server = Object.hasOwn(config.mcpServers, name) ? config.mcpServers[name] : undefined;
