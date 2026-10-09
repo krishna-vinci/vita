@@ -46,6 +46,7 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - **Tectonic runs with `--only-cached`** in the sandbox (no network during compiles). Any new LaTeX package must be warmed into the cache first by a trusted compile without `--only-cached` (planned `vita setup`). Templates use `microtype` and `\setlength{\parindent}{0pt}` (owner rule).
 - Nunjucks 3.2.4 has no `map` filter; use `join(", ", "title")`. Template delimiters: `((( var )))`, `((* tag *))`, `((= comment =))`.
 - PDF extraction can split words (microtype/kerning: "T rained"); `checkRender` compares with all whitespace removed. Never reword fixtures to dodge a checker bug — fix the checker.
+- Scratch workspaces: use unique folder names; agents reusing `scratchpad/ws` overwrote each other's data.
 - Codex tool limits (from Studium): `rm -rf` on computed paths is rejected; put test data under a temp dir. If `apply_patch` fails, write the file with a heredoc.
 
 ## Status (2026-10-09)
@@ -55,6 +56,7 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - Personal absolute paths (/home/krishna/...) in AGENTS.md, AGENT_MEMORY.md and `.claude/skills/codex-orchestrate/` must be generalised before the public release (M5).
 
 ## Recently done
+- 2026-10-09 · owner's real master (Copilot Luna + Codex Sol): done in round 1, 25/25 lines supported, 0 lint, 2 pages, every bullet extracted in order. Template fixes: enumitem `leftmargin` (parindent 0 had zeroed the label), untitled list items one per line.
 - 2026-10-09 · first real-model run (Copilot Luna analyst/checker/ATS, Codex Sol writer) on fixtures/developer: 64 s, done in round 1, 0 lint, 8 honest gaps, no invented skills.
 - 2026-10-09 · repo created, AGPL-3.0, design draft + spec, agent instructions and Codex dispatch skill (copied from Studium).
 
