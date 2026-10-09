@@ -50,7 +50,7 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - Codex tool limits (from Studium): `rm -rf` on computed paths is rejected; put test data under a temp dir. If `apply_patch` fails, write the file with a heredoc.
 
 ## Status (2026-10-09)
-- M0–M4 merged (engine, server, all screens). In progress: M5 release (Docker, CI, docs, path scrub) in ~/vita-worktrees/m5-t1-release.
+- M0–M5 complete (2026-10-09). 560 tests (core 430, server 60, shared 30, cli 23, web 17); Docker image verified (healthy, auth, UI, offline render). Not pushed: owner pushes to GitHub when ready. Next ideas: more bundled templates (Rover star/office via adoption), cover letters, careers beyond IT (packs), classifier hints (shadow mode).
 
 ## Open gaps
 - Personal absolute paths (<absolute-user-path>) in AGENTS.md, AGENT_MEMORY.md and `.claude/skills/codex-orchestrate/` must be generalised before the public release (M5).
@@ -86,3 +86,4 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - 2026-10-09 · M4-T3 instructions (Sol 6.1) · `core/src/instructions` (layers, guard, effective prompt), rules-extra lint (required-section, section-order, date-format), `/api/instructions`, `/api/rules`, `/api/prompts/:role` · Zod 4 applies inner defaults through `.optional()`.
 - 2026-10-09 · M4-T4 metrics (Sol 6.1) · `core/src/metrics`, `/api/metrics/*`; projects.md YAML stores `metrics` by claim id and `metric_answers` by question id; dismissals in `config/dismissed-questions.yaml`.
 - 2026-10-09 · M2-T6 + M3/M4 screens (Sonnet) · prep, fit, templates, sync, promote, research, metrics, Settings › Advanced, packs select; lazy routes + vendor chunks; `GET /api/packs` · shadcn CLI adds stray `cn` dep (revert) · open: fit dialog ops-list state untested visually; not every flow clicked in all four width/theme combos.
+- 2026-10-09 · M5 release (Sol 6.1 + orchestrator) · Dockerfile (pinned Tectonic 0.17.0 checksums, warmed cache, non-root), compose, CI + GHCR release workflows, README/INSTALL/CONTRIBUTING/SECURITY/ARCHITECTURE, `vita hash-password`, path scrub (`<repo>`, `<studium-checkout>`) · orchestrator: server `yaml` dep, Origin check host-based + `VITA_PUBLIC_ORIGIN`, loopback Host guard without password (DNS rebinding), README screenshots (fictional data) · Docker build needs `--network=host` on this host; arm64 and GitHub workflows not yet run.

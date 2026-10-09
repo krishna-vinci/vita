@@ -15,16 +15,19 @@ Vita is an open-source, self-hosted resume studio. Keep an honest outline of you
 
 The full [design principles](docs/specs/2026-10-09-vita-design.md#3-principles) are binding constraints.
 
-## Screenshots (planned)
+## Screenshots
 
-Images will be added after the frontend polish pass:
+Fictional example data.
 
-- Me: outline, evidence inventory and career-direction bases.
-- Jobs: paste a job and answer gap questions.
-- Resume workspace: PDF, direct edits, chat and evidence details.
-- Interview preparation: supported stories and honest gap answers.
-- Settings: per-role models, templates, rules and research integrations.
-- Mobile resume review, with light and dark themes.
+| Resume workspace | Interview prep |
+| --- | --- |
+| ![Resume workspace with chat](docs/screenshots/resume-workspace.png) | ![Interview prep with honest gap answers](docs/screenshots/interview-prep.png) |
+| **Projects and the metric interview** | **Base resumes** |
+| ![Projects with a metric question](docs/screenshots/projects.png) | ![Master and base resumes](docs/screenshots/base-resumes.png) |
+
+On a phone, in dark mode, with details shown:
+
+<img src="docs/screenshots/workspace-phone-dark.png" alt="Resume workspace on a phone with job match details" width="260">
 
 ## Quick start: Docker
 
@@ -95,7 +98,7 @@ Configuration lives in the **workspace**, separately from the app checkout.
 
 Role overrides currently include `analyst`, `writer`, `checker`, `ats-reviewer`, `resume-editor`, `source-editor`, `researcher`, `interviewer` and `template-adopter`. Base generation uses the writer model with the `build-base` skill. Settings and the effective-prompt API expose configuration and instruction warnings. See [architecture](docs/ARCHITECTURE.md) and [contributing](CONTRIBUTING.md) for extension contracts.
 
-Server variables: `VITA_WORKSPACE`, `VITA_HOST` (default `127.0.0.1`), `VITA_PORT` (4317), `VITA_PASSWORD_HASH` and optional `VITA_INSTANCE_DIR`. A non-loopback bind requires a valid scrypt hash. This is a single-user deployment.
+Server variables: `VITA_WORKSPACE`, `VITA_HOST` (default `127.0.0.1`), `VITA_PORT` (4317), `VITA_PASSWORD_HASH`, optional `VITA_INSTANCE_DIR`, and optional `VITA_PUBLIC_ORIGIN` (public URL when a reverse proxy rewrites `Host`). A non-loopback bind requires a valid scrypt hash. This is a single-user deployment.
 
 ## CLI reference
 
