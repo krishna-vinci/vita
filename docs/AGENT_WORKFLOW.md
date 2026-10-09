@@ -1,14 +1,9 @@
----
-name: codex-orchestrate
-description: Plan a feature or change, then execute it by dispatching Codex agents (codex exec) and reviewing their work. Use when the user says "/codex-orchestrate", "plan and execute with codex", "delegate to codex", or asks Claude to plan while Codex implements.
----
-
 # Codex orchestration
 
-Claude plans, dispatches, reviews, and integrates. Codex agents implement. Codex agents never commit; Claude commits after review.
+The orchestrator plans, dispatches, reviews, and integrates. Codex agents implement. Codex agents never commit; the orchestrator commits after review.
 
-Script: `.claude/skills/codex-orchestrate/dispatch.sh` (run from repo root `<repo>`).
-Run logs: `.claude/codex-runs/<task-id>/` (`last.md`, `events.jsonl`, `stderr.log`, `thread_id`).
+Script: `scripts/agents/dispatch.sh` (run from repo root `<repo>`).
+Run logs: `.agent-runs/<task-id>/` (`last.md`, `events.jsonl`, `stderr.log`, `thread_id`).
 Plans: `docs/plans/YYYY-MM-DD-<feature>.md`. Design specs the plans argue from: `docs/*.md`, decisions in `docs/decisions/LOG.md`.
 
 ## 0. Shared memory
@@ -17,7 +12,7 @@ Plans: `docs/plans/YYYY-MM-DD-<feature>.md`. Design specs the plans argue from: 
 
 **Ask before delegating:** save each task prompt as `docs/prompts/<task>.md`, give the owner the exact `dispatch.sh` command, and ask whether they want to run it themselves or have you dispatch it.
 
-**Model routing:** see section 2. In short: `sol61` for backend and high-scope work, `fast` for quick fixes and exploration, `precise` for tightly-scoped light fixes, `luna` for dead-simple ones, and Sonnet for high-stack frontend and as the frontend last pass.
+**Model routing:** see section 2. In short: `sol61` for backend and high-scope work, `fast` for quick fixes and exploration, `precise` for tightly-scoped light fixes, `luna` for dead-simple ones, and frontend agent for high-stack frontend and as the frontend last pass.
 
 ## 1. Plan
 
@@ -32,19 +27,19 @@ Plans: `docs/plans/YYYY-MM-DD-<feature>.md`. Design specs the plans argue from: 
 | Alias | Model | Use for |
 | --- | --- | --- |
 | `sol61` | `gpt-6.1-sol` (native Codex, reasoning high) | **Most intelligent.** Backend work and any high-scope task: new subsystems, security, data/schema, concurrency, cross-cutting changes, deep reviews. |
-| `fast` | `commandcode/deepseek-v4.1-flash` | Fast, simple fixes and clear, bounded edits. Also quick read-only exploration that maps files, lines and patterns before a frontend prompt is written for Sonnet. Handles 2–3 concurrent runs. |
+| `fast` | `commandcode/deepseek-v4.1-flash` | Fast, simple fixes and clear, bounded edits. Also quick read-only exploration that maps files, lines and patterns before a frontend prompt is written for frontend agent. Handles 2–3 concurrent runs. |
 | `precise` | `zai-coding/glm-5.3-flash` | Light fixes with a tight, explicit scope (named files, exact change). It's slow, so never give it broad or open-ended work. |
 | `luna` | `gpt-6-luna` (native Codex, reasoning xhigh) | Dead-simple fixes: one-liners, renames, copy/text tweaks, config values. |
 | `glm` | `zai-coding/glm-5.3` | Full GLM 5.3. Only when the owner asks (quota-limited). |
 | `sol` | `gpt-5.6-sol` (native Codex, reasoning high) | Previous Sol. Use `sol61` instead unless asked. |
 
-**Frontend:** high-stack frontend work goes to **Claude Sonnet** (Agent tool, `model: sonnet`, background). Sonnet needs a precise target:
+**Frontend:** high-stack frontend work goes to **the frontend agent**. frontend agent needs a precise target:
 - the exact files to edit
 - the components and APIs to use (with file:line)
 - the expected behavior and states
 - the verification steps
 
-Before writing Sonnet's prompt, map the code with a quick `fast` exploration, or explore it yourself. When other agents did frontend work, **Sonnet does the last pass** (polish, real-click verification at 390 and 1440 px, light and dark). **Reuse one Sonnet session** across implementations in a milestone (resume it with SendMessage); a new session per task wastes tokens re-learning the code.
+Before writing frontend agent's prompt, map the code with a quick `fast` exploration, or explore it yourself. When other agents did frontend work, **frontend agent does the last pass** (polish, real-click verification at 390 and 1440 px, light and dark). **Reuse one frontend agent session** across implementations in a milestone (resume it with SendMessage); a new session per task wastes tokens re-learning the code.
 
 The user can override the model per task.
 
@@ -102,12 +97,12 @@ Always list integration touchpoints a feature needs beyond its new files (shared
 Launch as a tracked background Bash call (`run_in_background: true`, long timeout) — never `nohup`/`&`. Parallel tasks = one background call each. Wait for the completion notice; don't poll.
 
 ```bash
-.claude/skills/codex-orchestrate/dispatch.sh run <task-id> fast <workdir> <scratchpad>/<task-id>.md
+scripts/agents/dispatch.sh run <task-id> fast <workdir> <scratchpad>/<task-id>.md
 ```
 
 ## 6. Review (every task, no exceptions)
 
-1. Read `.claude/codex-runs/<task-id>/last.md` (the agent's report).
+1. Read `.agent-runs/<task-id>/last.md` (the agent's report).
 2. Read the actual diff: `git -C <workdir> diff` (plus `git status` for new files). Don't trust the report alone.
 3. Check: meets acceptance, stays in scope, matches repo style, no stray edits, tests focused rather than bloated. Verify claims against the code before fixing anything.
 4. Run the targeted test command(s) yourself.
@@ -115,7 +110,7 @@ Launch as a tracked background Bash call (`run_in_background: true`, long timeou
    - **Accept**: move on.
    - **Fix**: write a follow-up prompt listing each problem concretely (file:line, what's wrong, what to do), then:
      ```bash
-     .claude/skills/codex-orchestrate/dispatch.sh resume <task-id> <workdir> <scratchpad>/<task-id>-fix1.md
+     scripts/agents/dispatch.sh resume <task-id> <workdir> <scratchpad>/<task-id>-fix1.md
      ```
      For a narrow fix, start a fresh `precise` run with a new task-id instead.
      After 2 failed fix rounds, stop and either fix it yourself or report to the user.
@@ -127,6 +122,6 @@ Launch as a tracked background Bash call (`run_in_background: true`, long timeou
 - Worktrees: after a task passes review, commit it on `codex/<task-id>`, merge into `main`, resolve conflicts, run the combined targeted tests once, push.
 - After `git merge main` inside a worktree, run `pnpm install --frozen-lockfile --prefer-offline` before testing (other slices may have added deps).
 - Never chain `git worktree remove` after test/merge commands with `&&`/`;` in one Bash call: if a test fails the removal still runs (or runs from inside the deleted dir). Merge + test first, then clean up in a separate call.
-- Never stage unrelated dirty files or `.claude/`. Stage files by path, not `git add -A`.
+- Never stage unrelated dirty files. Stage files by path, not `git add -A`.
 - Show progress to the user and commit/merge promptly as agents finish. Summarize: tasks, models, fix rounds, tests run with results, anything open.
 - Clean up after merge: `git worktree remove ~/vita-worktrees/<task-id> && git branch -d codex/<task-id>`.

@@ -8,7 +8,7 @@ Implement **Task 4** of `docs/plans/2026-10-09-m3-depth.md` exactly: interfaces,
 ## Context
 - Read first: `AGENTS.md` (note: minimal integration edits are allowed and must be listed), `AGENT_MEMORY.md` (gotchas: rtk, Tectonic `--only-cached`, delimiters, runRole does not wrap the task — wrap embedded data with `wrapUntrusted`), spec `docs/specs/2026-10-09-vita-design.md` (sections named in the plan).
 - Engine barrels: `core/src/index.ts` → workspace, source, render, packs, claims, lint, search, agent, pipeline (`PipelineDeps`, `WorkspaceHandle`, `generateMaster`, `tailor`, `generateBase`), ops, chat. Server: `server/src/server.ts`, `server/src/runtime.ts`, `server/src/routes/chat.ts` (pattern for a route file + test with faux provider), `server/src/jobs/runner.ts`.
-- Other M3 tasks run in parallel (prep, templates, sync, fit) and a Sonnet agent edits `web/` in the main tree. Stay in your files; don't touch `web/`.
+- Other M3 tasks run in parallel (prep, templates, sync, fit) and a frontend agent agent edits `web/` in the main tree. Stay in your files; don't touch `web/`.
 
 ## Scope
 - Change: core/src/fit/**, server/src/routes/fit.ts, shared/src/api-fit.ts, tests; integration edits: `core/src/index.ts` (one export line), `shared/src/index.ts` (one export line), `server/src/server.ts` (one registration line), `core/src/agent/{roles,models,prompt}.ts` only if your task adds a role.

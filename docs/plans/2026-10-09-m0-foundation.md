@@ -1,6 +1,6 @@
 # M0 Foundation Implementation Plan
 
-> **For agentic workers:** tasks are dispatched one prompt per task via `.claude/skills/codex-orchestrate/dispatch.sh`. Follow `AGENTS.md`. Do not commit; the orchestrator reviews and commits.
+> **For agentic workers:** tasks are dispatched one prompt per task via `scripts/agents/dispatch.sh`. Follow `AGENTS.md`. Do not commit; the orchestrator reviews and commits.
 
 **Goal:** A working, tested engine foundation: monorepo scaffold, shared schemas, confined workspace IO with git, lossless outline/projects parsing and import, the LaTeX template contract with sandboxed Tectonic rendering and text checks, the `general` pack, four profession fixtures, and a CLI that can `init`, `import`, `render` and `check`.
 
@@ -15,7 +15,7 @@
 - Licence `AGPL-3.0-only` in every `package.json`; package names `@vita/<pkg>`; `"type": "module"`; `"private": true`.
 - Packages export source: `"exports": { ".": "./src/index.ts" }`. No build step.
 - `tsconfig.base.json` copies Studium's (`<studium-checkout>/tsconfig.base.json`): strict, `noUncheckedIndexedAccess`, `verbatimModuleSyntax`, `moduleResolution: bundler`, `noEmit`.
-- Biome config copies Studium's `biome.json` style (2 spaces, line width 120, double quotes), excluding `fixtures/**/*.pdf`, `docs/plans`, `.claude`.
+- Biome config copies Studium's `biome.json` style (2 spaces, line width 120, double quotes), excluding `fixtures/**/*.pdf`, `docs/plans`.
 - No profession-specific vocabulary in `shared/`, `core/` or `cli/` code (spec §7).
 - Parsers never drop user text (spec §6.1, §18).
 - Tests never touch `~/` or the network; render tests skip with a printed notice when `tectonic` is not on PATH.

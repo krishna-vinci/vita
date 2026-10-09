@@ -9,11 +9,11 @@ Create the pnpm workspace (`shared`, `core`, `cli`) with every M0 dependency ins
 - Read first: `AGENTS.md`, `AGENT_MEMORY.md`, spec `docs/specs/2026-10-09-vita-design.md` §6.3, §6.4, §7.1, §11.1.
 - The full task, including exact dependency versions, file list and the exact exported interfaces, is **Task 1** in `docs/plans/2026-10-09-m0-foundation.md`. Implement it exactly; read "Global Constraints" there too.
 - Copy the setup style from Studium (read-only): `<studium-checkout>/package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, `biome.json`, `shared/package.json`, `shared/tsconfig.json`, `shared/vitest.config.ts`. Packages export source (`"exports": { ".": "./src/index.ts" }`), no build step.
-- The repo already has `LICENSE`, `README.md`, `AGENTS.md`, `AGENT_MEMORY.md`, `.gitignore`, `docs/`, `.claude/`. Do not modify them.
+- The repo already has `LICENSE`, `README.md`, `AGENTS.md`, `AGENT_MEMORY.md`, `.gitignore`, `docs/`. Do not modify them.
 
 ## Scope
 - Change: root `package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, `biome.json`, `pnpm-lock.yaml` (generated), everything under `shared/`, `core/` (scaffold + empty barrel only), `cli/` (scaffold + commander usage only).
-- Do not touch: `docs/`, `.claude/`, `AGENTS.md`, `AGENT_MEMORY.md`, `README.md`, `LICENSE`.
+- Do not touch: `docs/`, `AGENTS.md`, `AGENT_MEMORY.md`, `README.md`, `LICENSE`.
 
 ## Acceptance
 - `@vita/shared` exports exactly the names in the plan's Task 1 interface block (plus their inferred types).

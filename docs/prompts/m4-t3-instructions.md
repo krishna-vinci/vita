@@ -9,7 +9,7 @@ Implement **Task 3** of `docs/plans/2026-10-09-m4-intelligence.md` exactly, incl
 - Read first: `AGENTS.md` (integration edits and small backwards-compatible engine additions are allowed — list them), `AGENT_MEMORY.md` (gotchas), spec `docs/specs/2026-10-09-vita-design.md`.
 - Engine barrel `core/src/index.ts`; server `server/src/server.ts` and existing route files with tests (e.g. `server/src/routes/prep.ts`) show the patterns.
 - Spec §13 is the contract. Keep core invariants first in every system prompt.
-- Other M4 tasks run in parallel; a Sonnet agent edits `web/` in the main tree. Never touch `web/`.
+- Other M4 tasks run in parallel; a frontend agent agent edits `web/` in the main tree. Never touch `web/`.
 
 ## Scope
 - Change: core/src/instructions/**, core/src/lint/** (new rules + tests), core/src/agent/prompt.ts, role call sites in core/src/{pipeline,chat,prep}, server/src/routes/instructions.ts, shared/src/api-instructions.ts, tests; plus integration lines in `core/src/index.ts`, `shared/src/index.ts`, `server/src/server.ts`, and `core/src/agent/{roles,models,prompt}.ts` if you add a role.

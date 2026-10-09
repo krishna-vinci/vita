@@ -3,7 +3,7 @@
 You are the IMPLEMENTER in <worktree-root>/m2-t3-web on branch codex/m2-t3-web. Do not load orchestrator or workflow skills and do not spawn sub-agents; an orchestrator reviews and commits your work.
 
 ## Goal
-Set up the frontend so a Sonnet agent can build the critical screens next: Vite + React 19 + TypeScript, Tailwind 4, shadcn/ui initialised with the primitives listed in the plan, typed API client and TanStack Query hooks over `@vita/shared` DTOs, one shared SSE connection that invalidates queries, the app shell (Me / Jobs / Settings; top bar on desktop, bottom tabs on phone), routes, a working Settings page and Jobs list, and calm empty states for pages the next task fills.
+Set up the frontend so a frontend agent agent can build the critical screens next: Vite + React 19 + TypeScript, Tailwind 4, shadcn/ui initialised with the primitives listed in the plan, typed API client and TanStack Query hooks over `@vita/shared` DTOs, one shared SSE connection that invalidates queries, the app shell (Me / Jobs / Settings; top bar on desktop, bottom tabs on phone), routes, a working Settings page and Jobs list, and calm empty states for pages the next task fills.
 
 ## Context
 - Read first: `AGENTS.md`, `AGENT_MEMORY.md`, spec §4 and §16, and the visual draft `docs/design/vita-draft.html` (open it in a text editor: colours, type, three places, job flow).

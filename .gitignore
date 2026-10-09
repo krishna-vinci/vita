@@ -6,7 +6,5 @@ coverage/
 .env.*
 !.env.example
 .vita/
-.claude/codex-runs/
-.claude/worktrees/
-.claude/settings.local.json
+.agent-runs/
 .DS_Store

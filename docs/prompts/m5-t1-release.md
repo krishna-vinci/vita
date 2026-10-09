@@ -10,7 +10,7 @@ Make Vita installable and contributable as an open-source project: a Docker imag
 - Reference (read-only): Studium `<studium-checkout>/Dockerfile`, `compose.yaml`, `.github/workflows/{ci,release}.yml`, `docs/INSTALL.md`, `CONTRIBUTING.md`, `SECURITY.md`.
 - Pi model credentials: Pi reads `~/.pi/agent/auth.json` (OAuth/subscription logins) or provider env keys such as `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`. In Docker, mount the user's Pi agent dir read-only or pass env keys. Document both.
 - Tectonic 0.17.0 release asset: `tectonic-0.17.0-<arch>-unknown-linux-musl.tar.gz` from `https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.17.0/` (x86_64 and aarch64). Verify the download with a pinned SHA-256 in the Dockerfile; compute the amd64 hash locally (`sha256sum` after downloading to a temp dir) and for arm64 do the same; if you cannot download in this environment, leave a clearly named `ARG TECTONIC_SHA256_<ARCH>` with a build-time check and say so in the report.
-- A Sonnet agent is editing `web/` in the main tree. Never touch `web/` source (the Dockerfile builds it).
+- A frontend agent agent is editing `web/` in the main tree. Never touch `web/` source (the Dockerfile builds it).
 
 ## Deliverables
 1. `Dockerfile` (multi-stage like Studium's): build stage installs the workspace and builds the web app; runtime stage `node:22-slim`, installs `poppler-utils`, `git`, Tectonic (pinned, checksum-verified), copies the app, runs `vita setup` at build time to warm the TeX cache for bundled templates, runs as a non-root `vita` user, `EXPOSE 4317`, `ENV VITA_HOST=0.0.0.0 VITA_WORKSPACE=/data`, healthcheck on `/api/health`, entrypoint starts the server. Because the container binds 0.0.0.0, startup requires `VITA_PASSWORD_HASH` (existing rule) — document the hash command.
@@ -25,11 +25,11 @@ Make Vita installable and contributable as an open-source project: a Docker imag
    - `CONTRIBUTING.md` — dev workflow, AGENTS.md testing policy summary, how to add a profession pack (format, synonyms rules, neutrality test), how to add or adopt a template (contract delimiters `((( )))`, `((* *))`, knobs, attribution), skills.
    - `SECURITY.md` — reporting, threat model summary (untrusted job posts and pages, LaTeX sandbox, file confinement, auth).
    - `docs/ARCHITECTURE.md` — short package map and request/job flow, linking the spec.
-8. Path scrub: replace `<absolute-user-path>` absolute paths in tracked files (`AGENTS.md`, `AGENT_MEMORY.md`, `.claude/skills/codex-orchestrate/SKILL.md`, docs, prompts, plans) with repo-relative paths or `<repo>` / `<studium-checkout>` placeholders, keeping meaning. Do not change `.claude/codex-runs` (gitignored). Report every file changed by the scrub.
+8. Path scrub: replace `<absolute-user-path>` absolute paths in tracked files (`AGENTS.md`, `AGENT_MEMORY.md`, `docs/AGENT_WORKFLOW.md`, docs, prompts, plans) with repo-relative paths or `<repo>` / `<studium-checkout>` placeholders, keeping meaning. Do not change `.agent-runs` (gitignored). Report every file changed by the scrub.
 9. Secret scan: run `git log -p | grep -E "(sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|BEGIN (RSA|OPENSSH) PRIVATE KEY)"` and `grep -rE` the same over tracked files; report results (expected: none).
 
 ## Scope
-- Change: the files above, root `package.json` scripts, `cli/src/**` (hash-password only), `.claude/skills/codex-orchestrate/SKILL.md` (paths only), `AGENTS.md` and `AGENT_MEMORY.md` (paths only), `docs/**` (paths only, plus the new docs).
+- Change: the files above, root `package.json` scripts, `cli/src/**` (hash-password only), `docs/AGENT_WORKFLOW.md` (paths only), `AGENTS.md` and `AGENT_MEMORY.md` (paths only), `docs/**` (paths only, plus the new docs).
 - Do not touch: `web/src`, engine logic.
 
 ## Tests

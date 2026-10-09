@@ -1,6 +1,6 @@
 # M4 Intelligence Implementation Plan (backend + data)
 
-> Dispatched per task via `.claude/skills/codex-orchestrate/dispatch.sh`. Follow `AGENTS.md` (integration edits and small backwards-compatible engine additions allowed; list them). Do not commit.
+> Dispatched per task via `scripts/agents/dispatch.sh`. Follow `AGENTS.md` (integration edits and small backwards-compatible engine additions allowed; list them). Do not commit.
 
 **Goal:** The profile grows itself honestly: a GitHub/web researcher that proposes evidence, profession packs for IT, layered custom instructions and mechanical rules, and the metric interview.
 

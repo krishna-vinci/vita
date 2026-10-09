@@ -6,15 +6,15 @@
 #   dispatch.sh resume <task-id> <workdir> <prompt-file>
 #
 # <model>: fast | precise | glm (zai-coding/glm-5.3, full) | sol61 (gpt-6.1-sol, high) | sol (gpt-5.6-sol, high) | luna (gpt-6-luna, xhigh) | any full model id from the codex-router catalog.
-# Outputs go to .claude/codex-runs/<task-id>/:
+# Outputs go to .agent-runs/<task-id>/:
 #   events.jsonl   raw codex --json event stream (appended across turns)
 #   last.md        final agent message of the latest turn
 #   thread_id      codex session id, used by `resume`
 #   model          model used, reused by `resume`
 set -euo pipefail
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-RUNS="$REPO/.claude/codex-runs"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+RUNS="$REPO/.agent-runs"
 
 resolve_effort() {
   case "$1" in

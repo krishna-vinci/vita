@@ -17,6 +17,6 @@
     }
   },
   "files": {
-    "includes": ["**", "!**/dist", "!.claude", "!docs/plans", "!docs/design", "!**/fixtures/**/*.pdf"]
+    "includes": ["**", "!**/dist", "!docs/plans", "!docs/design", "!**/fixtures/**/*.pdf"]
   }
 }

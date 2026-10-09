@@ -373,7 +373,7 @@ Bundled v1 templates: three Rover templates converted to the contract, with CC-B
 
 ## 14a. Agent skills
 
-Writing knowledge lives in runtime-agnostic Agent Skills (`SKILL.md`), not in prompt code, so it can be improved without engine changes and reused from Claude Code, Codex or opencode outside the app. A skill may name Vita tools but must describe a fallback when a tool is absent (Studium principle 6).
+Writing knowledge lives in runtime-agnostic Agent Skills (`SKILL.md`), not in prompt code, so it can be improved without engine changes and reused from coding agents such as Codex or opencode outside the app. A skill may name Vita tools but must describe a fallback when a tool is absent (Studium principle 6).
 
 Bundled in `skills/` and copied into new workspaces; a user-edited skill in the workspace is never overwritten by updates (sync keeps a defaults history, as Studium's `skill-sync`).
 

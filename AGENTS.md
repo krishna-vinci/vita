@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Instructions for coding agents (Codex, Claude, others) working in this repo.
+Instructions for coding agents (Codex and other coding agents) working in this repo.
 
 Vita is an open-source, self-hosted resume studio: a person keeps one honest outline of their work plus an evidence inventory; agents turn it into a master resume, base resumes per career direction, and checked job resumes rendered to PDF through LaTeX.
 

@@ -73,7 +73,7 @@ export async function tailor(
             })(
               analystRole,
               [
-                'Analyse the job requirements and score every supplied base. Give every requirement a short `label` (a noun phrase of at most 6 words, e.g. "Kubernetes" or "on-call incident response") used to ask the person whether they have done it. Return JobAnalysis through submit_analysis.',
+                "Analyse the job requirements and score every supplied base. Give every requirement a short `label` (a noun phrase of at most 6 words, e.g. spreadsheet modelling or public speaking) used to ask the person whether they have done it. Return JobAnalysis through submit_analysis.",
                 data("job.md", input.jobText),
                 data("outline.md", ctx.outlineText),
                 data("projects.md", ctx.projectsText),

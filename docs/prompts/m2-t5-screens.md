@@ -1,4 +1,4 @@
-# Task: M2-T5 Critical screens (Sonnet)
+# Task: M2-T5 Critical screens (frontend agent)
 
 You are the frontend IMPLEMENTER in <repo> on branch main. Do not commit; the orchestrator reviews and commits. Do not spawn sub-agents.
 

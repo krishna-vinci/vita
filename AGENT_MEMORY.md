@@ -12,19 +12,19 @@ The orchestrator keeps the rest of this file current. When something under "Open
 
 ## Owner and how we work
 - The owner is a sole developer building Vita as an open-source (AGPL-3.0) resume studio. The owner's own resume repo (`<personal-resume-dir>/`, parent folder) is the first real dataset; it is personal and never committed here.
-- **Orchestrator:** Claude (or GPT-6.1 Sol in Codex).
+- **Orchestrator:** an orchestrator agent (any capable model).
   - Plans in `docs/plans/YYYY-MM-DD-*.md`, task prompts in `docs/prompts/<task>.md`.
   - Asks the owner whether to run a prompt themselves or have it dispatched.
   - Reviews, verifies, commits and merges. Pushes to GitHub only when the owner asks.
 - **Implementers** do exactly the prompt. If it doesn't fit the code, stop and report file:line.
   - Never load orchestration skills. Never spawn workers. Never commit or push.
-  - Never touch `.env*`, `.claude/`, or the owner's personal files in the parent folder.
-- **Model routing** (`.claude/skills/codex-orchestrate/dispatch.sh` aliases):
+  - Never touch `.env*`, local agent tooling folders, or the owner's personal files in the parent folder.
+- **Model routing** (`scripts/agents/dispatch.sh` aliases):
   - `sol61` (GPT-6.1 Sol) for backend and high-scope tasks (engine, schemas, pipeline, sandbox, security).
-  - `fast` (DeepSeek 4.1 Flash) for quick fixes and read-only exploration before a Sonnet prompt.
+  - `fast` (DeepSeek 4.1 Flash) for quick fixes and read-only exploration before a frontend agent prompt.
   - `precise` (GLM 5.3 Flash) for tightly scoped light fixes only; slow.
   - `luna` (GPT-6 Luna, xhigh) for dead-simple fixes.
-  - **Frontend split (owner rule):** Codex does frontend setup and plumbing (Vite/Tailwind/shadcn scaffold, routing, API client, query hooks, simple screens). **Sonnet** (Claude Agent tool) does the critical frontend: the job resume workspace (resume + chat + click-to-edit), the Me outline editor, base resumes, and the final polish pass. UI uses **shadcn/ui** components. One Sonnet session per milestone.
+  - **Frontend split (owner rule):** Codex does frontend setup and plumbing (Vite/Tailwind/shadcn scaffold, routing, API client, query hooks, simple screens). **the frontend agent** (frontend agent) does the critical frontend: the job resume workspace (resume + chat + click-to-edit), the Me outline editor, base resumes, and the final polish pass. UI uses **shadcn/ui** components. One frontend agent session per milestone.
   - Only one GLM run at a time (429s).
 - Design: `docs/design/vita-draft.html` (visual draft v0.5). Spec: `docs/specs/2026-10-09-vita-design.md`.
 - Owner's design preferences: simple surface, deep core; keep the outline → master → base → job philosophy; no hard-coded professions.
@@ -53,7 +53,7 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - M0–M5 complete (2026-10-09). 560 tests (core 430, server 60, shared 30, cli 23, web 17); Docker image verified (healthy, auth, UI, offline render). Not pushed: owner pushes to GitHub when ready. Next ideas: more bundled templates (Rover star/office via adoption), cover letters, careers beyond IT (packs), classifier hints (shadow mode).
 
 ## Open gaps
-- Personal absolute paths (<absolute-user-path>) in AGENTS.md, AGENT_MEMORY.md and `.claude/skills/codex-orchestrate/` must be generalised before the public release (M5).
+- Personal absolute paths (<absolute-user-path>) in AGENTS.md, AGENT_MEMORY.md and `docs/AGENT_WORKFLOW.md and scripts/agents/` must be generalised before the public release (M5).
 
 ## Recently done
 - 2026-10-09 · owner's real master (Copilot Luna + Codex Sol): done in round 1, 25/25 lines supported, 0 lint, 2 pages, every bullet extracted in order. Template fixes: enumitem `leftmargin` (parindent 0 had zeroed the label), untitled list items one per line.
@@ -75,8 +75,8 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - 2026-10-09 · M1-FIX (Sol 6.1) · `profile.yaml` (shared `Profile`; header is engine-owned, never model-written), variants indexed as claims, template safe with empty header fields, local dates via `deps.now`, plain gap questions · generation requires a named profile.yaml · core 191 / shared 26 / cli 20 / server 19 tests pass.
 - 2026-10-09 · M2-T4 (Sol 6.1 + 1 scope round) · `core/src/chat` (chatResume, proposeSourceEdit, applySourceEdit), `server/src/routes/chat.ts`, roles resume-editor/source-editor, skills edit-resume/edit-source/metric-interview · chat history: 10 turns per scope in server memory only; chat edits invalidate the prior review (recheck before export) · none open.
 - 2026-10-09 · orchestrator fixes from real master run on owner data · summary/list sections render bullets (`plainItems`/`detailItems`/`paragraphs` in tex context), text check strips list glyphs, `vita render` uses generation page limits, checker ownership rule · real master now renders 2 pages with every bullet found; LocalDocs "Built" was the last overstated flag.
-- 2026-10-09 · M2-T3 (Sol 6.1) · `web/` (Vite, React 19, Tailwind 4, shadcn/ui, typed client/queries, one SSE EventSource, shell Me/Jobs/Settings, Settings + Jobs list); `pnpm web`, `pnpm build:web` · Sonnet replaces `web/src/pages/Placeholders.tsx`; TS7 has no baseUrl; web-local biome config enables Tailwind; 676 KB bundle warning (code-split later) · Chrome-verified 390/1440 light/dark.
-- 2026-10-09 · M2-T5 (Sonnet) · `web/src/pages/{jobs,workspace,me}`, popover, chat hooks · gap answers tracked in localStorage `vita:answered:<id>`; Markdown export client-side; shadcn CLI adds a stray `cn` dep — revert it · Chrome MCP unreachable here: orchestrator verified with a headless CDP driver (scratchpad `cdp.mjs`) at 1440 light / 390 dark: jobs, questions, workspace, details, Me tabs OK. Bugs for T6: nice-to-haves shown as covered without matching text; outline editor shows raw anchors.
+- 2026-10-09 · M2-T3 (Sol 6.1) · `web/` (Vite, React 19, Tailwind 4, shadcn/ui, typed client/queries, one SSE EventSource, shell Me/Jobs/Settings, Settings + Jobs list); `pnpm web`, `pnpm build:web` · frontend agent replaces `web/src/pages/Placeholders.tsx`; TS7 has no baseUrl; web-local biome config enables Tailwind; 676 KB bundle warning (code-split later) · Chrome-verified 390/1440 light/dark.
+- 2026-10-09 · M2-T5 (frontend agent) · `web/src/pages/{jobs,workspace,me}`, popover, chat hooks · gap answers tracked in localStorage `vita:answered:<id>`; Markdown export client-side; shadcn CLI adds a stray `cn` dep — revert it · Chrome MCP unreachable here: orchestrator verified with a headless CDP driver (scratchpad `cdp.mjs`) at 1440 light / 390 dark: jobs, questions, workspace, details, Me tabs OK. Bugs for T6: nice-to-haves shown as covered without matching text; outline editor shows raw anchors.
 - 2026-10-09 · M3-T4 fit (Sol 6.1) · `core/src/fit`, `POST /api/{resumes,applications}/:id/fit` returns preview ops · 20 tests incl. 3 real PDFs.
 - 2026-10-09 · M3-T1 prep (Sol 6.1) · `core/src/prep`, interviewer role, `skills/interview-prep`, `POST/GET /api/applications/:id/prep` · unsupported STAR results become null and are flagged.
 - 2026-10-09 · M3-T2 templates (Sol 6.1) · `core/src/templates` (upload, compileOriginal, proposeAdoption, approveTemplate), template-adopter role, `skills/adopt-template`, `/api/templates/*` · previews cache in `.vita/template-previews/`; warm-up uses bundle cat.
@@ -85,5 +85,5 @@ The orchestrator keeps the rest of this file current. When something under "Open
 - 2026-10-09 · M4-T2 IT packs (DeepSeek) · 13 packs under `packs/`, bundled pack test.
 - 2026-10-09 · M4-T3 instructions (Sol 6.1) · `core/src/instructions` (layers, guard, effective prompt), rules-extra lint (required-section, section-order, date-format), `/api/instructions`, `/api/rules`, `/api/prompts/:role` · Zod 4 applies inner defaults through `.optional()`.
 - 2026-10-09 · M4-T4 metrics (Sol 6.1) · `core/src/metrics`, `/api/metrics/*`; projects.md YAML stores `metrics` by claim id and `metric_answers` by question id; dismissals in `config/dismissed-questions.yaml`.
-- 2026-10-09 · M2-T6 + M3/M4 screens (Sonnet) · prep, fit, templates, sync, promote, research, metrics, Settings › Advanced, packs select; lazy routes + vendor chunks; `GET /api/packs` · shadcn CLI adds stray `cn` dep (revert) · open: fit dialog ops-list state untested visually; not every flow clicked in all four width/theme combos.
+- 2026-10-09 · M2-T6 + M3/M4 screens (frontend agent) · prep, fit, templates, sync, promote, research, metrics, Settings › Advanced, packs select; lazy routes + vendor chunks; `GET /api/packs` · shadcn CLI adds stray `cn` dep (revert) · open: fit dialog ops-list state untested visually; not every flow clicked in all four width/theme combos.
 - 2026-10-09 · M5 release (Sol 6.1 + orchestrator) · Dockerfile (pinned Tectonic 0.17.0 checksums, warmed cache, non-root), compose, CI + GHCR release workflows, README/INSTALL/CONTRIBUTING/SECURITY/ARCHITECTURE, `vita hash-password`, path scrub (`<repo>`, `<studium-checkout>`) · orchestrator: server `yaml` dep, Origin check host-based + `VITA_PUBLIC_ORIGIN`, loopback Host guard without password (DNS rebinding), README screenshots (fictional data) · Docker build needs `--network=host` on this host; arm64 and GitHub workflows not yet run.

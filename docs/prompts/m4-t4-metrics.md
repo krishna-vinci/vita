@@ -9,7 +9,7 @@ Implement **Task 4** of `docs/plans/2026-10-09-m4-intelligence.md` exactly, incl
 - Read first: `AGENTS.md` (integration edits and small backwards-compatible engine additions are allowed — list them), `AGENT_MEMORY.md` (gotchas), spec `docs/specs/2026-10-09-vita-design.md`.
 - Engine barrel `core/src/index.ts`; server `server/src/server.ts` and existing route files with tests (e.g. `server/src/routes/prep.ts`) show the patterns.
 - Proposal shape and apply route: core/src/chat (SourceProposal, applySourceEdit). projects.md format: spec §6.2; serializer core/src/source/projects.ts.
-- Other M4 tasks run in parallel; a Sonnet agent edits `web/` in the main tree. Never touch `web/`.
+- Other M4 tasks run in parallel; a frontend agent agent edits `web/` in the main tree. Never touch `web/`.
 
 ## Scope
 - Change: core/src/metrics/**, server/src/routes/metrics.ts, shared/src/api-metrics.ts, tests; plus integration lines in `core/src/index.ts`, `shared/src/index.ts`, `server/src/server.ts`, and `core/src/agent/{roles,models,prompt}.ts` if you add a role.
