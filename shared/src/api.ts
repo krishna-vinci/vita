@@ -132,6 +132,8 @@ export const ApplicationResource = ResumeResource.extend({
   notes: z.string(),
   analysis: JobAnalysis,
   gaps: z.array(z.string()),
+  /** Gap answers given so far, by requirement id ("no", "yes", or "Yes: details"). */
+  answers: z.record(z.string(), z.string()).default({}),
 });
 export type ApplicationResource = z.infer<typeof ApplicationResource>;
 export const WorkspaceView = z.object({

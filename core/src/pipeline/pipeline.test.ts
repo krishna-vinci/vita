@@ -210,7 +210,7 @@ describe("faux generation pipeline", () => {
     expect(parseYaml(await readText(ws.root, "resumes/master/meta.yaml")).createdAt).toBe("2026-10-09");
   });
 
-  it("asks plain-language gap questions using the four-word boundary and keeps requirement ids", async () => {
+  it("asks plain-language gap questions and keeps requirement ids", async () => {
     const { ws, resume } = await profile();
     vi.spyOn(render, "compileTex").mockResolvedValue({ pdf: Buffer.from("stub-pdf"), log: "" });
     vi.spyOn(render, "pdfText").mockResolvedValue({
@@ -237,9 +237,9 @@ describe("faux generation pipeline", () => {
     options.onProgress = progress;
     const result = await tailor(ws, { jobText: "Job" }, options);
     expect(result.review.gaps).toEqual([
-      "req-short: Have you used Example skill?",
-      "req-four: Have you used One two three four?",
-      "req-long: Do you have experience with leading a team across multiple locations?",
+      "req-short: Have you worked with Example skill?",
+      "req-four: Have you worked with One two three four?",
+      "req-long: Have you worked with leading a team across multiple locations?",
     ]);
     expect(result.review.done).toBe(true);
     expect(progress).toHaveBeenCalledWith({ stage: "gaps", message: result.review.gaps[2] });

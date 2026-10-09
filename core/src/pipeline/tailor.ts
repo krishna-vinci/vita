@@ -1,11 +1,20 @@
 import { lstat } from "node:fs/promises";
-import { type JobAnalysis, Resume, type Review, Slug, slugify, visibleBullets } from "@vita/shared";
+import {
+  type JobAnalysis,
+  JobAnalysis as JobAnalysisSchema,
+  Resume,
+  type Review,
+  Slug,
+  slugify,
+  visibleBullets,
+} from "@vita/shared";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import { analystRole } from "../agent/roles.js";
 import { selectEvidence } from "../search/index.js";
 import { fileHash, readText, resolveInWorkspace } from "../workspace/index.js";
-import { effectivePack, findGaps, loadContext, mergeKeywords } from "./context.js";
+import { answerClaimId, effectivePack, findGaps, loadContext, mergeKeywords, optionalText } from "./context.js";
+import { answerFact } from "./coverage.js";
 import { localDate } from "./date.js";
 import { data, generate, roleRunner } from "./generate.js";
 import { withGenerationLock } from "./lock.js";
@@ -44,25 +53,34 @@ export async function tailor(
     const notes = input.notes ?? z.string().optional().parse(metadata.notes);
     const requestedBaseId = input.baseId ?? existing?.parent ?? undefined;
     const answers = { ...z.record(z.string(), z.string()).parse(metadata.answers ?? {}), ...input.answers };
-    const ctx = await loadContext(ws);
+    const ctx = await loadContext(
+      ws,
+      input.applicationId ? { answers: { applicationId: input.applicationId, answers } } : {},
+    );
     try {
       const usage: RoleUsage[] = [];
       deps.onProgress?.({ stage: "analyse" });
       const general = await effectivePack(ctx);
-      let analysis: JobAnalysis = await roleRunner(ctx, deps, usage, undefined, {
-        applicationId: input.applicationId,
-        jobNotes: notes,
-      })(
-        analystRole,
-        [
-          "Analyse the job requirements and score every supplied base. Return JobAnalysis through submit_analysis.",
-          data("job.md", input.jobText),
-          data("outline.md", ctx.outlineText),
-          data("projects.md", ctx.projectsText),
-          data("bases", ctx.bases),
-          data("effective pack", general),
-        ].join("\n\n"),
-      );
+      // A rerun of the same job keeps its analysis, so requirement ids (and the answers keyed by them) stay stable.
+      const storedJob = existingDir ? await optionalText(ws.root, `${existingDir}/job.md`) : undefined;
+      const storedAnalysis = existingDir ? await optionalText(ws.root, `${existingDir}/analysis.json`) : undefined;
+      let analysis: JobAnalysis =
+        storedAnalysis !== undefined && storedJob?.trim() === input.jobText.trim()
+          ? JobAnalysisSchema.parse(JSON.parse(storedAnalysis))
+          : await roleRunner(ctx, deps, usage, undefined, {
+              applicationId: input.applicationId,
+              jobNotes: notes,
+            })(
+              analystRole,
+              [
+                'Analyse the job requirements and score every supplied base. Give every requirement a short `label` (a noun phrase of at most 6 words, e.g. "Kubernetes" or "on-call incident response") used to ask the person whether they have done it. Return JobAnalysis through submit_analysis.',
+                data("job.md", input.jobText),
+                data("outline.md", ctx.outlineText),
+                data("projects.md", ctx.projectsText),
+                data("bases", ctx.bases),
+                data("effective pack", general),
+              ].join("\n\n"),
+            );
       const ranked = [...analysis.baseScores].sort((a, b) => b.score - a.score || a.baseId.localeCompare(b.baseId));
       const base =
         requestedBaseId && requestedBaseId !== "master"
@@ -124,6 +142,13 @@ export async function tailor(
           gaps,
           jobText: input.jobText,
           answers,
+          answerClaims: input.applicationId
+            ? Object.entries(answers)
+                .filter(([, value]) => answerFact(value) !== null)
+                .map(([requirementId]) => answerClaimId(input.applicationId as string, requirementId))
+                .filter((id) => ctx.index.claims.has(id))
+                .map((id) => ({ id, text: ctx.index.claims.get(id)?.text ?? "" }))
+            : [],
           notes,
         },
         deps,

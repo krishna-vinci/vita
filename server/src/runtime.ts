@@ -57,6 +57,7 @@ import {
   Slug,
   visibleBullets,
 } from "@vita/shared";
+import { parse as parseYaml } from "yaml";
 import { ApiFailure } from "./errors.js";
 import { EventHub } from "./events.js";
 import { type JobContext, JobRunner } from "./jobs/runner.js";
@@ -176,7 +177,15 @@ export class WorkspaceRuntime {
       notes: (await this.optional(`${prefix}/notes.md`)) ?? "",
       analysis: JobAnalysis.parse(JSON.parse(await readText(this.ws.root, `${prefix}/analysis.json`))),
       gaps: resource.review?.gaps ?? [],
+      answers: await this.answers(prefix),
     };
+  }
+  private async answers(prefix: string): Promise<Record<string, string>> {
+    const meta = await this.optional(`${prefix}/meta.yaml`);
+    const parsed = meta === undefined ? undefined : (parseYaml(meta) as { answers?: unknown } | null);
+    const answers = parsed?.answers;
+    if (!answers || typeof answers !== "object") return {};
+    return Object.fromEntries(Object.entries(answers).map(([key, value]) => [key, String(value)]));
   }
   async resumes(): Promise<ResumeSummary[]> {
     const results: ResumeSummary[] = [];

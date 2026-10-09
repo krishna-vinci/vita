@@ -3,6 +3,8 @@ import { z } from "zod";
 export const Requirement = z.object({
   id: z.string(),
   text: z.string(),
+  /** Short noun phrase for questions, e.g. "Kubernetes" or "on-call incident response". */
+  label: z.string().max(60).optional(),
   importance: z.enum(["must", "nice"]),
   keywords: z.array(z.array(z.string())),
 });

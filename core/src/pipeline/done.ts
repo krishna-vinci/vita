@@ -7,12 +7,9 @@ import {
   type Review,
   visibleBullets,
 } from "@vita/shared";
+import { requirementCoveredByText } from "./coverage.js";
 
-export function keywordMatches(text: string, keyword: string): boolean {
-  if (!keyword.trim()) return false;
-  const escaped = keyword.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`(?<![\\p{L}\\p{N}_])${escaped}(?![\\p{L}\\p{N}_])`, "iu").test(text);
-}
+export { keywordMatches } from "./coverage.js";
 
 export function evaluateDone(input: {
   resume: Resume;
@@ -57,9 +54,7 @@ export function evaluateDone(input: {
   for (const requirement of input.analysis.requirements) {
     if (requirement.importance !== "must") continue;
     const gap = input.gaps.some((value) => value === requirement.id || value.startsWith(`${requirement.id}:`));
-    const covered =
-      requirement.keywords.length > 0 &&
-      requirement.keywords.every((group) => group.some((keyword) => keywordMatches(visibleText, keyword)));
+    const covered = requirementCoveredByText(visibleText, requirement);
     if (!gap && !covered) blocking.push(`Uncovered must-have: ${requirement.id}: ${requirement.text}`);
   }
   const render = input.render;

@@ -77,9 +77,9 @@ describe("evaluateDone", () => {
     },
   );
 
-  it("blocks missing checks, partial keyword groups, failed render, overflow and reading-order failures", () => {
+  it("blocks missing checks, must-haves with no matching keyword group, failed render, overflow and reading-order failures", () => {
     expect(evaluateDone({ ...input, checks: [] }).blocking).toContain("Unchecked bullet: b");
-    const requirements = [{ ...requirement, keywords: [["records"], ["unmatched"]] }];
+    const requirements = [{ ...requirement, keywords: [["unmatched"], ["absent"]] }];
     expect(evaluateDone({ ...input, analysis: { ...input.analysis, requirements } }).done).toBe(false);
     for (const render of [
       null,
