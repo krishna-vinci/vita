@@ -10,3 +10,27 @@ https://creativecommons.org/licenses/by/4.0/
 modified: converted to Vita's template contract, parameterized layout and
 replaced sample content with resume data; removed pdfTeX-only primitives.
 The adapted template retains the CC BY 4.0 licence.
+
+Additional bundled Rover adaptations (each main.tex.njk and template.yaml):
+- rover-star: templates/star rover/star-rover.tex
+- rover-fancy: templates/fancy rover/fancy-rover.tex
+- rover-milky: templates/milky rover/milky-rover.tex
+- rover-office: templates/office rover/office-rover.tex (sample photo removed)
+- rover-obsolete: templates/obsolete rover/obsolete-rover.tex and preamble.tex
+  (preamble inlined)
+- rover-academic: templates/academic rover/acad-few.tex and acad-many.tex
+  (one academic design; publications come from resume sections, not BibTeX)
+- rover-week-monday, rover-week-tuesday, rover-week-wednesday,
+  rover-week-thursday, rover-week-sunday: corresponding day .tex files in
+  templates/week rover/. All five supplied day designs are retained; the
+  upstream checkout has no Friday or Saturday file.
+
+These templates are by subidit, from https://github.com/subidit/rover-resume,
+licensed under CC BY 4.0: https://creativecommons.org/licenses/by/4.0/ .
+Modifications: Vita contract placeholders, parameterized layout, safe empty
+optional fields, explicit list indentation, microtype, no paragraph indent,
+XeTeX-compatible primitives, dynamic footer names, and publication data in
+place of bibliography files. Week Tuesday uses a safe red heading instead
+of the original fixed-three-token splitter for arbitrary section titles.
+The adaptations retain CC BY 4.0. Their preview.png files show the fictional
+Vita developer fixture rendered using the adapted templates.

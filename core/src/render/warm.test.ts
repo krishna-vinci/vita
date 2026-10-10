@@ -1,4 +1,4 @@
-import { chmod, cp, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { chmod, cp, mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -11,7 +11,9 @@ beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), "vita-warm-test-"));
   templates = join(dir, "templates");
   capture = join(dir, "calls.jsonl");
-  await cp(new URL("../../../templates/", import.meta.url), templates, { recursive: true });
+  await cp(new URL("../../../templates/rover-base/", import.meta.url), join(templates, "rover-base"), {
+    recursive: true,
+  });
 });
 afterEach(async () => {
   vi.unstubAllEnvs();
@@ -30,6 +32,7 @@ async function engine(body: string): Promise<void> {
 }
 
 it("compiles every bundled template once with a sample and network-enabled flags, then cleans temp copies", async () => {
+  await cp(new URL("../../../templates/", import.meta.url), templates, { recursive: true });
   await cp(join(templates, "rover-base"), join(templates, "other"), { recursive: true });
   const metadata = join(templates, "other/template.yaml");
   await writeFile(metadata, (await readFile(metadata, "utf8")).replace("id: rover-base", "id: other"));
@@ -41,11 +44,13 @@ it("compiles every bundled template once with a sample and network-enabled flags
     .trim()
     .split("\n")
     .map((line) => JSON.parse(line));
-  expect(calls).toHaveLength(2);
+  expect(calls).toHaveLength((await readdir(templates)).length);
   for (const call of calls) {
     expect(call.args).toEqual(["-X", "compile", "main.tex"]);
     expect(call.tex).toContain("Alex Example");
     expect(call.tex).toContain("Organised records");
+    expect(call.tex).toContain("\\textbf{Coordination}");
+    expect(call.tex).toContain("Documented clear notes");
     await expect(stat(call.cwd)).rejects.toMatchObject({ code: "ENOENT" });
   }
 });

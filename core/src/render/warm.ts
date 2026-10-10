@@ -63,7 +63,21 @@ export async function warmTemplateCache(templatesDir: string): Promise<void> {
             },
           ],
         },
-        { id: "skills", title: "Skills", kind: "list", items: [{ id: "planning", title: "Planning" }] },
+        {
+          id: "skills",
+          title: "Skills",
+          kind: "list",
+          items: [
+            { id: "planning", title: "Planning" },
+            {
+              id: "coordination",
+              title: "Coordination",
+              bullets: [
+                { id: "sample-notes", text: "Documented clear notes and review steps.", claims: ["sample-notes"] },
+              ],
+            },
+          ],
+        },
         { id: "notes", title: "Notes", kind: "text", text: "Available for local assignments." },
       ],
     });

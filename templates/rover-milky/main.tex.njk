@@ -1,0 +1,89 @@
+% Rover Milky; adapted from Rover resume templates by subidit (CC BY 4.0).
+% https://github.com/subidit/rover-resume; source: templates/milky rover/milky-rover.tex
+% Modified for Vita contract, safe layout knobs and XeTeX; see NOTICE.
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[margin=((( layout.margin_in )))in, letterpaper]{geometry}
+\usepackage{charter}
+\usepackage{tgadventor}
+\usepackage{microtype}
+\usepackage{soul}
+\usepackage{xcolor}
+
+\setcounter{secnumdepth}{0}
+
+\usepackage{titlesec}
+\titlespacing{\section}{0pt}{4ex}{1ex}
+\titlespacing{\subsection}{0pt}{*1}{*0.5}
+\titlespacing{\subsubsection}{0pt}{*0.5}{*1}
+\titleformat{\section}{\titlerule\smallskip\footnotesize\sffamily\bfseries\uppercase}{}{}{\so}
+\titleformat*{\subsection}{\Large}
+\titleformat*{\subsubsection}{\large\itshape}
+
+\usepackage{enumitem}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\renewcommand{\headrulewidth}{0pt}
+\fancyhf{}
+\cfoot{\small\color{gray} ((( header.name ))) -- Page \thepage}
+
+\setlength{\parindent}{0pt}
+\setlist[itemize]{nosep,leftmargin=1.5em,labelsep=0.45em}
+\titlespacing{\section}{0pt}{((( layout.section_gap_pt )))pt}{((( layout.section_gap_pt )))pt}
+\titlespacing{\subsection}{0pt}{3pt}{0pt}
+\titlespacing{\subsubsection}{0pt}{0pt}{0pt}
+\linespread{((( layout.line_spread )))}
+
+\begin{document}
+\fontsize{((( layout.font_pt )))}{((( layout.font_pt * 1.2 )))}\selectfont
+\begin{center}
+  {\sffamily\LARGE\bfseries\so{((( header.name )))}}\par
+((* if header.name and header.headline *))
+  \medskip ((( header.headline )))\par
+((* endif *))
+((* if header.contact.length *))
+  \medskip
+((* for contact in header.contact *))
+  ((( contact.label ))): ((( contact.value )))((* if not loop.last *)) \quad ((* endif *))
+((* endfor *))
+  \par
+((* endif *))
+\end{center}
+
+((* for section in sections *))
+\section{((( section.title )))}
+((* if section.kind == "entries" *))
+((* for item in section.items *))
+\subsection{((( item.title )))((* if item.period *)) \hfill ((( item.period )))((* endif *))}
+((* if item.subtitle or item.location *))
+\subsubsection{((* if item.subtitle *))((( item.subtitle )))((* endif *))((* if item.location *)) \hfill ((( item.location )))((* endif *))}
+((* endif *))
+((* if item.bullets.length *))
+\begin{itemize}
+((* for bullet in item.bullets *))
+  \item ((( bullet.text )))
+((* endfor *))
+\end{itemize}
+((* endif *))
+((* endfor *))
+((* elif section.kind == "list" *))
+((* for item in section.detailItems *))
+((* if item.title *))
+\textbf{((( item.title )))}: ((( item.bullets | join(", ", "text") )))\par
+((* else *))
+((* for bullet in item.bullets *))
+((( bullet.text )))\par
+((* endfor *))
+((* endif *))
+((* endfor *))
+((* if section.plainItems.length *))
+((( section.plainItems | join(", ", "title") )))\par
+((* endif *))
+((* else *))
+((* for paragraph in section.paragraphs *))
+((( paragraph )))\par
+((* endfor *))
+((* endif *))
+((* endfor *))
+\end{document}

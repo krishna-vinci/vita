@@ -11,6 +11,7 @@ import {
   loadUpload,
   proposeAdoption,
   readArtifact,
+  readBundledTemplatePreview,
   receiveTemplateUpload,
   savedProposal,
   TemplateError,
@@ -108,7 +109,8 @@ export function templateRoutes(runtime: WorkspaceRuntime): Hono {
         const template = await loadTemplate([root], id);
         const previewPdf = !bundled && (await fileHash(runtime.ws.root, `.vita/template-previews/${id}.pdf`));
         let previewAvailable = !!previewPdf;
-        if (!previewAvailable) {
+        if (bundled) previewAvailable = !!(await readBundledTemplatePreview(root, id));
+        else if (!previewAvailable) {
           try {
             await readFile(join(template.dir, "preview.png"));
             previewAvailable = true;
@@ -126,6 +128,15 @@ export function templateRoutes(runtime: WorkspaceRuntime): Hono {
       }
     }
     return c.json([...summaries.values()]);
+  });
+  app.get("/:id/preview.png", async (c) => {
+    const id = Slug.parse(c.req.param("id"));
+    const png = await readBundledTemplatePreview(join(runtime.ws.bundledDir, "templates"), id);
+    if (!png) throw new ApiFailure(404, "not-found", "Bundled template preview not found");
+    c.header("Content-Type", "image/png");
+    c.header("X-Content-Type-Options", "nosniff");
+    c.header("Cache-Control", "no-cache");
+    return c.body(new Uint8Array(png));
   });
   app.get("/:uploadId", async (c) => c.json(await view(Slug.parse(c.req.param("uploadId")))));
   app.post("/:uploadId/propose", async (c) => {
