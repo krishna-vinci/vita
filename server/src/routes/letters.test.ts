@@ -59,6 +59,7 @@ beforeEach(async () => {
     `${prefix}/resume.json`,
     JSON.stringify({ ...resume, id, kind: "job", parent: "master" }),
   );
+  await core.writeTextAtomic(root, `${prefix}/meta.yaml`, "createdAt: 2026-10-10\n");
   await core.writeTextAtomic(root, `${prefix}/job.md`, "Catalogue service role at Example.");
   await core.writeTextAtomic(
     root,

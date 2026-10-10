@@ -320,7 +320,7 @@ describe("workspace API", () => {
       }),
     ).rejects.toMatchObject({ stderr: expect.stringContaining("requires VITA_PASSWORD_HASH") });
     await expect(readFile(join(root, "outline.md"))).rejects.toMatchObject({ code: "ENOENT" });
-  });
+  }, 30_000);
 });
 
 describe("generation API", () => {

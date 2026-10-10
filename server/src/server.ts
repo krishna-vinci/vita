@@ -23,6 +23,7 @@ import { eventsRoutes } from "./routes/events.js";
 import { fitRoutes } from "./routes/fit.js";
 import { instructionsRoutes } from "./routes/instructions.js";
 import { letterRoutes } from "./routes/letters.js";
+import { memoryRoutes } from "./routes/memory.js";
 import { metricsRoutes } from "./routes/metrics.js";
 import { onboardingRoutes } from "./routes/onboarding.js";
 import { packRoutes } from "./routes/packs.js";
@@ -30,6 +31,7 @@ import { prepRoutes } from "./routes/prep.js";
 import { researchRoutes } from "./routes/research.js";
 import { syncRoutes } from "./routes/sync.js";
 import { templateRoutes } from "./routes/templates.js";
+import { trackerRoutes } from "./routes/tracker.js";
 import type { WorkspaceRuntime } from "./runtime.js";
 
 async function body<T>(c: Context, schema: z.ZodType<T>, optional = false): Promise<T> {
@@ -90,6 +92,8 @@ export function createServer(
   });
   app.notFound((c) => c.json({ error: { code: "not-found", message: "Route not found" } }, 404));
   app.get("/api/health", (c) => c.json({ ok: true }));
+  app.route("/api", memoryRoutes(runtime));
+  app.route("/api", trackerRoutes(runtime));
   app.route("/api", researchRoutes(runtime));
   app.route("/api", packRoutes(runtime));
   app.get("/api/workspace", async (c) => {

@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { CORE_INVARIANTS } from "../instructions/core.js";
 import { loadInstructions } from "../instructions/load.js";
+import { memoryPrompt } from "../memory/index.js";
 import { readText } from "../workspace/index.js";
 import type { RoleName, RoleSpec } from "./roles.js";
 import { wrapUntrusted } from "./untrusted.js";
@@ -62,14 +63,21 @@ export async function buildSystemPrompt<O>(opts: SystemPromptOptions<O>): Promis
       chat: opts.chat,
     },
   );
-  for (const warning of instructions.warnings) opts.onWarning?.(warning);
+  const memory = await memoryPrompt({ root: opts.root }, opts.role.name);
+  const warnings = [...instructions.warnings, ...memory.warnings];
+  for (const warning of warnings) opts.onWarning?.(warning);
   return [
     CORE_INVARIANTS,
     `You are Vita's ${opts.role.name}. ${preambles[opts.role.name]}`,
     `Return your result only by calling ${opts.role.submitTool.name}. Correct validation errors and resubmit.`,
     ...skills,
     ...(instructions.text ? [`Standing guidance (below the core invariants):\n${instructions.text}`] : []),
-    ...(instructions.warnings.length ? [`Instruction warnings:\n${instructions.warnings.join("\n")}`] : []),
+    ...(warnings.length ? [`Instruction warnings:\n${warnings.join("\n")}`] : []),
+    ...(memory.text
+      ? [
+          `What Vita knows about you\nUse preferences and decisions as guidance subject to core invariants. Facts to confirm and outcomes are context only, never claim evidence.\n${wrapUntrusted("memory.md", memory.text)}`,
+        ]
+      : []),
     wrapUntrusted("task", opts.task),
   ].join("\n\n");
 }

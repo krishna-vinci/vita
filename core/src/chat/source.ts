@@ -1,5 +1,6 @@
-import { type ChatTurn, SourceProposal } from "@vita/shared";
+import { type ChatTurn, type SourceChatReply, SourceProposal } from "@vita/shared";
 import { buildSystemPrompt, runRole, wrapUntrusted } from "../agent/index.js";
+import { proposeMemory } from "../memory/index.js";
 import { loadContext } from "../pipeline/context.js";
 import type { PipelineDeps, WorkspaceHandle } from "../pipeline/types.js";
 import { commitPaths, FileLocks, fileHash, readText, resolveInWorkspace, writeTextAtomic } from "../workspace/index.js";
@@ -13,7 +14,7 @@ export async function proposeSourceEdit(
   input: { message: string; history: ChatTurn[] },
   deps: PipelineDeps,
   role: typeof sourceEditorRole = sourceEditorRole,
-): Promise<{ reply: string; proposal: SourceProposal | null }> {
+): Promise<SourceChatReply> {
   const hashes = { outline: await fileHash(ws.root, "outline.md"), projects: await fileHash(ws.root, "projects.md") };
   const ctx = await loadContext(ws);
   try {
@@ -34,7 +35,7 @@ export async function proposeSourceEdit(
       }),
       task: [
         chatTask(input.message, input.history),
-        "Return propose_edit with { reply, proposal }. A proposal has file, before, after, summary. Copy before exactly from the supplied snapshot with enough context to be unique. Return proposal: null for questions or refusals.",
+        "Return propose_edit with { reply, proposal, memory? }. For a lasting preference or decision explicitly stated by the user, propose a memory entry { text, kind }; these require approval and never become evidence. A proposal has file, before, after, summary. Copy before exactly from the supplied snapshot with enough context to be unique. Return proposal: null for questions or refusals.",
         wrapUntrusted("outline.md", snapshots.outline),
         wrapUntrusted("projects.md", snapshots.projects),
       ].join("\n\n"),
@@ -46,12 +47,13 @@ export async function proposeSourceEdit(
       retry: deps.retry,
       onUsage: deps.onUsage,
     });
-    if (!result.proposal) return { reply: result.reply, proposal: null };
+    const memoryProposals = await Promise.all((result.memory ?? []).map((entry) => proposeMemory(ws, entry, "chat")));
+    if (!result.proposal) return { reply: result.reply, proposal: null, memoryProposals };
     const edit = result.proposal;
     replacement(snapshots[edit.file], edit.before, edit.after);
     const baseHash = hashes[edit.file];
     if (!baseHash) throw new ChatConflictError("stale-hash", "Source file is missing. Request a fresh edit.");
-    return { reply: result.reply, proposal: { ...edit, baseHash } };
+    return { reply: result.reply, proposal: { ...edit, baseHash }, memoryProposals };
   } finally {
     ctx.search.close();
   }

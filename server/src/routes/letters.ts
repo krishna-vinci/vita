@@ -1,4 +1,12 @@
-import { applyLetterOps, chatLetter, exportLetter, generateLetter, getLetter, LetterBlockedError } from "@vita/core";
+import {
+  applyLetterOps,
+  chatLetter,
+  exportLetter,
+  generateLetter,
+  getLetter,
+  LetterBlockedError,
+  recordExportedVersion,
+} from "@vita/core";
 import { EmptyRequest, GenerateLetterRequest, LetterChatRequest, LetterOpsRequest, Slug } from "@vita/shared";
 import { type Context, Hono } from "hono";
 import type { z } from "zod";
@@ -74,6 +82,7 @@ export function letterRoutes(runtime: WorkspaceRuntime): Hono {
     const id = Slug.parse(c.req.param("id"));
     await body(c, EmptyRequest);
     const result = await mutation(id, () => immediateDeps().then((deps) => exportLetter(runtime.ws, id, deps)));
+    await recordExportedVersion(runtime.ws, id, new Date(), "letter");
     runtime.changed("application", result.sha, id);
     return c.json(result);
   });

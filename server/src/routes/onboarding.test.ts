@@ -123,7 +123,7 @@ it("keeps interview turns in memory, proposes a source diff after an answer, and
   const spy = vi.spyOn(core, "chatOnboarding");
   const before = await core.readText(root, "outline.md");
   const first = await server.request("/api/onboarding/chat", post({ message: "Help me get started" }));
-  expect(SourceChatReply.parse(await first.json())).toEqual({ reply: "What work do you do?", proposal: null });
+  expect(SourceChatReply.parse(await first.json())).toMatchObject({ reply: "What work do you do?", proposal: null });
   const second = await server.request("/api/onboarding/chat", post({ message: "I coordinated weekly workshops." }));
   expect(second.status).toBe(200);
   const result = SourceChatReply.parse(await second.json());

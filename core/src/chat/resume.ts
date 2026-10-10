@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { type ChatTurn, type Finding, Resume, type ResumeChatReply, Review, Slug } from "@vita/shared";
 import { buildSystemPrompt, runRole, wrapUntrusted } from "../agent/index.js";
 import { lintResume } from "../lint/index.js";
+import { proposeMemory } from "../memory/index.js";
 import { applyOps, OpError } from "../ops/index.js";
 import { effectivePack, loadContext, optionalText } from "../pipeline/context.js";
 import type { PipelineDeps, WorkspaceHandle } from "../pipeline/types.js";
@@ -43,7 +44,7 @@ export async function chatResume(
         }),
         task: [
           chatTask(input.message, input.history),
-          "Return propose_ops with { ops, summary }. An explicit chat request authorizes immediate, undoable resume operations. For unsupported skills, numbers or outcomes, return ops: [] and explain an honest alternative or ask for evidence. Do not treat a pending chat answer as approved source evidence. Preserve claim IDs and locked bullets.",
+          "Return propose_ops with { ops, summary, memory? }. For a lasting preference or decision explicitly stated by the user, propose a memory entry { text, kind }; these require approval and never become evidence. An explicit chat request authorizes immediate, undoable resume operations. For unsupported skills, numbers or outcomes, return ops: [] and explain an honest alternative or ask for evidence. Do not treat a pending chat answer as approved source evidence. Preserve claim IDs and locked bullets.",
           wrapUntrusted("resume.json", JSON.stringify(resume)),
           wrapUntrusted("claims and evidence", JSON.stringify([...ctx.index.claims.values()])),
         ].join("\n\n"),
@@ -55,8 +56,10 @@ export async function chatResume(
         retry: deps.retry,
         onUsage: deps.onUsage,
       });
+      const memoryProposals = await Promise.all((output.memory ?? []).map((entry) => proposeMemory(ws, entry, "chat")));
       const refusal = (reply: string, lint: Finding[] = []): ResumeChatReply => ({
         reply,
+        memoryProposals,
         ops: [],
         applied: false,
         sha: null,
@@ -156,6 +159,7 @@ export async function chatResume(
         reply: blocking.length
           ? `${output.summary} Some changed lines still need supporting evidence.`
           : output.summary,
+        memoryProposals,
         ops: output.ops,
         applied: true,
         sha,
