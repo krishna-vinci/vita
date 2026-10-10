@@ -111,6 +111,16 @@ export function researchExtensions(
   ];
 }
 
+/** Explicitly scoped to a generation run. Dispose in the caller's finally block. */
+export class RoleSession {
+  entry?: { key: string; run: (opts: RunRoleOptions<unknown>) => Promise<unknown>; dispose: () => void };
+
+  dispose() {
+    this.entry?.dispose();
+    this.entry = undefined;
+  }
+}
+
 export interface RunRoleOptions<O> {
   role: RoleSpec<O>;
   root: string;
@@ -126,7 +136,19 @@ export interface RunRoleOptions<O> {
   /** Optional engine-provided tools/extensions; callers must enforce role policies. */
   customTools?: ToolDefinition[];
   extensions?: ExtensionFactory[];
-  onUsage?: (u: { role: RoleName; model: string; input: number; output: number; costUsd: number }) => void;
+  /** Continue the writer session with review notes; other roles remain fresh. */
+  session?: RoleSession;
+  onUsage?: (u: {
+    role: RoleName;
+    model: string;
+    input: number;
+    output: number;
+    costUsd: number;
+    freshInput?: number;
+    cacheRead?: number;
+    cacheWrite?: number;
+    wallMs?: number;
+  }) => void;
 }
 
 export class RoleError extends Error {
@@ -192,12 +214,33 @@ function isRateLimit(error: RoleError): boolean {
 }
 
 async function runSession<O>(opts: RunRoleOptions<O>, model: Model<Api>, modelString: string): Promise<O> {
-  let captured: { output: O } | undefined;
+  const opened = performance.now();
+  const key = JSON.stringify([
+    opts.root,
+    opts.role.name,
+    modelString,
+    opts.system,
+    opts.role.submitTool.parameters,
+    opts.role.readTools,
+    opts.customTools?.map((tool) => [tool.name, tool.description, tool.parameters]),
+  ]);
+  if (opts.session?.entry?.key === key) return opts.session.entry.run(opts as RunRoleOptions<unknown>) as Promise<O>;
+  opts.session?.dispose();
+  const submission: { captured?: { output: O } } = {};
+  const getSubmission = () => submission.captured;
   let invalidSubmits = 0;
   let exhausted = false;
   let stop: (() => void) | undefined;
   const spec = opts.role.submitTool;
-  const reads = createReadTools(opts.tools, opts.role.readTools);
+  const observed = new Set<string>();
+  const reads = createReadTools(opts.tools, opts.role.readTools).map((tool) => ({
+    ...tool,
+    execute: async (...args: Parameters<typeof tool.execute>) => {
+      const result = await tool.execute(...args);
+      observed.add(tool.name);
+      return result;
+    },
+  }));
   if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(spec.name) || reads.some((tool) => tool.name === spec.name)) {
     throw new RoleError(opts.role.name, modelString, `Invalid or conflicting submit tool name: ${spec.name}`);
   }
@@ -231,7 +274,9 @@ async function runSession<O>(opts: RunRoleOptions<O>, model: Model<Api>, modelSt
     },
     async execute(_id, args, signal) {
       signal?.throwIfAborted();
-      captured = { output: spec.output.parse(args) };
+      if (opts.role.name === "ats-reviewer" && opts.tools.render && !observed.has("read_render"))
+        throw new Error("Read this round's render result with read_render before submitting ATS notes.");
+      submission.captured = { output: spec.output.parse(args) };
       return { content: [{ type: "text", text: "Submission accepted." }], details: {}, terminate: true };
     },
   };
@@ -274,50 +319,90 @@ async function runSession<O>(opts: RunRoleOptions<O>, model: Model<Api>, modelSt
     sessionManager: SessionManager.inMemory(opts.root),
     settingsManager,
   });
-  stop = () => {
+  const abortSession = () => {
     void session.abort().catch(() => undefined);
   };
-  opts.signal?.addEventListener("abort", stop, { once: true });
-  const check = () => {
-    opts.signal?.throwIfAborted();
-    if (exhausted) throw new RoleError(opts.role.name, modelString, "Maximum of 3 invalid submissions reached");
-    const last = session.messages.findLast((message): message is AssistantMessage => message.role === "assistant");
-    if (last?.stopReason === "error" || last?.stopReason === "aborted") {
-      throw new RoleError(opts.role.name, modelString, (last.errorMessage ?? "Model request failed").slice(0, 300));
+  stop = abortSession;
+  const dispose = () => session.dispose();
+  const execute = async (next: RunRoleOptions<O>, started = performance.now()): Promise<O> => {
+    const firstMessage = session.messages.length;
+    submission.captured = undefined;
+    invalidSubmits = 0;
+    exhausted = false;
+    Object.assign(opts.tools, next.tools);
+    next.signal?.addEventListener("abort", abortSession, { once: true });
+    const check = () => {
+      next.signal?.throwIfAborted();
+      if (exhausted) throw new RoleError(opts.role.name, modelString, "Maximum of 3 invalid submissions reached");
+      const last = session.messages.findLast((message): message is AssistantMessage => message.role === "assistant");
+      if (last?.stopReason === "error" || last?.stopReason === "aborted") {
+        throw new RoleError(opts.role.name, modelString, (last.errorMessage ?? "Model request failed").slice(0, 300));
+      }
+    };
+    try {
+      next.signal?.throwIfAborted();
+      await session.prompt(next.task, { expandPromptTemplates: false });
+      check();
+      let captured = getSubmission();
+      if (captured === undefined) {
+        await session.prompt(`Call ${spec.name} now.`, { expandPromptTemplates: false });
+        check();
+        captured = getSubmission();
+      }
+      if (captured === undefined) throw new RoleError(opts.role.name, modelString, "no submission");
+      return captured.output;
+    } catch (error) {
+      opts.session?.dispose();
+      throw error;
+    } finally {
+      next.signal?.removeEventListener("abort", abortSession);
+      const usage = {
+        role: opts.role.name,
+        model: modelString,
+        input: 0,
+        output: 0,
+        costUsd: 0,
+        freshInput: 0,
+        cacheRead: 0,
+        cacheWrite: 0,
+        wallMs: Math.round(performance.now() - started),
+      };
+      for (const message of session.messages.slice(firstMessage)) {
+        if (message.role !== "assistant") continue;
+        usage.input += message.usage.input + message.usage.cacheRead + message.usage.cacheWrite;
+        usage.freshInput += message.usage.input;
+        usage.cacheRead += message.usage.cacheRead;
+        usage.cacheWrite += message.usage.cacheWrite;
+        usage.output += message.usage.output;
+        usage.costUsd += message.usage.cost.total;
+      }
+      next.onUsage?.(usage);
     }
   };
   try {
-    opts.signal?.throwIfAborted();
     if (opts.extensions) await session.bindExtensions({});
-    // The task is the orchestrator's own instruction; callers wrap embedded data with wrapUntrusted().
-    await session.prompt(opts.task, { expandPromptTemplates: false });
-    check();
-    if (captured === undefined) {
-      await session.prompt(`Call ${spec.name} now.`, { expandPromptTemplates: false });
-      check();
-    }
-    if (captured === undefined) throw new RoleError(opts.role.name, modelString, "no submission");
-    return captured.output;
+    if (opts.session)
+      opts.session.entry = { key, run: execute as (opts: RunRoleOptions<unknown>) => Promise<unknown>, dispose };
+    return await execute(opts, opened);
   } finally {
-    opts.signal?.removeEventListener("abort", stop);
-    try {
-      if (opts.extensions) await session.extensionRunner.emit({ type: "session_shutdown", reason: "quit" });
-    } finally {
-      session.dispose();
+    if (!opts.session) {
+      try {
+        if (opts.extensions) await session.extensionRunner.emit({ type: "session_shutdown", reason: "quit" });
+      } finally {
+        dispose();
+      }
     }
-    const usage = { role: opts.role.name, model: modelString, input: 0, output: 0, costUsd: 0 };
-    for (const message of session.messages) {
-      if (message.role !== "assistant") continue;
-      usage.input += message.usage.input + message.usage.cacheRead + message.usage.cacheWrite;
-      usage.output += message.usage.output;
-      usage.costUsd += message.usage.cost.total;
-    }
-    opts.onUsage?.(usage);
   }
 }
 
 export async function runRole<O>(opts: RunRoleOptions<O>): Promise<O> {
   opts.signal?.throwIfAborted();
+  if (opts.session && opts.role.name !== "writer")
+    throw new RoleError(
+      opts.role.name,
+      resolveRoleModel(opts.models, opts.role.name),
+      "Session reuse is restricted to the writer.",
+    );
   if (opts.extensions && opts.role.name !== "researcher")
     throw new RoleError(
       opts.role.name,

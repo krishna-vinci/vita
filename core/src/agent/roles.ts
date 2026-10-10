@@ -1,6 +1,7 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { getCurrentTools } from "@earendil-works/pi-ai";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai/providers/faux";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { AtsNote, CheckNote, JobAnalysis, Prep, Resume } from "@vita/shared";
@@ -20,7 +21,13 @@ export type RoleName =
   | "interviewer"
   | "template-adopter"
   | "onboarder";
-export type ReadToolName = "read_outline" | "read_projects" | "search_evidence" | "read_resume" | "read_analysis";
+export type ReadToolName =
+  | "read_outline"
+  | "read_projects"
+  | "search_evidence"
+  | "read_resume"
+  | "read_analysis"
+  | "read_render";
 
 export interface RoleSpec<O> {
   name: RoleName;
@@ -62,7 +69,7 @@ export const checkerRole: RoleSpec<{ checks: CheckNote[] }> = {
 export const atsReviewerRole: RoleSpec<{ ats: AtsNote[] }> = {
   name: "ats-reviewer",
   skills: ["ats-review"],
-  readTools: ["read_resume", "read_analysis"],
+  readTools: ["read_resume", "read_analysis", "read_render"],
   submitTool: submit("submit_ats", z.object({ ats: z.array(AtsNote) })),
 };
 
@@ -90,7 +97,25 @@ export async function createGenerationRuntime(script?: FauxScript) {
       refreshOnCreate: false,
     });
     const faux = fauxProvider({ provider: "faux", models: [{ id: "writer" }, { id: "checker" }, { id: "default" }] });
-    faux.setResponses(parsed.map((step) => fauxAssistantMessage(fauxToolCall(step.tool, step.arguments))));
+    const pending = [...parsed];
+    const respond: Parameters<typeof faux.setResponses>[0][number] = (context) => {
+      const tools = new Set(getCurrentTools(context.messages).map((tool) => tool.name));
+      const needsRender =
+        tools.has("read_render") &&
+        !context.messages.some(
+          (message) => message.role === "toolResult" && message.toolName === "read_render" && !message.isError,
+        );
+      if (needsRender) {
+        faux.appendResponses([respond]);
+        return fauxAssistantMessage(fauxToolCall("read_render", {}));
+      }
+      const position = pending.findIndex((step) => tools.has(step.tool));
+      const step = pending.splice(position < 0 ? 0 : position, 1)[0];
+      if (!step) throw new Error("Faux script exhausted");
+      faux.appendResponses([respond]);
+      return fauxAssistantMessage(fauxToolCall(step.tool, step.arguments));
+    };
+    faux.setResponses([respond]);
     runtime.registerNativeProvider(faux.provider);
     return {
       runtime,

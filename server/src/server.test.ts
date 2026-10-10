@@ -252,6 +252,14 @@ describe("workspace API", () => {
     expect(visibleBullets(input.tools.resume).map((value) => value.id)).toEqual([bullet.id]);
     expect(input.task).toContain("<untrusted-data");
     expect(edited.review?.done).toBe(false);
+    const second = await server.request(
+      "/api/resumes/master/ops",
+      post({ ops: [{ op: "bullet.edit", id: bullet.id, text: bullet.text }] }),
+    );
+    const unchanged = ResumeMutation.parse(await second.json());
+    expect(unchanged.usage).toEqual([]);
+    expect(unchanged.review?.checks).toEqual(edited.review?.checks);
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 
   it("persists settings, warns about checker model reuse, and never returns credentials", async () => {

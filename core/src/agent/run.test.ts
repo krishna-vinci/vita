@@ -21,7 +21,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { ModelsConfig } from "./models.js";
 import type { RoleName, RoleSpec } from "./roles.js";
-import { RoleError, type RunRoleOptions, runRole, wrapUntrusted } from "./run.js";
+import { RoleError, RoleSession, type RunRoleOptions, runRole, wrapUntrusted } from "./run.js";
 
 const output = z.object({ text: z.string().trim().min(1), receipts: z.array(z.string()).default([]) });
 type Output = z.infer<typeof output>;
@@ -118,18 +118,69 @@ describe("runRole with Pi 1.1 faux", () => {
       },
     ]);
     expect(await runRole(opts)).toEqual({ text: "checked", receipts: [] });
-    expect(usage).toHaveBeenCalledWith({
-      role: "writer",
-      model: "faux/writer",
-      input: expect.any(Number),
-      output: expect.any(Number),
-      costUsd: 0,
-    });
+    expect(usage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        role: "writer",
+        model: "faux/writer",
+        input: expect.any(Number),
+        output: expect.any(Number),
+        costUsd: 0,
+        freshInput: expect.any(Number),
+        cacheRead: expect.any(Number),
+        cacheWrite: expect.any(Number),
+        wallMs: expect.any(Number),
+      }),
+    );
     expect(usage.mock.calls[0]?.[0].input).toBeGreaterThan(0);
     expect(usage.mock.calls[0]?.[0].output).toBeGreaterThan(0);
     expect(await runRole(opts)).toEqual({ text: "second", receipts: [] });
     expect(faux.state.callCount).toBe(2);
     expect(await readdir(root)).toEqual(["AGENTS.md", "outline.md", "projects.md"]);
+  });
+
+  it("continues writer history and tools in one session and reports only each turn's new usage", async () => {
+    const session = new RoleSession();
+    const opts = { ...options(), session };
+    const usage = vi.fn();
+    opts.onUsage = usage;
+    faux.setResponses([
+      submit("first".repeat(20)),
+      (context) => {
+        expect(context.messages.filter((message) => message.role === "user")).toHaveLength(2);
+        expect(context.messages.filter((message) => message.role === "assistant")).toHaveLength(1);
+        return submit("second");
+      },
+    ]);
+    try {
+      await runRole(opts);
+      expect(await runRole({ ...opts, task: "Fix the review notes." })).toEqual({ text: "second", receipts: [] });
+      expect(usage).toHaveBeenCalledTimes(2);
+      expect(usage.mock.calls[1]?.[0].output).toBeLessThan(usage.mock.calls[0]?.[0].output);
+      expect(session.entry).toBeDefined();
+    } finally {
+      session.dispose();
+    }
+    expect(session.entry).toBeUndefined();
+    await expect(runRole({ ...options("checker"), session })).rejects.toThrow("restricted to the writer");
+  });
+
+  it("requires ATS to read the completed render before accepting its verdict", async () => {
+    const opts = options("ats-reviewer");
+    opts.role.readTools = ["read_render"];
+    opts.tools.render = Promise.resolve({ render: { ok: false, missingBullets: ["missing"] } });
+    faux.setResponses([
+      submit("premature"),
+      (context) => {
+        expect(lastToolResult(context)?.isError).toBe(true);
+        return fauxAssistantMessage(fauxToolCall("read_render", {}));
+      },
+      (context) => {
+        expect(JSON.stringify(lastToolResult(context))).toContain("missingBullets");
+        expect(lastToolResult(context)?.isError).not.toBe(true);
+        return submit("Reading order failed");
+      },
+    ]);
+    expect(await runRole(opts)).toEqual({ text: "Reading order failed", receipts: [] });
   });
 
   it("returns an invalid submit as a tool error, then accepts the second submit", async () => {

@@ -1,0 +1,214 @@
+{
+  "mode": "faux",
+  "tokenAccounting": "Character/4 input and output estimates; no cache simulation, model calls or charges. Scripted verdicts do not measure quality.",
+  "results": [
+    {
+      "workspace": "fixtures/developer",
+      "job": "scripts/eval/developer-job.md",
+      "operation": "master",
+      "wallMs": 1589,
+      "usage": [
+        {
+          "role": "writer",
+          "model": "faux/writer",
+          "input": 6988,
+          "output": 572,
+          "costUsd": 0,
+          "freshInput": 6988,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "wallMs": 36
+        },
+        {
+          "role": "checker",
+          "model": "faux/checker",
+          "input": 4271,
+          "output": 201,
+          "costUsd": 0,
+          "freshInput": 4271,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "wallMs": 7
+        }
+      ],
+      "rounds": 1,
+      "lint": 0,
+      "checker": {
+        "supported": 6,
+        "overstated": 0,
+        "unsupported": 0
+      },
+      "ats": 0,
+      "done": true,
+      "gaps": [],
+      "blocking": []
+    },
+    {
+      "workspace": "fixtures/developer",
+      "job": "scripts/eval/developer-job.md",
+      "operation": "tailor",
+      "wallMs": 1316,
+      "usage": [
+        {
+          "role": "analyst",
+          "model": "faux/default",
+          "input": 3103,
+          "output": 47,
+          "costUsd": 0,
+          "freshInput": 3103,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "wallMs": 9
+        },
+        {
+          "role": "writer",
+          "model": "faux/writer",
+          "input": 7380,
+          "output": 572,
+          "costUsd": 0,
+          "freshInput": 7380,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "wallMs": 11
+        },
+        {
+          "role": "checker",
+          "model": "faux/checker",
+          "input": 4277,
+          "output": 201,
+          "costUsd": 0,
+          "freshInput": 4277,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "wallMs": 5
+        },
+        {
+          "role": "ats-reviewer",
+          "model": "faux/default",
+          "input": 2990,
+          "output": 6,
+          "costUsd": 0,
+          "freshInput": 2990,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "wallMs": 4
+        }
+      ],
+      "rounds": 1,
+      "lint": 0,
+      "checker": {
+        "supported": 6,
+        "overstated": 0,
+        "unsupported": 0
+      },
+      "ats": 0,
+      "done": true,
+      "gaps": [],
+      "blocking": []
+    },
+    {
+      "workspace": "fixtures/nurse",
+      "job": "scripts/eval/nurse-job.md",
+      "operation": "master",
+      "wallMs": 1216,
+      "usage": [
+        {
+          "role": "writer",
+          "model": "faux/writer",
+          "input": 7086,
+          "output": 596,
+          "costUsd": 0,
+          "freshInput": 7086,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "wallMs": 9
+        },
+        {
+          "role": "checker",
+          "model": "faux/checker",
+          "input": 4332,
+          "output": 201,
+          "costUsd": 0,
+          "freshInput": 4332,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "wallMs": 4
+        }
+      ],
+      "rounds": 1,
+      "lint": 0,
+      "checker": {
+        "supported": 6,
+        "overstated": 0,
+        "unsupported": 0
+      },
+      "ats": 0,
+      "done": true,
+      "gaps": [],
+      "blocking": []
+    },
+    {
+      "workspace": "fixtures/nurse",
+      "job": "scripts/eval/nurse-job.md",
+      "operation": "tailor",
+      "wallMs": 1253,
+      "usage": [
+        {
+          "role": "analyst",
+          "model": "faux/default",
+          "input": 3135,
+          "output": 41,
+          "costUsd": 0,
+          "freshInput": 3135,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "wallMs": 6
+        },
+        {
+          "role": "writer",
+          "model": "faux/writer",
+          "input": 7482,
+          "output": 596,
+          "costUsd": 0,
+          "freshInput": 7482,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "wallMs": 10
+        },
+        {
+          "role": "checker",
+          "model": "faux/checker",
+          "input": 4339,
+          "output": 201,
+          "costUsd": 0,
+          "freshInput": 4339,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "wallMs": 3
+        },
+        {
+          "role": "ats-reviewer",
+          "model": "faux/default",
+          "input": 3007,
+          "output": 6,
+          "costUsd": 0,
+          "freshInput": 3007,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "wallMs": 3
+        }
+      ],
+      "rounds": 1,
+      "lint": 0,
+      "checker": {
+        "supported": 6,
+        "overstated": 0,
+        "unsupported": 0
+      },
+      "ats": 0,
+      "done": true,
+      "gaps": [],
+      "blocking": []
+    }
+  ]
+}
