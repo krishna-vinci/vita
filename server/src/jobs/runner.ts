@@ -60,7 +60,7 @@ export class JobRunner {
         ["queued", "running"].includes(view.status) &&
         (!scope ||
           (scope === "application"
-            ? ["tailor", "answers", "prep"].includes(view.kind)
+            ? ["tailor", "answers", "prep", "letter"].includes(view.kind)
             : ["master", "base"].includes(view.kind))) &&
         (!id || view.resourceId === id || view.resourceId === null),
     );
