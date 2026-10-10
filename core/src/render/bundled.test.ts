@@ -11,9 +11,18 @@ import { renderTex } from "./tex";
 import { checkRender, pdfText } from "./textcheck";
 
 const templatesDir = fileURLToPath(new URL("../../../templates/", import.meta.url));
-const ids = (await readdir(templatesDir, { withFileTypes: true }))
-  .filter((entry) => entry.isDirectory())
-  .map((entry) => entry.name)
+const ids = (
+  await Promise.all(
+    (
+      await readdir(templatesDir, { withFileTypes: true })
+    )
+      .filter((entry) => entry.isDirectory())
+      .map(async (entry) =>
+        (await loadTemplate([templatesDir], entry.name)).meta.kind === "resume" ? entry.name : null,
+      ),
+  )
+)
+  .filter((id): id is string => id !== null)
   .sort();
 const fixtures = ["developer", "nurse", "teacher", "accountant"];
 let available = false;

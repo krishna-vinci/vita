@@ -44,7 +44,11 @@ it("compiles every bundled template once with a sample and network-enabled flags
     .trim()
     .split("\n")
     .map((line) => JSON.parse(line));
-  expect(calls).toHaveLength((await readdir(templates)).length);
+  const resumeTemplates = [];
+  for (const id of await readdir(templates))
+    if (!(await readFile(join(templates, id, "template.yaml"), "utf8")).includes("kind: letter"))
+      resumeTemplates.push(id);
+  expect(calls).toHaveLength(resumeTemplates.length);
   for (const call of calls) {
     expect(call.args).toEqual(["-X", "compile", "main.tex"]);
     expect(call.tex).toContain("Alex Example");

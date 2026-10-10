@@ -11,6 +11,8 @@ export const TemplateMeta = z.object({
   id: Slug,
   name: z.string(),
   description: z.string().optional(),
+  /** "resume" templates render resumes; "letter" templates render cover letters. */
+  kind: z.enum(["resume", "letter"]).default("resume"),
   source: z.object({ author: z.string(), licence: z.string(), url: z.string().optional() }).optional(),
   page: z.enum(["letter", "a4"]).default("letter"),
   knobs: z.record(z.string(), Knob).default({}),

@@ -164,7 +164,9 @@ it("validates ids and refuses approval before a successful proposal", async () =
 it("serves every bundled gallery PNG with image headers and advertises its description", async () => {
   const server = await app();
   const listed = (await (await server.request("/api/templates")).json()) as unknown[];
-  const bundled = listed.map((entry) => TemplateSummary.parse(entry)).filter((entry) => entry.bundled);
+  const bundled = listed
+    .map((entry) => TemplateSummary.parse(entry))
+    .filter((entry) => entry.bundled && entry.meta.kind === "resume");
   expect(bundled).toHaveLength(12);
   for (const template of bundled) {
     expect(template.previewAvailable).toBe(true);

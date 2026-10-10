@@ -73,7 +73,7 @@ it("refuses to rasterize a preview with missing bullets or page overflow", async
   });
   const template = {
     dir: root,
-    meta: { id: "example", name: "Example", page: "a4" as const, knobs: {}, supports: [] },
+    meta: { id: "example", name: "Example", kind: "resume" as const, page: "a4" as const, knobs: {}, supports: [] },
   };
   await expect(renderTemplatePreview(resume, template, 1)).rejects.toThrow("render check");
   extraction.mockResolvedValue({ text: "Visible text.", pages: 2 });

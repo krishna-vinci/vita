@@ -30,6 +30,8 @@ export async function warmTemplateCache(templatesDir: string): Promise<void> {
   for (const entry of await readdir(templatesDir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
     const tpl = await loadTemplate([templatesDir], entry.name);
+    // Letter templates are warmed by the letter pipeline's own sample (same packages as Rover Base).
+    if (tpl.meta.kind !== "resume") continue;
     const resume = Resume.parse({
       id: "sample",
       kind: "master",

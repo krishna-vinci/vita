@@ -14,6 +14,7 @@ for (const entry of (await readdir(templatesDir, { withFileTypes: true })).sort(
 )) {
   if (!entry.isDirectory()) continue;
   const template = await loadTemplate([templatesDir], entry.name);
+  if (template.meta.kind !== "resume") continue;
   const png = await renderTemplatePreview({ ...fixture, template: template.meta.id }, template, 1);
   await writeFile(join(template.dir, "preview.png"), png);
   console.log(`${template.meta.id}: preview.png (150 dpi)`);

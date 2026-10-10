@@ -1,5 +1,7 @@
 id: rover-letter
 name: Rover Letter
+kind: letter
+description: Cover letter matching Rover Base typography.
 source:
   author: Rover resume templates (subidit)
   licence: CC-BY-4.0
