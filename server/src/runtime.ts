@@ -5,6 +5,7 @@ import {
   applyOps,
   assignOutlineAnchors,
   buildSystemPrompt,
+  checkerContext,
   checkerRole,
   checkRender,
   commitPaths,
@@ -33,9 +34,11 @@ import {
   renderMarkdown,
   renderTex,
   resolveInWorkspace,
+  resolveRoleModel,
   runRole,
   tailor,
   undoPaths,
+  VerdictCache,
   type WorkspaceHandle,
   wrapUntrusted,
   writeFileAtomic,
@@ -69,6 +72,7 @@ export interface RuntimeOptions extends WorkspaceHandle {
 }
 
 export class WorkspaceRuntime {
+  private readonly verdictCache = new VerdictCache();
   readonly hub = new EventHub();
   readonly locks = new FileLocks();
   readonly jobs: JobRunner;
@@ -313,6 +317,13 @@ export class WorkspaceRuntime {
           .filter((bullet) => changed.has(bullet.id) && !bullet.override)
           .map((bullet) => bullet.id),
       );
+      const models = this.options.models ?? (await loadModelsConfig(this.ws.root));
+      this.verdictCache.useModel(resolveRoleModel(models, "checker"));
+      const cached = this.verdictCache
+        .partition(result.resume, index)
+        .cached.filter((note) => toCheck.has(note.bulletId));
+      review.checks.push(...cached);
+      for (const note of cached) toCheck.delete(note.bulletId);
       if (toCheck.size) {
         const selected = structuredClone(result.resume);
         for (const section of selected.sections)
@@ -320,7 +331,6 @@ export class WorkspaceRuntime {
         const outline = parseOutline(assignOutlineAnchors(await readText(this.ws.root, "outline.md")).markdown);
         const search = EvidenceSearch.build(index, outline);
         try {
-          const models = this.options.models ?? (await loadModelsConfig(this.ws.root));
           const checked = await runRole({
             role: checkerRole,
             root: this.ws.root,
@@ -333,8 +343,10 @@ export class WorkspaceRuntime {
             }),
             task: [
               "Check each supplied visible bullet against its claims and evidence. Return submit_checks. These are the changed bullets only.",
-              wrapUntrusted("changed resume", JSON.stringify(selected)),
-              wrapUntrusted("claims", JSON.stringify([...index.claims.values()])),
+              wrapUntrusted(
+                "visible bullets and complete cited evidence",
+                JSON.stringify(checkerContext(selected, index)),
+              ),
             ].join("\n\n"),
             tools: { root: this.ws.root, index, search, resume: selected },
             runtime: this.options.runtime,
@@ -342,6 +354,9 @@ export class WorkspaceRuntime {
             retry: this.options.retry,
             onUsage: (entry) => usage.push(entry),
           });
+          const actual = usage.at(-1)?.model ?? resolveRoleModel(models, "checker");
+          this.verdictCache.useModel(actual);
+          this.verdictCache.remember(selected, index, checked.checks);
           review.checks.push(...checked.checks.filter((note) => toCheck.has(note.bulletId)));
         } catch (error) {
           review.blocking.push(
@@ -375,6 +390,7 @@ export class WorkspaceRuntime {
   async pipelineDeps(ctx: JobContext): Promise<PipelineDeps> {
     return {
       runtime: this.options.runtime,
+      verdictCache: this.verdictCache,
       models: this.options.models ?? (await loadModelsConfig(this.ws.root)),
       retry: this.options.retry,
       signal: ctx.signal,

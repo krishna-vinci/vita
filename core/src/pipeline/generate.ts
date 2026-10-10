@@ -2,6 +2,7 @@ import { join } from "node:path";
 import {
   type AtsNote,
   type BaseConfig,
+  type CheckNote,
   type Finding,
   type JobAnalysis,
   type Pack,
@@ -12,7 +13,15 @@ import {
 } from "@vita/shared";
 import { Type } from "typebox";
 import { z } from "zod";
-import { buildSystemPrompt, modelWarnings, type RoleSpec, runRole, wrapUntrusted } from "../agent/index.js";
+import {
+  buildSystemPrompt,
+  modelWarnings,
+  RoleSession,
+  type RoleSpec,
+  resolveRoleModel,
+  runRole,
+  wrapUntrusted,
+} from "../agent/index.js";
 import { atsReviewerRole, checkerRole, writerRole } from "../agent/roles.js";
 import { enforcePageLimit } from "../instructions/rules.js";
 import { lintResume } from "../lint/index.js";
@@ -21,10 +30,11 @@ import type { Selection } from "../search/index.js";
 import { resolveInWorkspace } from "../workspace/index.js";
 import type { Context } from "./context.js";
 import { evaluateDone } from "./done.js";
+import { checkerContext, VerdictCache, writerEvidence } from "./efficient-context.js";
 import type { PipelineDeps, RoleUsage } from "./types.js";
 
 export function data(source: string, value: unknown): string {
-  return wrapUntrusted(source, typeof value === "string" ? value : JSON.stringify(value, null, 2));
+  return wrapUntrusted(source, typeof value === "string" ? value : JSON.stringify(value));
 }
 
 export function effectiveModels(deps: PipelineDeps): PipelineDeps["models"] {
@@ -42,7 +52,14 @@ export function roleRunner(
   models = effectiveModels(deps),
   guidance: { applicationId?: string; jobNotes?: string; onWarning?: (message: string) => void } = {},
 ) {
-  return async <O>(role: RoleSpec<O>, task: string, resume?: Resume, analysis?: JobAnalysis): Promise<O> => {
+  return async <O>(
+    role: RoleSpec<O>,
+    task: string,
+    resume?: Resume,
+    analysis?: JobAnalysis,
+    session?: RoleSession,
+    render?: Promise<unknown>,
+  ): Promise<O> => {
     deps.signal?.throwIfAborted();
     const system = await buildSystemPrompt({
       role,
@@ -60,7 +77,8 @@ export function roleRunner(
       task,
       system,
       root: ctx.ws.root,
-      tools: { root: ctx.ws.root, index: ctx.index, search: ctx.search, resume, analysis },
+      tools: { root: ctx.ws.root, index: ctx.index, search: ctx.search, resume, analysis, render },
+      session,
       runtime: deps.runtime,
       models,
       modelOverride: deps.modelOverrides?.[role.name],
@@ -70,7 +88,7 @@ export function roleRunner(
         usage.push(entry);
         deps.onUsage?.(entry);
         // Fallback safety uses the actual writer, including a rate-limit fallback.
-        if (role.name === "writer") models.roles.writer = entry.model;
+        if (role.name === "writer" || role.name === "checker") models.roles[role.name] = entry.model;
       },
     });
   };
@@ -194,17 +212,11 @@ export async function generate(
   let tex = "";
   let pdf: Buffer | undefined;
   let markdown = "";
-  const claims = input.selection
-    ? input.selection.claimIds.flatMap((id) => ctx.index.claims.get(id) ?? [])
-    : [...ctx.index.claims.values()];
-  const variants = input.selection
-    ? input.selection.items.flatMap((item) => item.variantIds.flatMap((id) => ctx.index.variants.get(id) ?? []))
-    : [...ctx.index.variants.values()];
+  const evidence = writerEvidence(ctx, input);
+  const writerSession = new RoleSession();
+  const cache = deps.verdictCache ?? new VerdictCache();
   const context = [
-    data("outline.md", ctx.outlineText),
-    data("projects.md", ctx.projectsText),
-    data("claims", claims),
-    data("variants", variants),
+    data("selected claims, variants and items", evidence),
     data("analysis", input.analysis),
     data("selection", input.selection ?? null),
     data("base config", input.baseConfig ?? null),
@@ -223,106 +235,145 @@ export async function generate(
     data("user notes", input.notes ?? ""),
   ].join("\n\n");
   // Two checked drafts total: initial draft plus one revision.
-  for (let round = 1; round <= 2; round++) {
-    deps.onProgress?.({ stage: round === 1 ? "write" : "revise", round });
-    const draft = await run(
-      writer,
-      [
-        `Generate a ${input.kind} resume with id ${input.id}, parent ${input.parent ?? "null"}, template ${input.template}, at most ${input.maxPages} pages.`,
-        "Preserve locked bullets exactly, including visibility. Answer claims are the person's own dated statements from gap questions: you may cite their ids for bullets or skills, using only what they say (never inflate a basic understanding into expertise). Other answers (no, skip) are gaps: never write them as experience. Never invent claim IDs or grant overrides. Cover every entry in \"must-haves to cover\" with a bullet (or a skills entry) that cites one of its claim ids and uses the requirement's wording where the claim supports it; recruiters and ATS look for that wording.",
-        ...(input.kind === "base"
+  try {
+    for (let round = 1; round <= 2; round++) {
+      deps.onProgress?.({ stage: round === 1 ? "write" : "revise", round });
+      const draft = await run(
+        writer,
+        round > 1
           ? [
-              "Select and order content from the master resume for the direction in the following data.",
-              data("direction", input.direction),
-            ]
-          : []),
-        "The engine supplies the header from profile.yaml. Return the resume content without a header through submit_resume.",
-        context,
-        data("previous resume", resume ?? null),
-        data("previous review", review ?? null),
-      ].join("\n\n"),
-      resume,
-      input.analysis,
-    );
-    resume = carryUserState(
-      { ...draft, header, id: input.id, kind: input.kind, parent: input.parent, template: input.template },
-      input.seed,
-    );
-    deps.onProgress?.({ stage: "lint", round });
-    const lint: Finding[] = lintResume(resume, { index: ctx.index, pack: input.pack, rules: ctx.rules });
-    if (lint.length)
-      deps.onProgress?.({
-        stage: "lint",
-        round,
-        message: lint.map((entry) => `${entry.rule}: ${entry.message}`).join("; "),
-      });
-    reportModelWarnings();
-    deps.onProgress?.({ stage: "check", round });
-    const { checks } = await run(
-      checkerRole,
-      [
-        "Check every visible bullet, including locked user bullets, against its claims and evidence. Return { checks: CheckNote[] } through submit_checks.",
-        data("resume", resume),
-        data("claims", [...ctx.index.claims.values()]),
-      ].join("\n\n"),
-      resume,
-      input.analysis,
-    );
-    deps.onProgress?.({ stage: "render", round });
-    let render: Review["render"] = null;
-    pdf = undefined;
-    tex = "";
-    markdown = renderMarkdown(resume);
-    try {
-      const template = await loadTemplate(
-        [resolveInWorkspace(ctx.ws.root, "templates"), join(ctx.ws.bundledDir, "templates")],
-        resume.template,
-      );
-      tex = renderTex(resume, template);
-      const compiled = await compileTex({ tex, assetsDir: template.dir });
-      render = checkRender(resume, await pdfText(compiled.pdf), input.maxPages);
-      pdf = compiled.pdf;
-    } catch (error) {
-      deps.signal?.throwIfAborted();
-      lint.push({
-        rule: "render-failed",
-        severity: "block",
-        message: error instanceof Error ? error.message : String(error),
-      });
-    }
-    deps.signal?.throwIfAborted();
-    let ats: AtsNote[] = [];
-    if (input.kind === "job") {
-      deps.onProgress?.({ stage: "ats", round });
-      ({ ats } = await run(
-        atsReviewerRole,
-        [
-          "Review coverage and ATS readability. Return { ats: AtsNote[] } through submit_ats.",
-          data("resume", resume),
-          data("analysis", input.analysis),
-          data("render", render),
-          data("gaps", input.gaps),
-        ].join("\n\n"),
+              "Revise the previous draft to address these review notes. Preserve locked bullets and the original generation constraints. Return submit_resume.",
+              data("previous resume", resume),
+              data("previous review", review),
+            ].join("\n\n")
+          : [
+              `Generate a ${input.kind} resume with id ${input.id}, parent ${input.parent ?? "null"}, template ${input.template}, at most ${input.maxPages} pages.`,
+              "Preserve locked bullets exactly, including visibility. Answer claims are the person's own dated statements from gap questions: you may cite their ids for bullets or skills, using only what they say (never inflate a basic understanding into expertise). Other answers (no, skip) are gaps: never write them as experience. Never invent claim IDs or grant overrides. Cover every entry in \"must-haves to cover\" with a bullet (or a skills entry) that cites one of its claim ids and uses the requirement's wording where the claim supports it; recruiters and ATS look for that wording.",
+              ...(input.kind === "base"
+                ? [
+                    "Select and order content from the master resume for the direction in the following data.",
+                    data("direction", input.direction),
+                  ]
+                : []),
+              "The engine supplies the header from profile.yaml. Return the resume content without a header through submit_resume.",
+              context,
+              data("previous resume", resume ?? null),
+              data("previous review", review ?? null),
+            ].join("\n\n"),
         resume,
         input.analysis,
-      ));
+        writerSession,
+      );
+      resume = carryUserState(
+        { ...draft, header, id: input.id, kind: input.kind, parent: input.parent, template: input.template },
+        input.seed,
+      );
+      deps.onProgress?.({ stage: "lint", round });
+      const lint: Finding[] = lintResume(resume, { index: ctx.index, pack: input.pack, rules: ctx.rules });
+      if (lint.length)
+        deps.onProgress?.({
+          stage: "lint",
+          round,
+          message: lint.map((entry) => `${entry.rule}: ${entry.message}`).join("; "),
+        });
+      reportModelWarnings();
+      const current = resume;
+      cache.useModel(resolveRoleModel(models, "checker"));
+      const { cached, pending, selected } = cache.partition(current, ctx.index);
+      deps.onProgress?.({ stage: "check", round });
+      const checkTask = async (): Promise<CheckNote[]> => {
+        if (!pending.size) return cached;
+        const { checks } = await run(
+          checkerRole,
+          [
+            "Check every supplied visible bullet, including locked user bullets, against its complete claims and evidence. Return { checks: CheckNote[] } through submit_checks. Missing claims are explicitly marked; never assume support.",
+            data("visible bullets and complete cited evidence", checkerContext(selected, ctx.index)),
+          ].join("\n\n"),
+          selected,
+          input.analysis,
+        );
+        const checked = checks.filter((note) => pending.has(note.bulletId));
+        cache.useModel(resolveRoleModel(models, "checker"));
+        cache.remember(selected, ctx.index, checked);
+        return [...cached, ...checked];
+      };
+      deps.onProgress?.({ stage: "render", round });
+      pdf = undefined;
+      tex = "";
+      markdown = renderMarkdown(current);
+      const renderTask = async (): Promise<Review["render"]> => {
+        try {
+          const template = await loadTemplate(
+            [resolveInWorkspace(ctx.ws.root, "templates"), join(ctx.ws.bundledDir, "templates")],
+            current.template,
+          );
+          tex = renderTex(current, template);
+          const compiled = await compileTex({ tex, assetsDir: template.dir });
+          const result = checkRender(current, await pdfText(compiled.pdf), input.maxPages);
+          pdf = compiled.pdf;
+          return result;
+        } catch (error) {
+          deps.signal?.throwIfAborted();
+          lint.push({
+            rule: "render-failed",
+            severity: "block",
+            message: error instanceof Error ? error.message : String(error),
+          });
+          return null;
+        }
+      };
+      const checksPromise = checkTask();
+      const renderPromise = renderTask();
+      // Read-render lets ATS start alongside the checker and compiler without hiding the final render result.
+      const renderData = renderPromise.then(
+        (render) => ({ render, findings: lint.filter((finding) => finding.rule === "render-failed") }),
+        (error: unknown) => ({ error: error instanceof Error ? error.message : String(error) }),
+      );
+      const atsTask = async (): Promise<AtsNote[]> => {
+        if (input.kind !== "job") return [];
+        deps.onProgress?.({ stage: "ats", round });
+        const { ats } = await run(
+          atsReviewerRole,
+          [
+            "Review coverage and ATS readability. Read this round's complete render result using read_render before submitting. Return { ats: AtsNote[] } through submit_ats.",
+            data("resume", current),
+            data("analysis", input.analysis),
+            data("gaps", input.gaps),
+          ].join("\n\n"),
+          current,
+          input.analysis,
+          undefined,
+          renderData,
+        );
+        return ats;
+      };
+      // Drain every stage before closing source/search resources, including on failure or cancellation.
+      const stages = await Promise.allSettled([checksPromise, renderPromise, atsTask()]);
+      const failure = stages.find((stage) => stage.status === "rejected");
+      if (failure?.status === "rejected") throw failure.reason;
+      const checks = (stages[0] as PromiseFulfilledResult<CheckNote[]>).value;
+      const render = (stages[1] as PromiseFulfilledResult<Review["render"]>).value;
+      const ats = (stages[2] as PromiseFulfilledResult<AtsNote[]>).value;
+      deps.signal?.throwIfAborted();
+      const overrides = visibleBullets(resume).flatMap((bullet) =>
+        bullet.override
+          ? [{ bulletId: bullet.id, reason: bullet.override.note ?? bullet.override.reason, at: bullet.override.at }]
+          : [],
+      );
+      review = Review.parse({
+        round,
+        lint,
+        checks,
+        ats,
+        render,
+        gaps: input.gaps,
+        overrides,
+        ...evaluateDone({ resume, lint, checks, analysis: input.analysis, gaps: input.gaps, render, overrides }),
+      });
+      if (review.done) break;
     }
-    const overrides = visibleBullets(resume).flatMap((bullet) =>
-      bullet.override
-        ? [{ bulletId: bullet.id, reason: bullet.override.note ?? bullet.override.reason, at: bullet.override.at }]
-        : [],
-    );
-    review = Review.parse({
-      round,
-      lint,
-      checks,
-      ats,
-      render,
-      gaps: input.gaps,
-      overrides,
-      ...evaluateDone({ resume, lint, checks, analysis: input.analysis, gaps: input.gaps, render, overrides }),
-    });
-    if (review.done) break;
+  } finally {
+    writerSession.dispose();
   }
   if (!resume || !review) throw new Error("Generation produced no reviewed resume");
   return { resume, review, tex, pdf, markdown, warnings };

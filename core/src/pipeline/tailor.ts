@@ -16,6 +16,7 @@ import { fileHash, readText, resolveInWorkspace } from "../workspace/index.js";
 import { answerClaimId, effectivePack, findGaps, loadContext, mergeKeywords, optionalText } from "./context.js";
 import { answerFact, expandGroup, gapQuestion, requirementLabel } from "./coverage.js";
 import { localDate } from "./date.js";
+import { baseSummaries } from "./efficient-context.js";
 import { data, generate, roleRunner } from "./generate.js";
 import { withGenerationLock } from "./lock.js";
 import { persist } from "./persist.js";
@@ -75,10 +76,8 @@ export async function tailor(
               [
                 "Analyse the job requirements and score every supplied base. Give every requirement a short `label` (a noun phrase of at most 6 words, e.g. spreadsheet modelling or public speaking) used to ask the person whether they have done it. Return JobAnalysis through submit_analysis.",
                 data("job.md", input.jobText),
-                data("outline.md", ctx.outlineText),
-                data("projects.md", ctx.projectsText),
-                data("bases", ctx.bases),
-                data("effective pack", general),
+                data("bases", baseSummaries(ctx.bases)),
+                data("pack keywords", general.keywords),
               ].join("\n\n"),
             );
       const ranked = [...analysis.baseScores].sort((a, b) => b.score - a.score || a.baseId.localeCompare(b.baseId));

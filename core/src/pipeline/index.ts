@@ -8,6 +8,7 @@ export {
 } from "../agent/roles.js";
 export { BaseGenerationError, generateBase } from "./base.js";
 export { evaluateDone } from "./done.js";
+export { checkerContext, VerdictCache } from "./efficient-context.js";
 export { generateMaster } from "./master.js";
 export { ProfileRequiredError } from "./profile.js";
 export { loadReviewContext } from "./stored.js";

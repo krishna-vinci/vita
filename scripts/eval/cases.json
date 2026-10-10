@@ -1,0 +1,29 @@
+[
+  {
+    "workspace": "../../fixtures/developer",
+    "job": "developer-job.md",
+    "analysis": {
+      "title": "Service role",
+      "requirements": [
+        {
+          "id": "req-service",
+          "text": "Build a catalogue service",
+          "importance": "must",
+          "keywords": [["catalogue", "catalog"]]
+        }
+      ],
+      "baseScores": []
+    }
+  },
+  {
+    "workspace": "../../fixtures/nurse",
+    "job": "nurse-job.md",
+    "analysis": {
+      "title": "Care role",
+      "requirements": [
+        { "id": "req-care", "text": "Patient care", "importance": "must", "keywords": [["patient", "care"]] }
+      ],
+      "baseScores": []
+    }
+  }
+]
