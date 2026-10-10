@@ -1,14 +1,19 @@
-import { SourceEdit } from "@vita/shared";
+import { MemoryInput, SourceEdit } from "@vita/shared";
 import { Type } from "typebox";
 import { z } from "zod";
 import type { RoleSpec } from "../agent/index.js";
 import { ResumeOpSchema } from "../ops/types.js";
 
 const resumeOutput = z.strictObject({
+  memory: z.array(MemoryInput).max(10).optional(),
   ops: z.array(ResumeOpSchema).max(100),
   summary: z.string().trim().min(1).max(20_000),
 });
-const sourceOutput = z.strictObject({ reply: z.string().trim().min(1).max(20_000), proposal: SourceEdit.nullable() });
+const sourceOutput = z.strictObject({
+  memory: z.array(MemoryInput).max(10).optional(),
+  reply: z.string().trim().min(1).max(20_000),
+  proposal: SourceEdit.nullable(),
+});
 
 export const resumeEditorRole: RoleSpec<z.infer<typeof resumeOutput>> = {
   name: "resume-editor",

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { JobAnalysis } from "./analysis";
+import { MemoryProposal } from "./api-memory";
 import { Slug } from "./ids";
 import { Resume, SectionKind } from "./resume";
 import { Finding, Review } from "./review";
@@ -240,9 +241,14 @@ export const SourceEdit = z.strictObject({
 });
 export const SourceProposal = SourceEdit.extend({ baseHash: z.string().regex(/^[a-f0-9]{64}$/) });
 export type SourceProposal = z.infer<typeof SourceProposal>;
-export const SourceChatReply = z.object({ reply: z.string(), proposal: SourceProposal.nullable() });
+export const SourceChatReply = z.object({
+  memoryProposals: z.array(MemoryProposal).optional(),
+  reply: z.string(),
+  proposal: SourceProposal.nullable(),
+});
 export type SourceChatReply = z.infer<typeof SourceChatReply>;
 export const ResumeChatReply = z.object({
+  memoryProposals: z.array(MemoryProposal).optional(),
   reply: z.string(),
   ops: z.array(ApiResumeOp),
   applied: z.boolean(),

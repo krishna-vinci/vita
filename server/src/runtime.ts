@@ -29,6 +29,7 @@ import {
   pdfText,
   RoleError,
   readText,
+  recordExportedVersion,
   relFromRoot,
   renderMarkdown,
   renderTex,
@@ -497,6 +498,7 @@ export class WorkspaceRuntime {
         "Export application resume",
         "user",
       );
+      await recordExportedVersion(this.ws, id);
       this.changed("application", sha, id);
       return { resource: await this.application(id), sha, pdfUrl: `/api/files/${prefix}/out/resume.pdf` };
     });

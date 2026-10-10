@@ -363,3 +363,28 @@ it("keeps the pre-model source hash when the source changes while a proposal is 
   await expect(applySourceEdit(ws, result.proposal)).rejects.toMatchObject({ code: "stale-hash" });
   expect(await readText(ws.root, "outline.md")).toContain("New user fact.");
 });
+
+it.each(["resume", "source"] as const)("returns %s chat memory proposals without applying them", async (scope) => {
+  const memory = [{ text: "Never mention the archive for finance roles.", kind: "preference" }];
+  faux.setResponses([
+    fauxAssistantMessage(
+      fauxToolCall(
+        scope === "resume" ? "propose_ops" : "propose_edit",
+        scope === "resume"
+          ? { ops: [], summary: "Remember this preference?", memory }
+          : { reply: "Remember this preference?", proposal: null, memory },
+      ),
+    ),
+  ]);
+  const result =
+    scope === "resume"
+      ? await chatResume(ws, { ...input, message: memory[0]?.text ?? "" }, deps)
+      : await proposeSourceEdit(ws, { message: memory[0]?.text ?? "", history: [] }, deps);
+  expect(result.memoryProposals).toEqual([
+    expect.objectContaining({
+      entry: expect.objectContaining({ text: memory[0]?.text, kind: "preference", source: "chat" }),
+      baseHash: null,
+    }),
+  ]);
+  expect(await fileHash(ws.root, "memory.md")).toBeNull();
+});

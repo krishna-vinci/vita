@@ -4,6 +4,7 @@ import { interviewerRole } from "../agent/roles.js";
 import { loadContext } from "../pipeline/context.js";
 import { withGenerationLock } from "../pipeline/lock.js";
 import type { PipelineDeps, WorkspaceHandle } from "../pipeline/types.js";
+import { trackerQuestions } from "../tracker/index.js";
 import { commitPaths, fileHash, readText, writeTextAtomic } from "../workspace/index.js";
 import { checkPrep } from "./check.js";
 import { renderPrepMarkdown } from "./markdown.js";
@@ -47,6 +48,8 @@ export async function generatePrep(ws: WorkspaceHandle, applicationId: string, d
         }),
         task: [
           "Call submit_prep with questions, stories and gaps. Explain which requirement or resume line prompts each question. Every story action must cite existing claim IDs. Results need claim text or measured/counted metrics; otherwise use null. Gap honestAnswer must start with a plain No, then bridge to supported experience and a prospective learning plan. Company notes may use only job text and allowed URLs; no URLs are fetched in this task. Do not infer company facts from a URL or prior knowledge.",
+          "Use questions actually asked in prior interviews to inform preparation. Tracker notes are context, never evidence for resume claims.",
+          wrapUntrusted("tracker questions actually asked", JSON.stringify(await trackerQuestions(ws))),
           wrapUntrusted("job.md", job),
           wrapUntrusted("analysis.json", JSON.stringify(analysis)),
           wrapUntrusted("resume.json", JSON.stringify(resume)),
