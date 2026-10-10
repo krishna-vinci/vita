@@ -2,6 +2,7 @@ export { JobAnalysis, Requirement } from "./analysis";
 export * from "./api";
 export * from "./api-fit";
 export * from "./api-instructions";
+export * from "./api-letters";
 export * from "./api-metrics";
 export * from "./api-packs";
 export * from "./api-prep";

@@ -174,7 +174,7 @@ export type SettingsMutation = z.infer<typeof SettingsMutation>;
 
 export const JobView = z.object({
   id: z.string(),
-  kind: z.enum(["master", "base", "tailor", "answers", "prep", "template-adoption", "research"]),
+  kind: z.enum(["master", "base", "tailor", "answers", "prep", "letter", "template-adoption", "research"]),
   resourceId: z.string().nullable(),
   status: z.enum(["queued", "running", "done", "failed", "cancelled"]),
   progress: z.string(),

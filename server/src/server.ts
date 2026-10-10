@@ -22,6 +22,7 @@ import { chatRoutes } from "./routes/chat.js";
 import { eventsRoutes } from "./routes/events.js";
 import { fitRoutes } from "./routes/fit.js";
 import { instructionsRoutes } from "./routes/instructions.js";
+import { letterRoutes } from "./routes/letters.js";
 import { metricsRoutes } from "./routes/metrics.js";
 import { packRoutes } from "./routes/packs.js";
 import { prepRoutes } from "./routes/prep.js";
@@ -184,6 +185,7 @@ export function createServer(
   app.route("/api/metrics", metricsRoutes(runtime));
   app.route("/api", fitRoutes(runtime));
   app.route("/api/applications", prepRoutes(runtime));
+  app.route("/api/applications", letterRoutes(runtime));
   app.route("/api/templates", templateRoutes(runtime));
   app.route("/api", syncRoutes(runtime));
   app.route("/api", instructionsRoutes(runtime));
