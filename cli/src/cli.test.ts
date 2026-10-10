@@ -127,6 +127,8 @@ it("registers all commands and sets the CLI failure status when check finds issu
     "render",
     "check",
     "setup",
+    "reset-password",
+    "users",
     "hash-password",
     "master",
     "tailor",

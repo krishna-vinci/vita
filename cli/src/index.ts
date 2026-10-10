@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command, Option } from "commander";
+import { resetPasswordCommand, usersCommand } from "./commands/accounts";
 import { checkCommand } from "./commands/check";
 import { hashPasswordCommand } from "./commands/hash-password";
 import { importCommand } from "./commands/import";
@@ -43,8 +44,16 @@ export function createProgram(): Command {
     });
   program.command("setup").description("Warm the package cache for bundled templates.").action(setupCommand);
   program
+    .command("reset-password <username>")
+    .description("Read a new password from stdin and revoke all account sessions (VITA_DATA_DIR).")
+    .action((username: string) => resetPasswordCommand(username));
+  program
+    .command("users")
+    .description("List accounts in VITA_DATA_DIR.")
+    .action(() => usersCommand());
+  program
     .command("hash-password")
-    .description("Read a password from stdin and print its scrypt hash.")
+    .description("Legacy: read a password from stdin and print its scrypt hash.")
     .action(() => hashPasswordCommand());
   program
     .command("master <dir>")

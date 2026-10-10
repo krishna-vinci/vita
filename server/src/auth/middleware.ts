@@ -1,32 +1,33 @@
-import type { MiddlewareHandler } from "hono";
-import { verifyPassword } from "./password.js";
+import type { DatabaseSync } from "node:sqlite";
+import type { Context, MiddlewareHandler } from "hono";
+import { getCookie, setCookie } from "hono/cookie";
+import { resolveSession, SESSION_DURATION_MS } from "../accounts/sessions.js";
+import { listUsers, type User } from "../accounts/users.js";
 
-export function assertBindAllowed(host: string, passwordHash?: string): void {
-  if (!["127.0.0.1", "::1", "localhost"].includes(host) && !passwordHash)
-    throw new Error(`VITA_HOST=${host} requires VITA_PASSWORD_HASH (scrypt); refusing a non-loopback bind`);
-  if (passwordHash && !/^scrypt\$16384\$8\$1\$[A-Za-z0-9_-]{22}\$[A-Za-z0-9_-]{86}$/.test(passwordHash))
-    throw new Error("VITA_PASSWORD_HASH must be a valid scrypt password hash");
+declare module "hono" {
+  interface ContextVariableMap {
+    user: User;
+    sessionHash: string;
+  }
 }
-
+export const SESSION_COOKIE = "vita_session";
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
-
-function hostname(hostHeader: string): string {
-  // "[::1]:4317" → "[::1]", "localhost:4317" → "localhost"
-  return hostHeader.startsWith("[")
-    ? hostHeader.slice(0, hostHeader.indexOf("]") + 1)
-    : (hostHeader.split(":")[0] ?? "");
+export function cookieOptions(c: Context, trustProxy = false) {
+  return {
+    httpOnly: true,
+    sameSite: "Strict" as const,
+    path: "/",
+    secure:
+      new URL(c.req.url).protocol === "https:" ||
+      (trustProxy && c.req.header("X-Forwarded-Proto")?.split(",")[0]?.trim().toLowerCase() === "https"),
+    maxAge: SESSION_DURATION_MS / 1000,
+  };
 }
-
-/**
- * Writes must come from this app. Behind a TLS reverse proxy the request URL is the internal http:// one,
- * so an Origin matches when its host equals the Host header (scheme ignored) or it is listed in
- * VITA_PUBLIC_ORIGIN. Without a password the server is loopback-only, so the Host header must be a
- * loopback name too (blocks DNS-rebinding pages from reaching the API).
- */
-export function passwordAuth(passwordHash?: string, publicOrigins: string[] = []): MiddlewareHandler {
+export function requestGuard(db: DatabaseSync, loopbackBind: boolean, publicOrigins: string[] = []): MiddlewareHandler {
   return async (c, next) => {
     const host = c.req.header("Host") ?? new URL(c.req.url).host;
-    if (!passwordHash && !LOOPBACK_HOSTS.has(hostname(host).toLowerCase()))
+    const hostname = host.startsWith("[") ? host.slice(0, host.indexOf("]") + 1) : (host.split(":")[0] ?? "");
+    if (loopbackBind && listUsers(db).length === 0 && !LOOPBACK_HOSTS.has(hostname.toLowerCase()))
       return c.json({ error: { code: "forbidden", message: "Unexpected Host header" } }, 403);
     const origin = c.req.header("Origin");
     if (!["GET", "HEAD", "OPTIONS"].includes(c.req.method) && origin) {
@@ -34,23 +35,24 @@ export function passwordAuth(passwordHash?: string, publicOrigins: string[] = []
       try {
         originHost = new URL(origin).host;
       } catch {}
-      const allowed = originHost.toLowerCase() === host.toLowerCase() || publicOrigins.includes(origin);
-      if (!allowed)
+      if (originHost.toLowerCase() !== host.toLowerCase() && !publicOrigins.includes(origin))
         return c.json({ error: { code: "forbidden", message: "Cross-origin writes are not allowed" } }, 403);
-    }
-    if (passwordHash) {
-      const header = c.req.header("Authorization") ?? "";
-      let password: string | undefined;
-      if (/^Basic [A-Za-z0-9+/]+=*$/i.test(header) && header.length < 4096) {
-        const decoded = Buffer.from(header.slice(6), "base64").toString("utf8");
-        const colon = decoded.indexOf(":");
-        if (colon >= 0) password = decoded.slice(colon + 1);
-      }
-      if (password === undefined || !(await verifyPassword(password, passwordHash))) {
-        c.header("WWW-Authenticate", 'Basic realm="Vita", charset="UTF-8"');
-        return c.json({ error: { code: "unauthorized", message: "Password required" } }, 401);
-      }
     }
     await next();
   };
 }
+export function sessionAuth(db: DatabaseSync, trustProxy = false): MiddlewareHandler {
+  return async (c, next) => {
+    const token = getCookie(c, SESSION_COOKIE);
+    const resolved = token ? resolveSession(db, token) : null;
+    if (!resolved) return c.json({ error: { code: "unauthorized", message: "Sign in required" } }, 401);
+    c.set("user", resolved.user);
+    c.set("sessionHash", resolved.hash);
+    setCookie(c, SESSION_COOKIE, token as string, cookieOptions(c, trustProxy));
+    await next();
+  };
+}
+export const requireAdmin: MiddlewareHandler = async (c, next) => {
+  if (!c.get("user").isAdmin) return c.json({ error: { code: "forbidden", message: "Admin required" } }, 403);
+  await next();
+};

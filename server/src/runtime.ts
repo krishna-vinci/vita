@@ -45,7 +45,7 @@ import {
   type ApplicationResource,
   type ApplicationSummary,
   JobAnalysis,
-  type JobView,
+  JobView,
   type PutSettingsRequest,
   Resume,
   type ResumeOpsRequest,
@@ -86,7 +86,7 @@ export class WorkspaceRuntime {
   }
   static async create(options: RuntimeOptions): Promise<WorkspaceRuntime> {
     try {
-      await readdir(options.root);
+      if ((await readdir(options.root)).length === 0) await initWorkspace(options.root, { name: "" });
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       await initWorkspace(options.root, { name: "" });
@@ -94,7 +94,23 @@ export class WorkspaceRuntime {
     const created = options.runtime
       ? { runtime: options.runtime, close: async () => {} }
       : await createGenerationRuntime();
-    return new WorkspaceRuntime({ ...options, runtime: created.runtime }, created.close);
+    const runtime = new WorkspaceRuntime({ ...options, runtime: created.runtime }, created.close);
+    try {
+      const history: JobView[] = [];
+      for (const file of (await readdir(resolveInWorkspace(runtime.ws.root, ".vita/jobs"))).filter((file) =>
+        file.endsWith(".json"),
+      )) {
+        const parsed = JobView.safeParse(JSON.parse(await readText(runtime.ws.root, `.vita/jobs/${file}`)));
+        if (parsed.success) history.push(parsed.data);
+      }
+      runtime.jobs.seedHistory(history.sort((a, b) => a.createdAt.localeCompare(b.createdAt)));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        await runtime.close();
+        throw error;
+      }
+    }
+    return runtime;
   }
   async close(): Promise<void> {
     for (const job of this.jobs.list()) this.jobs.cancel(job.id);
