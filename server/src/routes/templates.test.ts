@@ -160,3 +160,32 @@ it("validates ids and refuses approval before a successful proposal", async () =
   );
   expect((await server.request(`/api/templates/${uploaded.id}/not.pdf`)).status).toBe(404);
 });
+
+it("serves every bundled gallery PNG with image headers and advertises its description", async () => {
+  const server = await app();
+  const listed = (await (await server.request("/api/templates")).json()) as unknown[];
+  const bundled = listed.map((entry) => TemplateSummary.parse(entry)).filter((entry) => entry.bundled);
+  expect(bundled).toHaveLength(12);
+  for (const template of bundled) {
+    expect(template.previewAvailable).toBe(true);
+    expect(template.meta.description).toBeTruthy();
+    const response = await server.request(`/api/templates/${template.id}/preview.png`);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("image/png");
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(
+      Buffer.from(await response.arrayBuffer()).equals(
+        await readFile(join(bundledDir, "templates", template.id, "preview.png")),
+      ),
+    ).toBe(true);
+  }
+});
+
+it("rejects invalid and missing bundled PNGs and never serves workspace preview files", async () => {
+  const server = await app();
+  expect((await server.request("/api/templates/bad_id/preview.png")).status).toBe(400);
+  expect((await server.request("/api/templates/missing/preview.png")).status).toBe(404);
+  await mkdir(join(root, "templates/workspace-only"), { recursive: true });
+  await cp(join(bundledDir, "templates/rover-base/preview.png"), join(root, "templates/workspace-only/preview.png"));
+  expect((await server.request("/api/templates/workspace-only/preview.png")).status).toBe(404);
+});

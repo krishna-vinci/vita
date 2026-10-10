@@ -1,0 +1,93 @@
+% Rover Week Monday; adapted from Rover resume templates by subidit (CC BY 4.0).
+% https://github.com/subidit/rover-resume; source: templates/week rover/monday.tex
+% Modified for Vita contract, safe layout knobs and XeTeX; see NOTICE.
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[margin=((( layout.margin_in )))in, a4paper]{geometry}
+\usepackage[default,semibold,type1]{raleway}
+
+\setcounter{secnumdepth}{0}
+\usepackage{enumitem}
+
+\setlist[enumerate]{itemsep=0pt,align=left}
+\setlist[description]{itemsep=0pt}
+
+\usepackage{xcolor}
+\usepackage{titlesec}
+\titlespacing{\section}{0pt}{*4}{*0}
+\titlespacing{\subsection}{0pt}{*3}{-\parskip}
+\titlespacing{\subsubsection}{0pt}{\parskip}{-\parskip}
+\titleformat*{\section}{\color{gray}\huge\fontseries{el}\uppercase}
+\titleformat*{\subsection}{\large\bfseries}
+\titleformat*{\subsubsection}{\bfseries\scshape}
+
+\newcommand{\aux}[1]{
+  $|$ {\normalfont \textsc{#1}}
+}
+\newcommand{\rside}[1]{
+  \hfill {\normalfont \color{gray} \scshape\oldstylenums{\lowercase{#1}}}
+}
+
+\usepackage{xcolor}
+
+\usepackage[bookmarks=false,hidelinks]{hyperref}
+\usepackage{microtype}
+\setlength{\parindent}{0pt}
+\setlist[itemize]{nosep,leftmargin=1.5em,labelsep=0.45em}
+\titlespacing{\section}{0pt}{((( layout.section_gap_pt )))pt}{((( layout.section_gap_pt )))pt}
+\titlespacing{\subsection}{0pt}{3pt}{0pt}
+\titlespacing{\subsubsection}{0pt}{0pt}{0pt}
+\linespread{((( layout.line_spread )))}
+
+\begin{document}
+\fontsize{((( layout.font_pt )))}{((( layout.font_pt * 1.2 )))}\selectfont
+\begin{center}
+  {\Huge\bfseries ((( header.name )))}\par
+((* if header.name and header.headline *))
+  \medskip ((( header.headline )))\par
+((* endif *))
+((* if header.contact.length *))
+  \medskip
+((* for contact in header.contact *))
+  ((( contact.label ))): ((( contact.value )))((* if not loop.last *)) \quad ((* endif *))
+((* endfor *))
+  \par
+((* endif *))
+\end{center}
+
+((* for section in sections *))
+\section{((( section.title )))}
+((* if section.kind == "entries" *))
+((* for item in section.items *))
+\subsection{((( item.title )))((* if item.period *)) \rside{((( item.period )))}((* endif *))}
+((* if item.subtitle or item.location *))
+\subsubsection{((* if item.subtitle *))((( item.subtitle )))((* endif *))((* if item.location *)) \rside{((( item.location )))}((* endif *))}
+((* endif *))
+((* if item.bullets.length *))
+\begin{itemize}
+((* for bullet in item.bullets *))
+  \item ((( bullet.text )))
+((* endfor *))
+\end{itemize}
+((* endif *))
+((* endfor *))
+((* elif section.kind == "list" *))
+((* for item in section.detailItems *))
+((* if item.title *))
+\textbf{((( item.title )))}: ((( item.bullets | join(", ", "text") )))\par
+((* else *))
+((* for bullet in item.bullets *))
+((( bullet.text )))\par
+((* endfor *))
+((* endif *))
+((* endfor *))
+((* if section.plainItems.length *))
+((( section.plainItems | join(", ", "title") )))\par
+((* endif *))
+((* else *))
+((* for paragraph in section.paragraphs *))
+((( paragraph )))\par
+((* endfor *))
+((* endif *))
+((* endfor *))
+\end{document}

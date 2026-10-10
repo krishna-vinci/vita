@@ -16,6 +16,13 @@ describe("Knob", () => {
 });
 
 describe("TemplateMeta", () => {
+  it("accepts an optional gallery description without requiring it on older templates", () => {
+    const meta = { id: "rover-star", name: "Rover Star" };
+    expect(TemplateMeta.parse(meta).description).toBeUndefined();
+    expect(TemplateMeta.parse({ ...meta, description: "Navy headings." }).description).toBe("Navy headings.");
+    expect(TemplateMeta.safeParse({ ...meta, description: 42 }).success).toBe(false);
+  });
+
   it("fills defaults and validates nested knobs and section kinds", () => {
     expect(TemplateMeta.parse({ id: "rover-base", name: "Rover Base" })).toEqual({
       id: "rover-base",

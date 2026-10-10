@@ -68,3 +68,17 @@ it("matches bullets when the list glyph lands inside the first word", () => {
   const data = resume(["Automated API validation"]);
   expect(checkRender(data, { text: "A\n•utomated API validation", pages: 1 }, 1).ok).toBe(true);
 });
+
+it("matches equivalent PDF hyphen glyphs while still detecting missing words and reordered bullets", () => {
+  const data = resume(["Prepared month-end reconciliations.", "Documented follow-up needs."]);
+  expect(
+    checkRender(data, { text: "Prepared month‑end reconciliations.\nDocumented follow‐up needs.", pages: 1 }, 1).ok,
+  ).toBe(true);
+  expect(
+    checkRender(data, { text: "Prepared month‑end.\nDocumented follow‐up needs.", pages: 1 }, 1).missingBullets,
+  ).toEqual(["b0"]);
+  expect(
+    checkRender(data, { text: "Documented follow‑up needs.\nPrepared month‐end reconciliations.", pages: 1 }, 1)
+      .outOfOrder,
+  ).toEqual(["b1"]);
+});

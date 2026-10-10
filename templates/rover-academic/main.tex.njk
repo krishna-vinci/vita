@@ -1,0 +1,95 @@
+% Rover Academic; adapted from Rover resume templates by subidit (CC BY 4.0).
+% https://github.com/subidit/rover-resume; source: templates/academic rover/acad-few.tex
+% Modified for Vita contract, safe layout knobs and XeTeX; see NOTICE.
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[margin=((( layout.margin_in )))in, a4paper]{geometry}
+\usepackage{scholax}
+
+\setcounter{secnumdepth}{0}
+\usepackage{microtype}
+
+\usepackage{enumitem}
+
+\setlist[enumerate]{leftmargin=*,labelsep=\parindent,label=[{\arabic*}]}
+
+\usepackage{titlesec}
+\titlespacing{\subsection}{0pt}{*2.5}{-\parskip}
+\titlespacing{\subsubsection}{0pt}{*0}{*0}
+\titleformat{\section}{\large\bfseries\uppercase}{}{}{}[\titlerule]
+\titleformat*{\subsection}{\large\bfseries}
+\titleformat*{\subsubsection}{\bfseries\itshape}
+
+\setlength{\parindent}{0pt}
+\setlist[itemize]{nosep,leftmargin=1.5em,labelsep=0.45em}
+\titlespacing{\section}{0pt}{((( layout.section_gap_pt )))pt}{((( layout.section_gap_pt )))pt}
+\titlespacing{\subsection}{0pt}{3pt}{0pt}
+\titlespacing{\subsubsection}{0pt}{0pt}{0pt}
+\linespread{((( layout.line_spread )))}
+
+\begin{document}
+\fontsize{((( layout.font_pt )))}{((( layout.font_pt * 1.2 )))}\selectfont
+\begin{center}
+  {\Huge\bfseries ((( header.name )))}\par
+((* if header.name and header.headline *))
+  \medskip ((( header.headline )))\par
+((* endif *))
+((* if header.contact.length *))
+  \medskip
+((* for contact in header.contact *))
+  ((( contact.label ))): ((( contact.value )))((* if not loop.last *)) \quad ((* endif *))
+((* endfor *))
+  \par
+((* endif *))
+\end{center}
+
+((* for section in sections *))
+\section{((( section.title )))}
+((* if section.title == "Publications" and (section.kind == "list" or section.kind == "entries") *))
+((* if section.items.length *))
+\begin{enumerate}[leftmargin=2em,labelsep=0.45em,label={[\arabic*]}]
+((* for item in section.items *))
+\item ((* if item.title *))\textbf{((( item.title )))}((* endif *))
+((* if item.subtitle *)) ((( item.subtitle )))((* endif *))
+((* if item.period *)) \hfill ((( item.period )))((* endif *))
+((* if item.location *)) ((( item.location )))((* endif *))
+((* for bullet in item.bullets *))
+((( bullet.text )))\par
+((* endfor *))
+((* endfor *))
+\end{enumerate}
+((* endif *))
+((* elif section.kind == "entries" *))
+((* for item in section.items *))
+\subsection{((( item.title )))((* if item.period *)) \hfill ((( item.period )))((* endif *))}
+((* if item.subtitle or item.location *))
+\subsubsection{((* if item.subtitle *))((( item.subtitle )))((* endif *))((* if item.location *)) \hfill ((( item.location )))((* endif *))}
+((* endif *))
+((* if item.bullets.length *))
+\begin{itemize}
+((* for bullet in item.bullets *))
+  \item ((( bullet.text )))
+((* endfor *))
+\end{itemize}
+((* endif *))
+((* endfor *))
+((* elif section.kind == "list" *))
+((* for item in section.detailItems *))
+((* if item.title *))
+\textbf{((( item.title )))}: ((( item.bullets | join(", ", "text") )))\par
+((* else *))
+((* for bullet in item.bullets *))
+((( bullet.text )))\par
+((* endfor *))
+((* endif *))
+((* endfor *))
+((* if section.plainItems.length *))
+((( section.plainItems | join(", ", "title") )))\par
+((* endif *))
+((* else *))
+((* for paragraph in section.paragraphs *))
+((( paragraph )))\par
+((* endfor *))
+((* endif *))
+((* endfor *))
+\end{document}

@@ -33,7 +33,7 @@ export function normalizeForMatch(s: string): string {
     .replace(/\u00ad/g, "")
     .replace(/``|''|[“”„]/g, '"')
     .replace(/[‘’`]/g, "'")
-    .replace(/---|--|[–—−]/g, "-")
+    .replace(/---|--|[‐‑–—−]/g, "-")
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();

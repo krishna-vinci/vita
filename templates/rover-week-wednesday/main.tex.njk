@@ -1,0 +1,125 @@
+% Rover Week Wednesday; adapted from Rover resume templates by subidit (CC BY 4.0).
+% https://github.com/subidit/rover-resume; source: templates/week rover/wednesday.tex
+% Modified for Vita contract, safe layout knobs and XeTeX; see NOTICE.
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[margin=((( layout.margin_in )))in, a4paper]{geometry}
+\usepackage[sfdefault,light]{FiraSans}
+
+\usepackage{xcolor}
+\definecolor{accent}{HTML}{99A799}
+
+\setcounter{secnumdepth}{0}
+
+\usepackage{enumitem}
+
+\setlist[enumerate]{itemsep=0pt}
+\setlist[description]{itemsep=0pt}
+
+\usepackage{xhfill}
+\usepackage{soul}
+\newcommand{\midrule}[1]{
+  \leavevmode
+  \xrfill[.5ex]{1pt}[accent]~\so{#1}~\xrfill[.5ex]{1pt}[accent]
+}
+
+\usepackage{titlesec}
+\titlespacing{\section}{0pt}{*4}{*2}
+\titlespacing{\subsection}{0pt}{*2}{*0}
+\titlespacing{\subsubsection}{0pt}{*0}{*0}
+\titleformat{\section}{\large\bfseries\uppercase}{}{}{\midrule}[\global\RemVStrue]
+\titleformat{\subsection}{\large\bfseries\scshape}{}{}{\rvs}
+
+\newif\ifRemVS
+\newcommand{\rvs}{
+  % Spacing is controlled by the contract knobs.
+  \global\RemVSfalse
+}
+
+\newcommand{\aux}[1]{
+  $|$ \space {\normalfont\itshape #1}
+}
+
+\newcommand{\rside}[1]{
+  \hfill {\normalfont\scshape \lowercase{#1}}
+}
+
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{refcount}
+
+\AtBeginDocument{
+  \ifnum\getpagerefnumber{LastPage}>1
+    \pagestyle{fancy}
+  \else
+    \pagestyle{empty}
+  \fi
+}
+
+\renewcommand{\headrulewidth}{0pt}
+\fancyhf{}
+\cfoot{\small\color{gray} ((( header.name ))) -- Page \thepage}
+
+\usepackage{xcolor}
+
+\usepackage[bookmarks=false,hidelinks]{hyperref}
+\usepackage{microtype}
+\setlength{\parindent}{0pt}
+\setlist[itemize]{nosep,leftmargin=1.5em,labelsep=0.45em}
+\titlespacing{\section}{0pt}{((( layout.section_gap_pt )))pt}{((( layout.section_gap_pt )))pt}
+\titlespacing{\subsection}{0pt}{3pt}{0pt}
+\titlespacing{\subsubsection}{0pt}{0pt}{0pt}
+\linespread{((( layout.line_spread )))}
+
+\begin{document}
+\fontsize{((( layout.font_pt )))}{((( layout.font_pt * 1.2 )))}\selectfont
+\begin{center}
+  {\Huge\bfseries ((( header.name )))}\par
+((* if header.name and header.headline *))
+  \medskip ((( header.headline )))\par
+((* endif *))
+((* if header.contact.length *))
+  \medskip
+((* for contact in header.contact *))
+  ((( contact.label ))): ((( contact.value )))((* if not loop.last *)) \quad ((* endif *))
+((* endfor *))
+  \par
+((* endif *))
+\end{center}
+
+((* for section in sections *))
+\section{((( section.title )))}
+((* if section.kind == "entries" *))
+((* for item in section.items *))
+\subsection{((( item.title )))((* if item.period *)) \rside{((( item.period )))}((* endif *))}
+((* if item.subtitle or item.location *))
+\subsubsection{((* if item.subtitle *))((( item.subtitle )))((* endif *))((* if item.location *)) \rside{((( item.location )))}((* endif *))}
+((* endif *))
+((* if item.bullets.length *))
+\begin{itemize}
+((* for bullet in item.bullets *))
+  \item ((( bullet.text )))
+((* endfor *))
+\end{itemize}
+((* endif *))
+((* endfor *))
+((* elif section.kind == "list" *))
+((* for item in section.detailItems *))
+((* if item.title *))
+\textbf{((( item.title )))}: ((( item.bullets | join(", ", "text") )))\par
+((* else *))
+((* for bullet in item.bullets *))
+((( bullet.text )))\par
+((* endfor *))
+((* endif *))
+((* endfor *))
+((* if section.plainItems.length *))
+((( section.plainItems | join(", ", "title") )))\par
+((* endif *))
+((* else *))
+((* for paragraph in section.paragraphs *))
+((( paragraph )))\par
+((* endfor *))
+((* endif *))
+((* endfor *))
+\end{document}

@@ -1,0 +1,143 @@
+% Rover Obsolete; adapted from Rover resume templates by subidit (CC BY 4.0).
+% https://github.com/subidit/rover-resume; source: templates/obsolete rover/obsolete-rover.tex
+% Modified for Vita contract, safe layout knobs and XeTeX; see NOTICE.
+\documentclass[11pt]{article}
+\usepackage[margin=((( layout.margin_in )))in, a4paper]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[defaultfam,light,semibold,lining]{montserrat}
+
+\newcommand{\uthree}[4]{
+    {\large
+        {\bfseries #1 $|$ \textit{#2} \hfill #3} \par
+    }
+    \begin{itemize}
+        #4
+	\end{itemize}
+    \par\addvspace{2.5ex}
+}
+
+\newcommand{\ufour}[5]{
+	{\large \bfseries
+        #1 \hfill #2 \par
+	    {\color{darkgray}\textit{#3 \hfill #4}} \par
+    }
+	\begin{itemize}
+		#5
+	\end{itemize}
+    \par\addvspace{2.5ex}
+}
+
+\usepackage{enumitem}
+
+\setlist[description]{itemsep=0pt}
+
+\usepackage{soul}
+\usepackage[explicit]{titlesec}
+\titleformat{\section}
+{\centering\large\bfseries\uppercase}{}{}
+{\so{#1}}
+
+\titlespacing{\section}{0pt}{*4}{*1}
+
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{refcount}
+
+\AtBeginDocument{
+    \ifnum\getpagerefnumber{LastPage}>1
+        \pagestyle{fancy}
+    \else
+        \pagestyle{empty}
+    \fi
+}
+
+\renewcommand{\headrulewidth}{0pt}
+\fancyhf{}
+\cfoot{\small\color{gray} ((( header.name ))) -- Page \thepage}
+
+\usepackage{xcolor}
+
+\usepackage[bookmarks=false]{hyperref}
+\hypersetup{
+    colorlinks=true,
+    urlcolor=darkgray
+}
+
+\setcounter{secnumdepth}{0}
+\setlength{\parindent}{0pt}
+
+\titleformat{\subsection}{\large\bfseries}{}{}{#1}
+\titleformat{\subsubsection}{\large\itshape}{}{}{#1}
+\usepackage{microtype}
+\setlength{\parindent}{0pt}
+\setlist[itemize]{nosep,leftmargin=1.5em,labelsep=0.45em}
+\titlespacing{\section}{0pt}{((( layout.section_gap_pt )))pt}{((( layout.section_gap_pt )))pt}
+\titlespacing{\subsection}{0pt}{3pt}{0pt}
+\titlespacing{\subsubsection}{0pt}{0pt}{0pt}
+\linespread{((( layout.line_spread )))}
+
+\begin{document}
+\fontsize{((( layout.font_pt )))}{((( layout.font_pt * 1.2 )))}\selectfont
+\begin{center}
+((* if header.contact.length *))
+\begin{minipage}[c]{0.28\textwidth}\raggedright\small
+((* for contact in header.contact *))
+((* if loop.index % 2 == 1 *))
+((( contact.label ))): ((( contact.value )))\par
+((* endif *))
+((* endfor *))
+\end{minipage}\hfill
+((* endif *))
+\begin{minipage}[c]{0.4\textwidth}\centering
+{\huge\bfseries ((( header.name )))}\par
+((* if header.name and header.headline *))
+\medskip ((( header.headline )))\par
+((* endif *))
+\end{minipage}
+((* if header.contact.length *))
+\hfill\begin{minipage}[c]{0.28\textwidth}\raggedleft\small
+((* for contact in header.contact *))
+((* if loop.index % 2 == 0 *))
+((( contact.label ))): ((( contact.value )))\par
+((* endif *))
+((* endfor *))
+\end{minipage}
+((* endif *))
+\end{center}
+
+((* for section in sections *))
+\section{((( section.title )))}
+((* if section.kind == "entries" *))
+((* for item in section.items *))
+\subsection{((( item.title )))((* if item.period *)) \hfill ((( item.period )))((* endif *))}
+((* if item.subtitle or item.location *))
+\subsubsection{((* if item.subtitle *))((( item.subtitle )))((* endif *))((* if item.location *)) \hfill ((( item.location )))((* endif *))}
+((* endif *))
+((* if item.bullets.length *))
+\begin{itemize}
+((* for bullet in item.bullets *))
+  \item ((( bullet.text )))
+((* endfor *))
+\end{itemize}
+((* endif *))
+((* endfor *))
+((* elif section.kind == "list" *))
+((* for item in section.detailItems *))
+((* if item.title *))
+\textbf{((( item.title )))}: ((( item.bullets | join(", ", "text") )))\par
+((* else *))
+((* for bullet in item.bullets *))
+((( bullet.text )))\par
+((* endfor *))
+((* endif *))
+((* endfor *))
+((* if section.plainItems.length *))
+((( section.plainItems | join(", ", "title") )))\par
+((* endif *))
+((* else *))
+((* for paragraph in section.paragraphs *))
+((( paragraph )))\par
+((* endfor *))
+((* endif *))
+((* endfor *))
+\end{document}
