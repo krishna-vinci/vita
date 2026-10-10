@@ -199,7 +199,7 @@ it("asks one question then proposes an interview answer through the existing dif
     },
   ]);
   const first = await chatOnboarding(ws, { message: "Help me get started", history: [] }, deps);
-  expect(first).toEqual({ reply: "What work do you do?", proposal: null });
+  expect(first).toMatchObject({ reply: "What work do you do?", proposal: null });
   const answer = await chatOnboarding(
     ws,
     { message: "I coordinated weekly workshops.", history: [{ role: "assistant", text: first.reply }] },

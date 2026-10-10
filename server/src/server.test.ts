@@ -345,7 +345,8 @@ describe("generation API", () => {
     for (const queued of [master, base]) {
       const job = runtime.jobs.get(queued.job.id);
       expect(job?.status, job?.error).toBe("done");
-      expect(job?.usage.map((usage) => usage.role)).toEqual(["writer", "checker"]);
+      // The base repeats the master's lines with the same claims, so supported verdicts are reused from the cache.
+      expect(job?.usage.map((usage) => usage.role)).toEqual(queued === master ? ["writer", "checker"] : ["writer"]);
       expect(job?.result?.sha).toMatch(/^[a-f0-9]{40}$/);
       expect((await server.request(`/api/jobs/${queued.job.id}`)).status).toBe(200);
     }
@@ -375,7 +376,8 @@ describe("generation API", () => {
     if (!bullet) throw new Error("No fixture bullet");
     const edited = await server.request(
       `/api/applications/${id}/ops`,
-      post({ ops: [{ op: "bullet.edit", id: bullet.id, text: bullet.text }] }),
+      // An unsourced number makes the edited line fail lint, so the review is no longer done.
+      post({ ops: [{ op: "bullet.edit", id: bullet.id, text: `${bullet.text} for 70% of releases` }] }),
     );
     expect(ResumeMutation.parse(await edited.json()).review?.done).toBe(false);
     const refused = await server.request(`/api/applications/${id}/export`, post());
@@ -387,6 +389,12 @@ describe("generation API", () => {
         ops: [{ op: "bullet.override", id: bullet.id, reason: "this-resume-only", note: "User confirms wording" }],
       }),
     );
+    // The PDF now contains the edited wording.
+    const editedText = visibleBullets(resume)
+      .map((entry) => (entry.id === bullet.id ? `${entry.text} for 70% of releases` : entry.text))
+      .join("\n");
+    vi.spyOn(core, "pdfText").mockResolvedValue({ text: editedText, pages: 1 });
+    vi.spyOn(engineRender, "pdfText").mockResolvedValue({ text: editedText, pages: 1 });
     const exported = await server.request(`/api/applications/${id}/export`, post());
     expect(exported.status, await exported.clone().text()).toBe(200);
     expect(ExportResult.parse(await exported.json()).resource.review?.done).toBe(true);

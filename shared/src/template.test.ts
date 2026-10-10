@@ -27,6 +27,7 @@ describe("TemplateMeta", () => {
     expect(TemplateMeta.parse({ id: "rover-base", name: "Rover Base" })).toEqual({
       id: "rover-base",
       name: "Rover Base",
+      kind: "resume",
       page: "letter",
       knobs: {},
       supports: ["summary", "entries", "list", "text"],

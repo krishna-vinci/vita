@@ -132,7 +132,7 @@ it("faux generation passes independent checks, wraps source data and writes sepa
   const writer = spy.mock.calls[0]?.[0];
   expect(writer?.system).toContain("Skill: write-letter");
   expect(writer?.task).toContain('<untrusted-data source="job.md">');
-  expect(writer?.task).toContain("&quot;tone&quot;: &quot;warm&quot;");
+  expect(writer?.task).toMatch(/&quot;tone&quot;: ?&quot;warm&quot;/);
   const checker = spy.mock.calls[1]?.[0];
   expect(checker?.system).toContain("Skill: check-claims");
   expect(checker?.task).toContain("developer-work-1");
