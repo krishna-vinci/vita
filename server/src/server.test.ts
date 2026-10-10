@@ -1,9 +1,7 @@
-import { execFile } from "node:child_process";
-import { cp, mkdtemp, readFile, rm, symlink } from "node:fs/promises";
+import { cp, mkdtemp, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
 import * as core from "@vita/core";
 import {
   ApplicationResource,
@@ -21,12 +19,10 @@ import {
 } from "@vita/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as engineRender from "../../core/src/render/index.js";
-import { hashPassword } from "./auth/password.js";
 import { WorkspaceRuntime } from "./runtime.js";
-import { createServer } from "./server.js";
+import { createWorkspaceApp as createServer } from "./server.js";
 
 const bundledDir = fileURLToPath(new URL("../../", import.meta.url));
-const execute = promisify(execFile);
 let dir: string;
 let runtime: WorkspaceRuntime;
 let closeFaux: (() => Promise<void>) | undefined;
@@ -304,31 +300,6 @@ describe("workspace API", () => {
     }
     expect((await server.request("/api/files/resumes/master/missing.pdf")).status).toBe(404);
   });
-
-  it("authenticates API and SSE with the configured password and rejects cross-origin writes", async () => {
-    const passwordHash = await hashPassword("fixture-password");
-    const server = await app([], { passwordHash });
-    expect((await server.request("/api/health")).status).toBe(401);
-    expect((await server.request("/api/events")).status).toBe(401);
-    const authorization = `Basic ${Buffer.from("vita:fixture-password").toString("base64")}`;
-    expect((await server.request("/api/health", { headers: { Authorization: authorization } })).status).toBe(200);
-    const foreign = await server.request("/api/master/generate", {
-      ...post(),
-      headers: { Authorization: authorization, Origin: "http://foreign.test" },
-    });
-    expect(foreign.status).toBe(403);
-  });
-
-  it("refuses non-loopback startup before initializing workspace or model runtime", async () => {
-    const root = join(dir, "should-not-exist");
-    await expect(
-      execute("pnpm", ["--filter", "@vita/server", "exec", "tsx", "src/main.ts"], {
-        cwd: bundledDir,
-        env: { ...process.env, VITA_HOST: "0.0.0.0", VITA_PASSWORD_HASH: "", VITA_WORKSPACE: root },
-      }),
-    ).rejects.toMatchObject({ stderr: expect.stringContaining("requires VITA_PASSWORD_HASH") });
-    await expect(readFile(join(root, "outline.md"))).rejects.toMatchObject({ code: "ENOENT" });
-  }, 30_000);
 });
 
 describe("generation API", () => {

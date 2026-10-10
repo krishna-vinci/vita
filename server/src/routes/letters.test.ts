@@ -17,7 +17,7 @@ import {
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import * as render from "../../../core/src/render/index.js";
 import { WorkspaceRuntime } from "../runtime.js";
-import { createServer } from "../server.js";
+import { createWorkspaceApp as createServer } from "../server.js";
 
 const bundledDir = fileURLToPath(new URL("../../../", import.meta.url));
 const id = "2026-10-10-example";

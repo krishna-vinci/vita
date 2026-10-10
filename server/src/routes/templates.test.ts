@@ -7,7 +7,7 @@ import { JobMutation, JobView, Resume, TemplateApproval, TemplateSummary, Templa
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { zipFixture } from "../../../core/src/templates/test-helpers.js";
 import { WorkspaceRuntime } from "../runtime.js";
-import { createServer } from "../server.js";
+import { createWorkspaceApp as createServer } from "../server.js";
 
 const bundledDir = fileURLToPath(new URL("../../../", import.meta.url));
 const original = await readFile(join(bundledDir, "core/src/templates/fixtures/simple-cv.tex"), "utf8");

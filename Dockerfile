@@ -19,7 +19,7 @@ ARG TARGETARCH
 ARG VERSION=dev
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
     NODE_ENV=production HOME=/home/vita XDG_CACHE_HOME=/home/vita/.cache \
-    VITA_HOST=0.0.0.0 VITA_PORT=4317 VITA_WORKSPACE=/data
+    VITA_HOST=0.0.0.0 VITA_PORT=4317 VITA_DATA_DIR=/data
 RUN corepack enable pnpm \
     && apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl git poppler-utils \
@@ -74,7 +74,6 @@ RUN <<'SH'
 cat > /usr/local/bin/vita-entrypoint <<'SCRIPT'
 #!/bin/sh
 set -eu
-: "${VITA_PASSWORD_HASH:?Set VITA_PASSWORD_HASH; see docs/INSTALL.md}"
 # Pi locks and refreshes auth.json and writes its model cache. Keep the host mount
 # read-only, and import only credentials/model configuration into a private copy.
 if [ -d /pi-agent ]; then
@@ -87,14 +86,7 @@ if [ -d /pi-agent ]; then
     fi
   done
 fi
-mkdir -p "$VITA_WORKSPACE"
-if [ ! -e "$VITA_WORKSPACE/outline.md" ]; then
-  if [ -n "$(find "$VITA_WORKSPACE" -mindepth 1 -maxdepth 1 -print -quit)" ]; then
-    echo 'Workspace has files but no outline.md; initialize or restore it explicitly.' >&2
-    exit 1
-  fi
-  node --import /app/cli/node_modules/tsx/dist/loader.mjs /app/cli/src/index.ts init "$VITA_WORKSPACE" --name 'My workspace'
-fi
+mkdir -p "$VITA_DATA_DIR"
 exec "$@"
 SCRIPT
 chmod 0755 /usr/local/bin/vita-entrypoint
@@ -104,10 +96,9 @@ USER vita
 # Warm as the runtime user so --only-cached compiles see the same writable cache.
 RUN pnpm vita setup
 EXPOSE 4317
-# Health is authenticated. Its expected 401 confirms the route and auth are alive;
-# installations without a password (custom entrypoint) must return {ok: true}.
+# Public health does not require account setup or a session.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD node -e 'fetch("http://127.0.0.1:" + (process.env.VITA_PORT || "4317") + "/api/health", {signal: AbortSignal.timeout(4000)}).then(async r => {const b = await r.json(); if (process.env.VITA_PASSWORD_HASH ? r.status !== 401 || b.error?.code !== "unauthorized" : !r.ok || b.ok !== true) process.exit(1)}).catch(() => process.exit(1))'
+    CMD node -e 'fetch("http://127.0.0.1:" + (process.env.VITA_PORT || "4317") + "/api/health", {signal: AbortSignal.timeout(4000)}).then(async r => {const b = await r.json(); if (!r.ok || b.ok !== true) process.exit(1)}).catch(() => process.exit(1))'
 WORKDIR /app/server
 ENTRYPOINT ["vita-entrypoint"]
 CMD ["node", "--import", "tsx", "src/main.ts"]

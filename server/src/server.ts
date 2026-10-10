@@ -16,7 +16,6 @@ import {
 import { type Context, Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { ZodError, type z } from "zod";
-import { passwordAuth } from "./auth/middleware.js";
 import { ApiFailure } from "./errors.js";
 import { chatRoutes } from "./routes/chat.js";
 import { eventsRoutes } from "./routes/events.js";
@@ -34,6 +33,8 @@ import { templateRoutes } from "./routes/templates.js";
 import { trackerRoutes } from "./routes/tracker.js";
 import type { WorkspaceRuntime } from "./runtime.js";
 
+export { createAccountServer as createServer } from "./accounts/server.js";
+
 async function body<T>(c: Context, schema: z.ZodType<T>, optional = false): Promise<T> {
   const text = await c.req.text();
   if (optional && !text) return schema.parse({});
@@ -48,12 +49,8 @@ function id(c: Context): string {
   return Slug.parse(c.req.param("id"));
 }
 
-export function createServer(
-  runtime: WorkspaceRuntime,
-  options: { passwordHash?: string; webDist?: string; publicOrigins?: string[] } = {},
-): Hono {
+export function createWorkspaceApp(runtime: WorkspaceRuntime, options: { webDist?: string } = {}): Hono {
   const app = new Hono();
-  app.use("*", passwordAuth(options.passwordHash, options.publicOrigins ?? []));
   app.use("/api/*", (c, next) =>
     bodyLimit({
       maxSize:

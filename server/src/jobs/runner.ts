@@ -25,6 +25,23 @@ export class JobRunner {
     private readonly save: (job: JobView) => Promise<void>,
   ) {}
 
+  seedHistory(history: JobView[]): void {
+    for (const saved of history.slice(-200)) {
+      const view = structuredClone(saved);
+      if (["queued", "running"].includes(view.status)) {
+        view.status = "cancelled";
+        view.error = "Server stopped before this job finished";
+        view.finishedAt = new Date().toISOString();
+      }
+      this.#jobs.set(view.id, {
+        view,
+        controller: new AbortController(),
+        handler: async () => {
+          throw new Error("Historical job cannot run");
+        },
+      });
+    }
+  }
   enqueue(kind: JobView["kind"], resourceId: string | null, handler: JobHandler): JobView {
     const record: Record = {
       view: {

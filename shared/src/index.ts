@@ -1,5 +1,6 @@
 export { JobAnalysis, Requirement } from "./analysis";
 export * from "./api";
+export * from "./api-auth";
 export * from "./api-fit";
 export * from "./api-instructions";
 export * from "./api-letters";

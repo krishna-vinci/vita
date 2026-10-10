@@ -106,23 +106,17 @@ You need Docker with Compose, and a provider API key or a Pi subscription login.
 
 ```sh
 cp .env.example .env
-mkdir -p vita-data
+mkdir -p vita-home
 # The non-root container runs as UID/GID 1000. On Linux, if needed:
-sudo chown 1000:1000 vita-data
+sudo chown 1000:1000 vita-home
 docker compose build
-# Read a password without terminal echo (Bash):
-read -r -s -p 'Vita password: ' VITA_PASSWORD; printf '\n'
-printf '%s' "$VITA_PASSWORD" | docker run --rm -i --entrypoint pnpm vita:local --silent vita hash-password
-unset VITA_PASSWORD
-```
-
-Put the resulting hash in `.env` as `VITA_PASSWORD_HASH='scrypt$…'`, keeping the single quotes so Compose preserves `$`. Then:
-
-```sh
 docker compose up -d
+docker compose logs vita
 ```
 
-Open **http://127.0.0.1:4317**; use username `vita` and your password. An empty `vita-data` directory is initialized on startup.
+Open **http://127.0.0.1:4317** and create the first admin account. Docker binds a non-loopback address inside the container, so first setup requires the one-time code printed in the server log. No HTTP Basic password prompt or environment password hash is used.
+
+Accounts live in `vita-home/vita.db`; each user's workspace is initialized on first access in `vita-home/users/<username>/`. Admins add and manage users. Add your name/contact in your workspace's `profile.yaml`, outline and evidence, and configure distinct writer/checker models before generating.
 
 Use provider keys in `.env`, or uncomment the read-only `~/.pi/agent` mount in `compose.yaml` to import Pi OAuth/subscription
 logins. Docker includes checksum-verified Tectonic 0.17.0, poppler, git and a warmed TeX cache.
@@ -136,19 +130,17 @@ Install Node.js 22, pnpm 10.28.2, git, Tectonic 0.17.0 and poppler (`pdftotext`,
 corepack enable
 pnpm install --frozen-lockfile --prefer-offline
 pnpm vita setup
-pnpm vita init "$PWD/vita-data" --name 'Your Name'
-VITA_WORKSPACE="$PWD/vita-data" pnpm server
+export VITA_DATA_DIR="$PWD/vita-home"
+pnpm server
 # Another terminal:
 pnpm web
 ```
 
-Open **http://127.0.0.1:5173** for Vite development. For the built app, run `pnpm build:web` and open port 4317. The root
-`pnpm vita` command runs inside `cli/`; use absolute paths such as `"$PWD/vita-data"`. Provider environment variables must be
-available to the server process; local startup does not automatically load `.env`.
+Open **http://127.0.0.1:5173** for Vite development. For the built app, run `pnpm build:web` and open port 4317. The root `pnpm vita` command runs inside `cli/`; use absolute paths for workspace commands and `VITA_DATA_DIR` so the server and CLI share one database. Provider environment variables must be available to the server process; local startup does not automatically load `.env`.
 
 ## First run
 
-1. Set your name and contact details in `profile.yaml`. Models do not write the resume header.
+1. Sign in (or create the first admin account), then set your name and contact details in `profile.yaml`. Models do not write the resume header.
 2. Write freely in `outline.md`. Record sources, claims, limits and measured or counted outcomes in `projects.md`.
    If you have notes in an older format, `pnpm vita import` converts them (see the CLI reference).
 3. Choose a default model and **distinct** writer and checker models in `config/models.yaml` or Settings. A new workspace uses one
@@ -191,9 +183,7 @@ Role overrides currently include `analyst`, `writer`, `checker`, `ats-reviewer`,
 effective-prompt API expose configuration and instruction warnings. See [architecture](docs/ARCHITECTURE.md) and
 [contributing](CONTRIBUTING.md) for extension contracts.
 
-Server variables: `VITA_WORKSPACE`, `VITA_HOST` (default `127.0.0.1`), `VITA_PORT` (4317), `VITA_PASSWORD_HASH`, optional
-`VITA_INSTANCE_DIR`, and optional `VITA_PUBLIC_ORIGIN` (public URL when a reverse proxy rewrites `Host`). A non-loopback bind
-requires a valid scrypt hash. This is a single-user deployment.
+Server variables: `VITA_DATA_DIR` (default `./vita-home` relative to process cwd), `VITA_HOST` (default `127.0.0.1`), `VITA_PORT` (4317), `VITA_TRUST_PROXY=1` for a trusted TLS proxy, optional `VITA_INSTANCE_DIR`, and `VITA_PUBLIC_ORIGIN` when a proxy rewrites `Host`. Accounts are required on every bind. `VITA_WORKSPACE` is a legacy migration override: if it contains `outline.md` during first setup, the first admin uses it in place. `VITA_PASSWORD_HASH` is no longer read. See [installation](docs/INSTALL.md) for password recovery and backups.
 
 ## CLI reference
 
@@ -204,7 +194,9 @@ Run commands as `pnpm vita <command>` from the checkout; paths resolve from `cli
 | `init <dir> [--name <name>]` | Initialize a workspace; refuses an existing outline. |
 | `import <dir> --projects <legacy.md>` | Import evidence and preserve free prose. Optional `--outline`, `--name`, `--headline`, repeatable `--contact 'Label=value[=url]'`. Writes source files; back up an existing workspace first. |
 | `setup` | Download TeX packages by compiling trusted bundled templates. Needed before offline renders. |
-| `hash-password` | Read one password from stdin; print the server's scrypt hash. |
+| `users` | List accounts and workspace paths in `VITA_DATA_DIR/vita.db`. |
+| `reset-password <username>` | Read a new password from stdin and revoke all sessions. Set the same absolute `VITA_DATA_DIR` as the server. |
+| `hash-password` | Legacy helper: print a scrypt hash from stdin; the server no longer accepts an environment hash. |
 | `master <dir>` | Generate and check a master resume. Requires a named profile and configured provider access. |
 | `tailor <dir> --job <file\|->` | Generate/check a job resume; optional `--base <id>` and `--slug <slug>`. `-` reads job text from stdin. |
 | `render <dir> [--resume <id>] [--out <dir>]` | Compile a master/base (default `master`) to PDF, Markdown and TeX and check extracted text/pages. |

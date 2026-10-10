@@ -19,6 +19,13 @@ export function eventsRoutes(hub: EventHub): Hono {
         queue.push(event);
         wake?.();
       });
+      const abort = () => {
+        aborted = true;
+        wake?.();
+      };
+      const stopClose = hub.onClose(abort);
+      c.req.raw.signal.addEventListener("abort", abort, { once: true });
+      if (c.req.raw.signal.aborted) abort();
       const heartbeat = setInterval(() => {
         void stream.write(": keep-alive\n\n").catch(() => {
           aborted = true;
@@ -42,6 +49,8 @@ export function eventsRoutes(hub: EventHub): Hono {
       } finally {
         clearInterval(heartbeat);
         unsubscribe();
+        stopClose();
+        c.req.raw.signal.removeEventListener("abort", abort);
       }
     }),
   );

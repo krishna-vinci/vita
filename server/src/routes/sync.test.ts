@@ -7,7 +7,7 @@ import { SyncMutation, SyncSuggestions } from "@vita/shared";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { changeSource, required, sampleResume, setup } from "../../../core/src/sync/test-fixtures.js";
 import { WorkspaceRuntime } from "../runtime.js";
-import { createServer } from "../server.js";
+import { createWorkspaceApp as createServer } from "../server.js";
 
 const bundledDir = fileURLToPath(new URL("../../../", import.meta.url));
 let root: string;

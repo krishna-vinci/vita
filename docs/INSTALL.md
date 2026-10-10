@@ -1,118 +1,137 @@
 # Install and self-host Vita
 
-Vita is a single-user app. Keep the workspace separate from the application checkout. The [security guide](../SECURITY.md) and [design spec](specs/2026-10-09-vita-design.md#17-security-and-privacy) describe the trust boundaries.
+Keep the accounts data directory separate from the application checkout. Each account owns a workspace with plain files and git history. The application requires a cookie session for workspace access; `/api/health` is public.
 
 ## Local development
 
-Requirements: Node.js **22**, pnpm **10.28.2** (root `packageManager`), git, **Tectonic 0.17.0**, and poppler's `pdftotext` and `pdfinfo`. On Debian/Ubuntu install poppler with `sudo apt-get install poppler-utils`. Put Tectonic on `PATH` from the [official release](https://github.com/tectonic-typesetting/tectonic/releases/tag/tectonic%400.17.0); the Dockerfile pins SHA-256 values for its Linux musl amd64/arm64 archives. For other platforms use the matching upstream binary.
+Requirements: Node.js **22** with `node:sqlite` (22.13 or newer), pnpm **10.28.2**, git, **Tectonic 0.17.0**, and poppler's `pdftotext` and `pdfinfo`. On Debian/Ubuntu install poppler with `sudo apt-get install poppler-utils`. Install Tectonic from its [official release](https://github.com/tectonic-typesetting/tectonic/releases/tag/tectonic%400.17.0).
 
 ```sh
 corepack enable
 pnpm install --frozen-lockfile --prefer-offline
-tectonic --version
-pdftotext -v
-pdfinfo -v
 pnpm vita setup
-pnpm vita init "$PWD/vita-data" --name 'Your Name'
-VITA_WORKSPACE="$PWD/vita-data" pnpm server
+export VITA_DATA_DIR="$PWD/vita-home"
+pnpm server
 ```
 
-In another terminal run `pnpm web`, then open `http://127.0.0.1:5173`. Vite proxies the API to port 4317. For one server serving the built frontend, run `pnpm build:web` and use `http://127.0.0.1:4317`.
+In another terminal run `pnpm web`, then open `http://127.0.0.1:5173`. Vite proxies API requests to port 4317. For one server serving the built frontend, run `pnpm build:web` and use `http://127.0.0.1:4317`.
 
-Root `pnpm vita` and `pnpm server` run in their package directories. Always pass an absolute workspace path. The server's implicit `./vita-data` is relative to `server/`. Shell environment variables are read directly; `.env` is **not** automatically loaded by local startup.
+Root `pnpm vita` and `pnpm server` run in different package directories. Use an **absolute `VITA_DATA_DIR`** for both; otherwise each process resolves `./vita-home` from its own cwd. Local startup reads shell variables and does not automatically load `.env`.
 
-Edit the workspace's `profile.yaml` (name, headline, contact), `outline.md` and `projects.md`. Choose a default and distinct writer/checker models in `config/models.yaml` or Settings. An initialized workspace defaults to one model for every role and warns until you select a different checker. Available model identifiers depend on Pi's provider catalogue and your account. Base generation uses the writer role.
+After creating an account, access its workspace to initialize `users/<username>/`. Edit `profile.yaml`, `outline.md` and `projects.md`. Choose a default and distinct writer/checker models in `config/models.yaml` or Settings. An initialized workspace warns until you select a different checker.
 
-`pnpm vita setup` is a trusted, network-enabled compile of bundled templates. Normal renders use `--only-cached`; run setup as the same OS user/cache environment as the server. New template packages also need a trusted cache warm-up; never use the trusted warm-up path for an unreviewed upload.
+`pnpm vita setup` warms bundled TeX packages using a trusted, network-enabled compile. Normal renders use `--only-cached`; warm the cache as the same OS user as the server. Never warm an unreviewed upload through the trusted path.
 
-## Generate a password hash
+## First run and accounts
 
-The server reuses this scrypt format for HTTP Basic auth. The CLI reads stdin, strips a single final LF/CRLF, preserves spaces and rejects empty or multiline input. In Bash:
+When the database has no accounts, workspace routes return `{ "setupRequired": true }`. `GET /api/auth/state` reports setup and sign-in state. Health, auth state, and the web shell/assets remain public so setup can load. The first account becomes an enabled admin and is signed in immediately.
+
+A loopback bind (`127.0.0.1`, `::1`, or `localhost`) needs no setup code. Any other bind prints a random **one-time setup code** in the server log. Enter it when creating the first admin. A restart before setup generates a new code. Once an account exists, setup is closed and no code is printed. Docker binds `0.0.0.0` internally, so it requires the code even when its published port is loopback-only.
+
+The setup, login and admin screens are supplied by the separate frontend task. The account API can be used directly in the meantime. For example, use fictional placeholders in this JSON and omit `setupCode` on a loopback bind:
 
 ```sh
-read -r -s -p 'Vita password: ' VITA_PASSWORD; printf '\n'
-printf '%s' "$VITA_PASSWORD" | pnpm --silent vita hash-password
-unset VITA_PASSWORD
+curl --fail-with-body -c /tmp/vita-cookies -H 'Content-Type: application/json' \
+  --data-binary @- http://127.0.0.1:4317/api/auth/setup <<'JSON'
+{"username":"admin","displayName":"Administrator","password":"REPLACE_WITH_PRIVATE_PASSWORD","setupCode":"CODE_FROM_SERVER_LOG"}
+JSON
+curl --fail-with-body -b /tmp/vita-cookies http://127.0.0.1:4317/api/me
 ```
 
-Copy only the `scrypt$16384$8$1$…` output. For Compose, set `VITA_PASSWORD_HASH='scrypt$…'` in `.env`: **single quotes are necessary** to avoid interpolation of the literal dollar signs. Keep `.env` private and out of git.
+Treat the cookie file as private and remove it when finished. `POST /api/auth/login` accepts `username` and `password`; `POST /api/auth/logout` deletes the current session. Failed logins are limited per IP and username, returning 429 with `Retry-After` after five failures in fifteen minutes.
 
-For a local server, export the hash using single quotes, then start it:
+Admins manage accounts through `/api/admin/users`:
+
+- `GET` lists users; `POST` accepts `username`, `displayName`, `password`, optional `isAdmin`, and optional absolute `workspace`.
+- `PATCH /:username` changes `displayName`, `isAdmin`, or `disabled`.
+- `POST /:username/password` sets a temporary `password` and revokes all that user's sessions.
+- `DELETE /:username` deletes the account and sessions, retaining the workspace; the response reports its path. A retained default workspace prevents reuse of that username. Explicit workspace paths cannot overlap another account's workspace.
+
+New users and admin password resets require the user to change their temporary password before accessing workspace routes. `POST /api/auth/password` accepts `currentPassword` and `newPassword`; it preserves the current session and revokes all others. The last enabled admin cannot be deleted, disabled or demoted.
+
+Passwords use salted scrypt. Random session tokens are stored only as SHA-256 hashes, expire after thirty days of inactivity, and slide on authenticated requests. Cookies are HttpOnly, SameSite=Strict, and Secure for HTTPS requests. Jobs, SSE events, settings, uploads and source files stay within the signed-in user's workspace.
+
+## Password recovery from the shell
+
+Use the same absolute accounts directory as the server. The new password comes from stdin, never a command-line argument. Bash example:
 
 ```sh
-export VITA_PASSWORD_HASH='REPLACE_WITH_SCRYPT_HASH'
-VITA_WORKSPACE="$PWD/vita-data" pnpm server
+export VITA_DATA_DIR="$PWD/vita-home"
+pnpm vita users
+read -r -s -p 'New password: ' VITA_NEW_PASSWORD; printf '\n'
+printf '%s' "$VITA_NEW_PASSWORD" | pnpm --silent vita reset-password admin
+unset VITA_NEW_PASSWORD
 ```
 
-Use username `vita` and your password in the browser. The server validates the password; it does not distinguish usernames. Changing the environment hash and restarting rotates the password. No plaintext password is stored by Vita.
+This clears the temporary-password flag and revokes **all** sessions for that account. Supply one password of 8–1024 characters, optionally ending in LF/CRLF. The CLI refuses to create a missing accounts database. `hash-password` remains a legacy scrypt utility; its output is no longer a server setting.
+
+For Compose, use `docker compose exec vita pnpm vita users` and pipe the password to `docker compose exec -T vita pnpm --silent vita reset-password admin`.
+
+## Migrating from VITA_PASSWORD_HASH
+
+Back up the existing workspace and remove `VITA_PASSWORD_HASH` from your environment; the server ignores it. Set `VITA_DATA_DIR` to a new accounts directory and `VITA_WORKSPACE` to the **existing** workspace's absolute path before first setup:
+
+```sh
+export VITA_DATA_DIR="$PWD/vita-home"
+export VITA_WORKSPACE="$PWD/vita-data"
+pnpm server
+```
+
+Create the first admin with a new password. If the legacy directory contains `outline.md`, that admin's account records the path and uses it directly: no files are copied or moved, and git history stays in place. Other users use `VITA_DATA_DIR/users/<username>/`. Keep the accounts directory outside the legacy workspace so these paths do not overlap. The override is considered only during first setup; changing it later does not change accounts. If no outline exists there, the first admin gets a normal per-user workspace. Remove the override after setup if desired.
+
+For an existing Docker workspace, mount the old directory at `/legacy-workspace`, use a new `/data` mount for accounts, and set `VITA_WORKSPACE=/legacy-workspace`. This changes the container mount location without moving or copying host files. Retain the legacy volume after setup because the admin still uses its path. A legacy workspace containing the accounts directory can continue as the first admin's workspace, but additional workspaces must be outside it: overlapping workspace paths are rejected to preserve user isolation.
 
 ## Docker Compose
 
-Docker and Compose are the only host runtime requirements. The multi-stage image builds the web app, includes git, poppler and checksum-verified Tectonic 0.17.0, and warms bundled template packages as the non-root runtime user.
+Docker and Compose are the only host runtime requirements. The image includes git, poppler, checksum-verified Tectonic 0.17.0, and a warmed TeX cache.
 
 ```sh
 cp .env.example .env
-mkdir -p vita-data
+mkdir -p vita-home
 # Linux bind mounts must be writable by UID/GID 1000:
-sudo chown 1000:1000 vita-data
-docker compose build
+sudo chown 1000:1000 vita-home
+docker compose up -d --build
+docker compose logs vita
+curl --fail http://127.0.0.1:4317/api/health
 ```
 
-For an existing data directory, arrange ownership/ACLs for all files Vita must update; preserve a backup first. The image does not recursively change ownership. Docker Desktop usually handles host bind permissions itself.
+Read the setup code from the log. No hash generation is needed. The entrypoint creates the accounts data directory; individual workspaces initialize lazily after setup and sign-in. Existing data is reused. The public healthcheck expects `{"ok":true}`, including before setup.
 
-Generate a hash without installing Node/pnpm on the host (Bash):
+Compose mounts `./vita-home:/data`: `/data/vita.db` stores accounts and sessions, and `/data/users/<username>/` holds each normal workspace. Explicit paths must be available inside the container. The non-root runtime uses UID/GID 1000; arrange ownership/ACLs before mounting existing data. The image does not recursively change ownership. The pre-warmed TeX cache lives at `/home/vita/.cache`; do not hide it with an empty mount. `docker compose down` retains host data.
 
-```sh
-read -r -s -p 'Vita password: ' VITA_PASSWORD; printf '\n'
-printf '%s' "$VITA_PASSWORD" | docker run --rm -i --entrypoint pnpm vita:local --silent vita hash-password
-unset VITA_PASSWORD
-```
+To upgrade, stop Vita, back up all data, update the checkout, and run `docker compose up -d --build`. Tagged releases publish amd64/arm64 GHCR images; the supplied Compose file builds locally.
 
-Set the single-quoted hash in `.env`, add provider credentials as described below, then:
+## Pi credentials
 
-```sh
-docker compose up -d
-docker compose logs -f vita
-curl -u vita http://127.0.0.1:4317/api/health
-```
+**Provider keys:** uncomment `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` in `.env`, or export them for local startup. Other Pi-supported providers use their own variables. These instance credentials are available to generation in every user's runtime. Configure models independently in each workspace. Credentials never belong in workspace git.
 
-`curl` prompts for your password and returns `{"ok":true}`. The image binds `0.0.0.0` inside the container and requires `VITA_PASSWORD_HASH`, even though Compose publishes only `127.0.0.1:4317`. The image healthcheck expects the authenticated endpoint's `401 unauthorized` response without a password; this tests route/auth availability. Use the authenticated curl above to confirm its successful health response.
-
-The entrypoint initializes an **empty** `/data`. A non-empty directory without `outline.md` is rejected to avoid overwriting partial/restored data. An existing workspace is reused. Set your profile name before generation; initial `My workspace` is a placeholder.
-
-All workspace files and their git history live in `./vita-data:/data`. The pre-warmed TeX cache lives in `/home/vita/.cache`; do not hide it with an empty mount. App source remains root-owned; the `vita` user (1000:1000) owns data and caches. `docker compose down` removes containers, not the host workspace.
-
-To upgrade, stop Vita, back up `vita-data`, update the checkout, and run `docker compose up -d --build`. Tagged CI releases publish `ghcr.io/<owner>/<repo>:<version>` for amd64/arm64; after publication you can replace Compose's local image/build with that image and pull it. The supplied Compose file builds locally and does not depend on a published image.
-
-## Pi credentials: two options
-
-**Provider environment keys:** uncomment and replace `ANTHROPIC_API_KEY` and/or `OPENAI_API_KEY` in `.env`; Compose passes them to the container. Other Pi-supported providers may use their own env keys. Locally export keys in the shell that starts the server. Configure matching model identifiers in the workspace. Provider keys and the password hash never belong in the workspace git repo.
-
-**Pi OAuth/subscription logins:** sign in with Pi on the host so `~/.pi/agent/auth.json` exists. Uncomment this volume under `vita.volumes` in `compose.yaml`:
+**Pi OAuth/subscriptions:** sign in with Pi on the host, then uncomment this Compose volume:
 
 ```yaml
 - ${HOME}/.pi/agent:/pi-agent:ro
 ```
 
-The host directory and files must be readable by container UID 1000. The entrypoint imports only `auth.json` and optional `models.json` into a private writable `/home/vita/.pi/agent` copy. Pi needs writes for credential locking/refresh and its model cache; the host mount stays read-only. Refreshes in the container are ephemeral and are not synchronized back: sign in on the host again if tokens expire or a restarted container has stale credentials. Recreate the container after changing host credentials. Do not mount the source at Pi's writable internal directory. Treat the copied credentials and container access as private, too.
+UID 1000 must be able to read the mount. The entrypoint imports only `auth.json` and optional `models.json` into a private writable `/home/vita/.pi/agent` copy for locking, refresh and model caching. The host stays read-only. Container refreshes are ephemeral and are not synchronized back; reauthenticate on the host and recreate the container when needed. Treat copied credentials and container access as private.
 
-No provider is required to start the UI or render an existing resume; generation requires valid credentials and selected models. Provider calls send the source/evidence context needed for the requested role.
+No provider is needed to start the server or render an existing resume. Generation needs valid credentials and selected models; provider requests include the source/evidence context needed for the role.
 
 ## Server configuration
 
 | Variable | Default / behavior |
 | --- | --- |
-| `VITA_WORKSPACE` | Local `./vita-data` from server cwd; Docker `/data`. |
-| `VITA_HOST` | Local `127.0.0.1`; Docker `0.0.0.0`, requiring a hash. |
-| `VITA_PORT` | `4317`; if overridden, update Compose's port mapping. |
-| `VITA_PASSWORD_HASH` | Optional on loopback; required otherwise. Scrypt only. |
-| `VITA_INSTANCE_DIR` | Optional operator-controlled directory containing `instructions/*.md`. Mount it separately in Docker (prefer read-only). |
+| `VITA_DATA_DIR` | `./vita-home` from process cwd; Compose `/data`. Contains `vita.db` and `users/`. |
+| `VITA_WORKSPACE` | Optional legacy first-admin override when it contains `outline.md` at setup. |
+| `VITA_HOST` | `127.0.0.1` locally; Docker `0.0.0.0`. Non-loopback first setup requires a logged code. |
+| `VITA_PORT` | `4317`; update port mapping if changed. |
+| `VITA_TRUST_PROXY` | Only `1` trusts forwarded protocol and client-IP headers. Default off. |
+| `VITA_PUBLIC_ORIGIN` | Optional comma-separated public origins when a proxy rewrites Host. |
+| `VITA_INSTANCE_DIR` | Optional operator-controlled `instructions/*.md`; mount separately, preferably read-only. |
 
-Model overrides, rules, packs, templates, instructions and MCP configuration are workspace files; see [README configuration](../README.md#configuration). MCP stdio executables must be installed in the runtime image; HTTP MCP endpoints must be reachable from the container. Declare research URLs/servers through instructions, and give MCP tokens only read permissions.
+Models, rules, packs, templates, instructions and MCP configuration are workspace files; see [README configuration](../README.md#configuration). MCP executables must be installed in the image; HTTP endpoints must be reachable. Give MCP credentials only the permissions needed for research.
 
-## Expose safely
+## TLS and reverse proxies
 
-Keep the published port on loopback. For remote use, put a reverse proxy with TLS in front of it and keep the password enabled. A Caddy proxy on the host can use:
+Keep the published port on loopback and put a TLS reverse proxy in front for remote access. For Caddy on the host:
 
 ```caddyfile
 resume.example.com {
@@ -120,17 +139,19 @@ resume.example.com {
 }
 ```
 
-Replace the hostname, configure DNS, and let your proxy manage the certificate. Forward the `Authorization` header and the original `Host` header (Caddy and nginx `proxy_set_header Host $host` do this). If your proxy rewrites `Host`, set `VITA_PUBLIC_ORIGIN=https://vita.example.org` (comma-separated for several) so browser writes from that origin are accepted. Test saving from the browser. Keep SSE `/api/events` streaming without response buffering or short timeouts. A proxy container on the Compose network can reach `vita:4317`.
+Forward the original Host and set `VITA_TRUST_PROXY=1` only when clients cannot reach Vita except through your trusted proxy. The proxy must replace forwarded headers. This enables Secure cookies behind TLS and accurate client-IP limits. If the proxy rewrites Host, set `VITA_PUBLIC_ORIGIN=https://resume.example.com`. Keep `/api/events` streaming without buffering or short timeouts.
 
-HTTP Basic auth carries reusable credentials on each request. Use HTTPS for remote access and firewall direct access to port 4317. A trusted personal VPN or SSH tunnel to the loopback service is also suitable. Vita is not a multi-tenant service: anyone with the password can access this workspace and trigger provider usage.
+Before first setup on a loopback bind, Vita also requires a loopback Host to block DNS rebinding. Complete setup locally, or bind non-loopback and use the logged setup code when initially provisioning through a public hostname. After setup, accounts protect all workspace API routes and the write Origin check continues to apply.
 
 ## Backups and troubleshooting
 
-Stop the container/server for a consistent backup, then copy the entire workspace including `.git`, evidence uploads and generated files. Back up `.env` and host Pi credentials separately with private permissions. `.vita/` is disposable cache. Restore into a writable directory with the same ownership requirements; do not restore over a running instance.
+Stop the server for a consistent backup. Copy the entire `VITA_DATA_DIR`, including `vita.db` and any SQLite sidecar files, every workspace's `.git`, evidence and generated files. Back up **explicit/legacy workspace paths separately** if outside that directory. Back up `.env` and host Pi credentials privately. `.vita/` is disposable cache except for job history needed if you want past jobs visible. Restore while stopped with matching permissions.
 
-- Refuses startup: replace the placeholder password hash; check quoting and `VITA_HOST`.
-- Permission denied: check data ownership and Pi mount readability for UID 1000.
-- Missing TeX file during render: warm trusted bundled templates as the same user, without masking the pre-warmed cache.
-- No generation / wrong model: check provider login/key and `config/models.yaml`; the checker must differ from the writer.
-- Local server has no UI: run `pnpm build:web`, or use Vite on port 5173.
-- Data directory has files but no outline: initialize a new empty directory explicitly, or restore a complete workspace. The container does not repair it automatically.
+- Lost admin password: use `vita reset-password <username>` against the correct accounts directory.
+- Setup asks for a code: inspect the current startup log; Docker always uses the non-loopback setup rule.
+- 429 during sign-in: wait the reported `Retry-After` interval.
+- Secure cookie missing behind TLS: verify `VITA_TRUST_PROXY=1`, header forwarding and direct-access restrictions.
+- Permission denied: check data and Pi mount ownership for UID 1000.
+- Missing TeX file: warm trusted bundled templates without masking the cache.
+- Generation/model issues: check credentials and each workspace's `config/models.yaml`.
+- Local server has no UI: build web or run Vite; account screens land in the separate web task.

@@ -14,7 +14,7 @@ import {
 } from "@vita/shared";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { WorkspaceRuntime } from "../runtime.js";
-import { createServer } from "../server.js";
+import { createWorkspaceApp as createServer } from "../server.js";
 
 const bundledDir = fileURLToPath(new URL("../../../", import.meta.url));
 const draft: EvidenceSubmission = {

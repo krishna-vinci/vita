@@ -6,7 +6,7 @@ import * as core from "@vita/core";
 import { JobMutation, JobView, Prep, Resume, SettingsView, VitaEvent } from "@vita/shared";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { WorkspaceRuntime } from "../runtime.js";
-import { createServer } from "../server.js";
+import { createWorkspaceApp as createServer } from "../server.js";
 
 const bundledDir = fileURLToPath(new URL("../../../", import.meta.url));
 const id = "2026-10-09-example";
