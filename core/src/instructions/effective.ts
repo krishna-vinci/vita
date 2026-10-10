@@ -8,11 +8,13 @@ import {
   writerRole,
 } from "../agent/roles.js";
 import { resumeEditorRole, sourceEditorRole } from "../chat/roles.js";
+import { onboarderRole } from "../onboarding/roles.js";
 import type { WorkspaceHandle } from "../pipeline/types.js";
 import { researcherRole } from "../research/role.js";
 import { templateAdopterRole } from "../templates/adopt.js";
 
 export const promptRoles = {
+  onboarder: onboarderRole,
   analyst: analystRole,
   writer: writerRole,
   checker: checkerRole,

@@ -7,6 +7,7 @@ export * from "./fit/index.js";
 export * from "./instructions/index.js";
 export * from "./lint/index.js";
 export * from "./metrics/index.js";
+export * from "./onboarding/index.js";
 export * from "./ops/index.js";
 export * from "./packs/index.js";
 export * from "./pipeline/index.js";

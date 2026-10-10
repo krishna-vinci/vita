@@ -18,7 +18,8 @@ export type RoleName =
   | "source-editor"
   | "researcher"
   | "interviewer"
-  | "template-adopter";
+  | "template-adopter"
+  | "onboarder";
 export type ReadToolName = "read_outline" | "read_projects" | "search_evidence" | "read_resume" | "read_analysis";
 
 export interface RoleSpec<O> {

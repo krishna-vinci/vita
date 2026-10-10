@@ -23,6 +23,7 @@ import { eventsRoutes } from "./routes/events.js";
 import { fitRoutes } from "./routes/fit.js";
 import { instructionsRoutes } from "./routes/instructions.js";
 import { metricsRoutes } from "./routes/metrics.js";
+import { onboardingRoutes } from "./routes/onboarding.js";
 import { packRoutes } from "./routes/packs.js";
 import { prepRoutes } from "./routes/prep.js";
 import { researchRoutes } from "./routes/research.js";
@@ -52,7 +53,12 @@ export function createServer(
   app.use("*", passwordAuth(options.passwordHash, options.publicOrigins ?? []));
   app.use("/api/*", (c, next) =>
     bodyLimit({
-      maxSize: c.req.path === "/api/templates/upload" ? 11 * 1024 * 1024 : 2_500_000,
+      maxSize:
+        c.req.path === "/api/templates/upload"
+          ? 11 * 1024 * 1024
+          : c.req.path === "/api/onboarding/import"
+            ? 6 * 1024 * 1024
+            : 2_500_000,
       onError: (c) =>
         c.json({ error: { code: "body-too-large", message: "Request body exceeds the size limit" } }, 413),
     })(c, next),
@@ -181,6 +187,7 @@ export function createServer(
   });
   app.route("/api/events", eventsRoutes(runtime.hub));
   app.route("/api/chat", chatRoutes(runtime));
+  app.route("/api/onboarding", onboardingRoutes(runtime));
   app.route("/api/metrics", metricsRoutes(runtime));
   app.route("/api", fitRoutes(runtime));
   app.route("/api/applications", prepRoutes(runtime));

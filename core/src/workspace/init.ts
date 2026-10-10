@@ -5,10 +5,15 @@ import { writeTextAtomic } from "./files.js";
 import { commitPaths, ensureRepo } from "./git.js";
 import { resolveInWorkspace } from "./paths.js";
 
+export function starterOutline(name: string): string {
+  const title = name.replace(/[\r\n]+/g, " ").trim() || "Your outline";
+  return `# ${title}\n\n## Summary\n<!-- Introduce yourself and the work you want to do. -->\n\n## Experience\n<!-- List your roles and the facts about your work. -->\n\n## Projects\n<!-- Describe projects and contributions. -->\n\n## Education\n<!-- List your education and qualifications. -->\n\n## Skills\n<!-- List skills supported by your experience. -->\n`;
+}
+
 export async function initWorkspace(root: string, opts: { name: string }): Promise<void> {
   await mkdir(root, { recursive: true });
   const name = opts.name.replace(/[\r\n]+/g, " ");
-  const outline = `# ${name}\n\n## Summary\n<!-- Introduce yourself and the work you want to do. -->\n\n## Experience\n<!-- List your roles and the facts about your work. -->\n\n## Projects\n<!-- Describe projects and contributions. -->\n\n## Education\n<!-- List your education and qualifications. -->\n\n## Skills\n<!-- List skills supported by your experience. -->\n`;
+  const outline = starterOutline(name);
   // Exclusive creation refuses existing outlines, including simultaneous initialisation.
   const handle = await open(resolveInWorkspace(root, "outline.md"), "wx").catch((cause: NodeJS.ErrnoException) => {
     if (cause.code === "EEXIST") throw new Error("Workspace already has outline.md", { cause });

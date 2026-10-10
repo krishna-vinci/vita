@@ -159,6 +159,7 @@ export const ApiModelsConfig = z.strictObject({
       researcher: model.optional(),
       interviewer: model.optional(),
       "template-adopter": model.optional(),
+      onboarder: model.optional(),
     })
     .default({}),
 });

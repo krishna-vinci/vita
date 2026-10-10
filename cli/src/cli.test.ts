@@ -49,6 +49,18 @@ it("initialises a named workspace and refuses to replace it", async () => {
   await expect(initCommand(root)).rejects.toThrow("already has outline.md");
 });
 
+it("initialises an unnamed starter without treating the directory name as the person's name", async () => {
+  const root = join(dir, "workspace");
+  await initCommand(root);
+  expect(Profile.parse(parseYaml(await core.readText(root, "profile.yaml")))).toEqual({ name: "", contact: [] });
+  expect(await core.onboardingStatus({ root, bundledDir: fileURLToPath(new URL("../../", import.meta.url)) })).toEqual({
+    hasProfileName: false,
+    outlineIsStarter: true,
+    projectCount: 0,
+    masterExists: false,
+  });
+});
+
 it("imports legacy evidence and an outline losslessly, adds anchors, prints the report and commits as importer", async () => {
   const root = join(dir, "workspace");
   await initCommand(root);

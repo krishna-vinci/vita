@@ -89,7 +89,7 @@ export class WorkspaceRuntime {
       await readdir(options.root);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-      await initWorkspace(options.root, { name: "My workspace" });
+      await initWorkspace(options.root, { name: "" });
     }
     const created = options.runtime
       ? { runtime: options.runtime, close: async () => {} }

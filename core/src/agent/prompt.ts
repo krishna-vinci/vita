@@ -7,6 +7,8 @@ import { wrapUntrusted } from "./untrusted.js";
 
 const bundledRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const preambles: Record<RoleName, string> = {
+  onboarder:
+    "Help the person start from documented facts or one interview answer at a time. Propose source changes for approval.",
   researcher:
     "Research evidence through read-only sources. Propose source additions for user approval; never apply them.",
   "template-adopter":

@@ -12,6 +12,7 @@ export async function proposeSourceEdit(
   ws: WorkspaceHandle,
   input: { message: string; history: ChatTurn[] },
   deps: PipelineDeps,
+  role: typeof sourceEditorRole = sourceEditorRole,
 ): Promise<{ reply: string; proposal: SourceProposal | null }> {
   const hashes = { outline: await fileHash(ws.root, "outline.md"), projects: await fileHash(ws.root, "projects.md") };
   const ctx = await loadContext(ws);
@@ -21,10 +22,10 @@ export async function proposeSourceEdit(
       if ((await fileHash(ws.root, `${file}.md`)) !== hashes[file])
         throw new ChatConflictError("stale-hash", "Source changed while loading. Request a fresh edit.");
     const result = await runRole({
-      role: sourceEditorRole,
+      role,
       root: ws.root,
       system: await buildSystemPrompt({
-        role: sourceEditorRole,
+        role,
         root: ws.root,
         bundledDir: ws.bundledDir,
         chat: input.message,
@@ -40,7 +41,7 @@ export async function proposeSourceEdit(
       tools: { root: ws.root, index: ctx.index, search: ctx.search },
       runtime: deps.runtime,
       models: deps.models,
-      modelOverride: deps.modelOverrides?.[sourceEditorRole.name],
+      modelOverride: deps.modelOverrides?.[role.name],
       signal: deps.signal,
       retry: deps.retry,
       onUsage: deps.onUsage,
