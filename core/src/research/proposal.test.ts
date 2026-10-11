@@ -81,3 +81,14 @@ it("allocates unique IDs and cannot inject claim anchors through submitted prose
   expect(item.claims[1]?.evidence[0]).not.toBe("ev-forged");
   expect(item.claims[1]?.text).toContain("&lt;!--");
 });
+
+it("turns an empty inline evidence list into a readable block list", () => {
+  const before = "# Evidence\n\n## Archive\n\n```yaml\nkind: project\nlinks: []\nevidence: []\n```\n";
+  const proposal = evidenceProposal(before, "a".repeat(64), submission);
+  if (!proposal) throw new Error("Missing proposal");
+  expect(proposal.after).not.toContain("evidence: [");
+  expect(proposal.after).toMatch(/evidence:\n {2}- /);
+  const { doc, issues } = parseProjects(proposal.after);
+  expect(issues).toEqual([]);
+  expect(doc.items[0]?.meta.evidence.length).toBeGreaterThan(0);
+});

@@ -55,6 +55,14 @@ function addEvidence(section: string, evidence: Evidence[], eol: string): string
       offset = yaml.length;
       addition = stringify({ evidence }, { lineWidth: 0 });
     }
+  } else if (isSeq(node) && node.range && node.flow && node.items.length === 0) {
+    // An empty inline list (`evidence: []`) becomes a readable block list.
+    const block = stringify(evidence, { lineWidth: 0 })
+      .split("\n")
+      .map((line) => (line ? `  ${line}` : line))
+      .join("\n");
+    const replaced = `${yaml.slice(0, node.range[0]).trimEnd()}\n${block}${yaml.slice(node.range[1]).replace(/^[ \t]*\r?\n/, "")}`;
+    return section.slice(0, start) + replaced.replaceAll("\n", eol) + section.slice(end);
   } else if (isSeq(node) && node.range) {
     if (node.flow) {
       offset = node.range[1] - 1;
