@@ -21,6 +21,7 @@ export function Toolbar({
   canPdf,
   overBy,
   onFit,
+  onTemplate,
 }: {
   details: boolean;
   onDetails: (on: boolean) => void;
@@ -33,6 +34,7 @@ export function Toolbar({
   /** Page limit when the PDF is over it, to offer a one-click fit. */
   overBy?: number;
   onFit: (pages: number) => void;
+  onTemplate: () => void;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -63,6 +65,7 @@ export function Toolbar({
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={onMarkdown}>Markdown</DropdownMenuItem>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={onTemplate}>Change template…</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => onFit(1)}>Fit to one page first</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => onFit(2)}>Fit to two pages first</DropdownMenuItem>
           </DropdownMenuContent>

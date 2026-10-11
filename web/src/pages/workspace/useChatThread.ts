@@ -1,4 +1,4 @@
-import type { Resume } from "@vita/shared";
+import type { MemoryProposal, Resume } from "@vita/shared";
 import { useCallback, useState } from "react";
 import { useResumeChat } from "@/api/queries";
 import { allBullets } from "@/lib/resume-view";
@@ -13,6 +13,7 @@ export interface Message {
   role: "user" | "assistant" | "error";
   text: string;
   changes?: Change[];
+  memoryProposals?: MemoryProposal[];
 }
 
 /** Chat history lives in the page; the server keeps the last few turns for context. */
@@ -37,7 +38,10 @@ export function useChatThread(scope: "application" | "resume", id: string, resum
           return [{ id: bulletId, before: prev?.text ?? "", after: next.text, hidden: !!next.hidden }];
         });
         setChanged(changes.map((change) => change.id));
-        setMessages((all) => [...all, { role: "assistant", text: reply.reply, changes }]);
+        setMessages((all) => [
+          ...all,
+          { role: "assistant", text: reply.reply, changes, memoryProposals: reply.memoryProposals },
+        ]);
       } catch (error) {
         setMessages((all) => [
           ...all,

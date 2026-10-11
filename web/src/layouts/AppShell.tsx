@@ -13,6 +13,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { type Theme, useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
+import { AccountMenu } from "./AccountMenu";
 
 const places = [
   { to: "/me", label: "Me", icon: UserRound },
@@ -60,12 +61,13 @@ export default function AppShell() {
       </a>
       <header className="border-b bg-card">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-5 py-3 md:px-8">
-          <NavLink to="/me/outline" className="font-display text-2xl font-bold tracking-tight" aria-label="Vita home">
+          <NavLink to="/" className="font-display text-2xl font-bold tracking-tight" aria-label="Vita home">
             vita<span className="text-primary">.</span>
           </NavLink>
           <div className="mr-auto hidden md:block">
             <Navigation />
           </div>
+          <AccountMenu />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="size-11" aria-label="Change appearance">

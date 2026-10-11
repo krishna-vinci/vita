@@ -1,9 +1,10 @@
-import type { SourceProposal } from "@vita/shared";
+import type { MemoryProposal, SourceProposal } from "@vita/shared";
 import { SendHorizontal } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useApplySource, useSourceChat } from "@/api/queries";
 import { Markdown } from "@/components/Markdown";
+import { MemoryProposals } from "@/components/MemoryProposals";
 import { Diff } from "@/components/ProposalDiff";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,6 +14,7 @@ interface Turn {
   role: "user" | "assistant" | "error";
   text: string;
   proposal?: SourceProposal | null;
+  memoryProposals?: MemoryProposal[];
   state?: "open" | "accepted" | "discarded";
 }
 
@@ -35,7 +37,13 @@ export function SourceChat({ dirty, className }: { dirty: boolean; className?: s
       const reply = await chat.mutateAsync(message);
       setTurns((all) => [
         ...all,
-        { role: "assistant", text: reply.reply, proposal: reply.proposal, state: reply.proposal ? "open" : undefined },
+        {
+          role: "assistant",
+          text: reply.reply,
+          proposal: reply.proposal,
+          memoryProposals: reply.memoryProposals,
+          state: reply.proposal ? "open" : undefined,
+        },
       ]);
     } catch (error) {
       setTurns((all) => [
@@ -55,6 +63,7 @@ export function SourceChat({ dirty, className }: { dirty: boolean; className?: s
           // biome-ignore lint/suspicious/noArrayIndexKey: append-only list
           <Bubble key={index} from={turn.role}>
             {turn.role === "assistant" ? <Markdown text={turn.text} /> : turn.text}
+            <MemoryProposals proposals={turn.memoryProposals} />
             {turn.proposal && (
               <div className="mt-3 flex flex-col gap-2">
                 <p className="text-xs font-medium text-muted-foreground">

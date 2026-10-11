@@ -40,9 +40,15 @@ export function invalidateEvent(client: QueryClient, event: VitaEvent): void {
       queryKeys[event.scope in scoped ? scoped[event.scope as keyof typeof scoped] : (event.scope as "outline")],
     );
     if (event.scope === "outline" || event.scope === "resume") invalidate(queryKeys.sync);
-    if (event.scope === "application") invalidate(["prep"]);
+    if (event.scope === "application") {
+      invalidate(["prep"]);
+      invalidate(["letter"]);
+      invalidate(queryKeys.tracker);
+    }
+    if (event.scope === "outline") invalidate(["onboarding"]);
     if (event.scope === "settings")
-      for (const key of [queryKeys.instructions, queryKeys.rules, queryKeys.mcp, queryKeys.metrics]) invalidate(key);
+      for (const key of [queryKeys.instructions, queryKeys.rules, queryKeys.mcp, queryKeys.metrics, queryKeys.memory])
+        invalidate(key);
     if (event.scope === "projects") invalidate(queryKeys.metrics);
     invalidate(queryKeys.workspace);
     return;

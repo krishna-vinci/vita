@@ -34,11 +34,14 @@ export function ProposalReview({
   proposal,
   blocked,
   onDone,
+  apply: applyOverride,
 }: {
   proposal: SourceProposal;
   /** Set when unsaved edits would clash with the change. */
   blocked?: boolean;
   onDone: (accepted: boolean) => void;
+  /** Use a different apply route (for example the onboarding one). */
+  apply?: (proposal: SourceProposal) => Promise<unknown>;
 }) {
   const apply = useApplySource();
   const [state, setState] = useState<"open" | "accepted" | "discarded">("open");
@@ -56,7 +59,7 @@ export function ProposalReview({
               disabled={blocked || apply.isPending}
               onClick={async () => {
                 try {
-                  await apply.mutateAsync(proposal);
+                  await (applyOverride ? applyOverride(proposal) : apply.mutateAsync(proposal));
                   setState("accepted");
                   toast.success("Added.");
                   onDone(true);

@@ -155,3 +155,46 @@ export const useMcp = () => useQuery({ queryKey: queryKeys.mcp, queryFn: ({ sign
 export const useSaveMcp = () => useApiMutation(api.mcp.save, [queryKeys.mcp]);
 export const usePacks = () =>
   useQuery({ queryKey: queryKeys.packs, queryFn: ({ signal }) => api.packs(signal), retry: false });
+
+export const useAuthState = () =>
+  useQuery({ queryKey: queryKeys.auth, queryFn: ({ signal }) => api.auth.state(signal), staleTime: 60_000 });
+export const useUsers = () =>
+  useQuery({ queryKey: queryKeys.users, queryFn: ({ signal }) => api.admin.users(signal), retry: false });
+
+export const useOnboardingStatus = () =>
+  useQuery({ queryKey: ["onboarding"], queryFn: ({ signal }) => api.onboarding.status(signal), retry: false });
+export const useMemory = () =>
+  useQuery({ queryKey: queryKeys.memory, queryFn: ({ signal }) => api.memory.get(signal) });
+export const useTrackerList = () =>
+  useQuery({ queryKey: queryKeys.tracker, queryFn: ({ signal }) => api.tracker.list(signal), retry: false });
+export const useTracker = (id: string) =>
+  useQuery({
+    queryKey: queryKeys.trackerOf(id),
+    queryFn: ({ signal }) => api.tracker.get(id, signal),
+    enabled: !!id,
+    retry: false,
+  });
+export const useLetter = (id: string, enabled = true) =>
+  useQuery({
+    queryKey: queryKeys.letter(id),
+    queryFn: ({ signal }) => api.letters.get(id, signal),
+    enabled: !!id && enabled,
+    retry: false,
+  });
+export const useGithub = () =>
+  useQuery({ queryKey: ["github"], queryFn: ({ signal }) => api.github.get(signal), retry: false });
+
+export const useTrackerMutation = <T, R>(id: string, fn: (input: T) => Promise<R>, onResult?: (result: R) => void) => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: async (result) => {
+      onResult?.(result);
+      await Promise.all([
+        client.invalidateQueries({ queryKey: queryKeys.trackerOf(id) }),
+        client.invalidateQueries({ queryKey: queryKeys.tracker }),
+        client.invalidateQueries({ queryKey: queryKeys.memory }),
+      ]);
+    },
+  });
+};

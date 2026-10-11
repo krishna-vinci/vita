@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { AdvancedSection } from "./settings/AdvancedSection";
 import { TemplatesSection } from "./settings/TemplatesSection";
+import { UsersSection } from "./settings/UsersSection";
 
 const roles = [
   { id: "analyst", label: "Reading the job" },
@@ -226,6 +227,7 @@ export default function SettingsPage() {
         <>
           <SettingsForm settings={query.data} />
           <TemplatesSection />
+          <UsersSection />
           <AdvancedSection />
         </>
       )}

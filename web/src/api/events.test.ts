@@ -67,8 +67,11 @@ describe("shared SSE", () => {
       expect(spy.mock.calls.map(([filter]) => filter?.queryKey)).toEqual([
         key,
         ...(scope === "outline" || scope === "resume" ? [queryKeys.sync] : []),
-        ...(scope === "application" ? [["prep"]] : []),
-        ...(scope === "settings" ? [queryKeys.instructions, queryKeys.rules, queryKeys.mcp, queryKeys.metrics] : []),
+        ...(scope === "application" ? [["prep"], ["letter"], queryKeys.tracker] : []),
+        ...(scope === "outline" ? [["onboarding"]] : []),
+        ...(scope === "settings"
+          ? [queryKeys.instructions, queryKeys.rules, queryKeys.mcp, queryKeys.metrics, queryKeys.memory]
+          : []),
         ...(scope === "projects" ? [queryKeys.metrics] : []),
         queryKeys.workspace,
       ]);

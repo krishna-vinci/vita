@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useDetails } from "@/lib/use-details";
+import { JobTabs } from "../workspace/JobTabs";
 
 const groups: { kind: PrepQuestion["kind"]; title: string }[] = [
   { kind: "technical", title: "Technical questions" },
@@ -43,6 +44,7 @@ export default function PrepPage() {
           <ArrowLeft /> Back to my resume
         </Link>
       </Button>
+      <JobTabs id={id} current="prep" />
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-2">
           <h1 className="font-display text-3xl font-bold">Get ready for {title}</h1>

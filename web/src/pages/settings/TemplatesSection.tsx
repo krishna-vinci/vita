@@ -1,14 +1,15 @@
 import { FileUp } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { useTemplates, useUploadTemplate } from "@/api/queries";
-import { Badge } from "@/components/ui/badge";
+import { useSaveSettings, useSettings, useUploadTemplate } from "@/api/queries";
+import { TemplateGallery } from "@/components/TemplateGallery";
 import { Button } from "@/components/ui/button";
 import { TemplateAdoption } from "./TemplateAdoption";
 
 /** Installed templates, plus the upload flow for your own LaTeX. */
 export function TemplatesSection() {
-  const templates = useTemplates();
+  const settings = useSettings();
+  const save = useSaveSettings();
   const upload = useUploadTemplate();
   const picker = useRef<HTMLInputElement>(null);
   // Remembered for this tab, so a reload does not lose an upload waiting for approval.
@@ -35,34 +36,21 @@ export function TemplatesSection() {
       <p className="text-sm text-muted-foreground">
         The look of your PDF. Bring your own LaTeX template and Vita adapts it so your content fits in.
       </p>
-      {templates.data && (
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {templates.data.map((template) => (
-            <li key={template.id} className="flex flex-col gap-1 rounded-xl border bg-card p-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-medium break-words">{template.meta.name}</span>
-                <Badge variant="outline">{template.bundled ? "Built in" : "Yours"}</Badge>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {template.meta.page === "a4" ? "A4 paper" : "US Letter paper"}
-                {template.meta.source ? ` · by ${template.meta.source.author}` : ""}
-              </p>
-              {template.previewPdfUrl ? (
-                <a
-                  href={template.previewPdfUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="w-fit text-sm text-primary underline underline-offset-2"
-                >
-                  See a preview
-                </a>
-              ) : (
-                <span className="text-sm text-muted-foreground">No preview yet</span>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+      <TemplateGallery
+        selected={settings.data?.template}
+        pending={save.isPending}
+        pickLabel="Use for new resumes"
+        onPick={(template) =>
+          settings.data &&
+          save.mutate(
+            { models: settings.data.models, template },
+            {
+              onSuccess: () => toast.success("New resumes will use this template."),
+              onError: (error) => toast.error(error.message),
+            },
+          )
+        }
+      />
       {uploadId ? (
         <TemplateAdoption id={uploadId} onClose={() => setUploadId("")} />
       ) : (

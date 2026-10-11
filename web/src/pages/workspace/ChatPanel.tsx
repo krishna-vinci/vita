@@ -1,6 +1,7 @@
 import { SendHorizontal } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Markdown } from "@/components/Markdown";
+import { MemoryProposals } from "@/components/MemoryProposals";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -51,6 +52,7 @@ export function ChatPanel({
                 ))}
               </ul>
             )}
+            <MemoryProposals proposals={message.memoryProposals} />
             {message.changes?.length === 0 && message.role === "assistant" && (
               <p className="mt-1 text-xs text-muted-foreground">No lines were changed.</p>
             )}

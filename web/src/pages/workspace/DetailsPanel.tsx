@@ -3,6 +3,7 @@ import { Markdown } from "@/components/Markdown";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCost, requirementCovered, visibleText } from "@/lib/resume-view";
+import { SaveAnswers } from "./SaveAnswers";
 
 /** Everything the default view hides: job match, checker notes, tokens and cost. */
 export function DetailsPanel({
@@ -15,6 +16,7 @@ export function DetailsPanel({
   skipped = 0,
   onAnswerSkipped,
   answers = {},
+  applicationId,
 }: {
   resume: Resume;
   analysis?: ApplicationResource["analysis"];
@@ -25,6 +27,7 @@ export function DetailsPanel({
   skipped?: number;
   onAnswerSkipped?: () => void;
   answers?: Record<string, string>;
+  applicationId?: string;
 }) {
   const text = visibleText(resume);
   const gapIds = new Set(gaps.map((gap) => gap.split(":")[0]));
@@ -122,7 +125,12 @@ export function DetailsPanel({
         )}
         {Object.keys(answers).length > 0 && (
           <div className="md:col-span-2">
-            <h3 className="font-medium">Your answers</h3>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="font-medium">Your answers</h3>
+              {applicationId && Object.values(answers).some((answer) => /^yes\b/i.test(answer)) && (
+                <SaveAnswers applicationId={applicationId} />
+              )}
+            </div>
             <ul className="list-disc pl-5 text-muted-foreground">
               {Object.entries(answers).map(([requirement, answer]) => (
                 <li key={requirement}>

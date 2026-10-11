@@ -1,15 +1,18 @@
 import {
+  type AccountUser,
   type AdoptionProposal,
   type AnswerMetricRequest,
   type AnswersRequest,
   ApiError as ApiErrorSchema,
   type ApplicationResource,
   type ApplicationSummary,
+  type AuthState,
   type CreateApplicationRequest,
   type CreateBaseRequest,
   type EffectivePromptView,
   type ExportResult,
   type FitResponse,
+  type GenerateLetterRequest,
   type HealthView,
   type ImportLegacyRequest,
   type ImportLegacyResult,
@@ -17,16 +20,28 @@ import {
   type InstructionsView,
   type JobMutation,
   type JobView,
+  type LetterChatReply,
+  type LetterExportResult,
+  type LetterMutation,
+  type LetterOpsRequest,
+  type LetterResource,
   type MarkdownMutation,
   type MarkdownResource,
   type McpConfig,
+  type MemoryEntry,
+  type MemoryInput,
+  type MemoryProposal,
   type MetricQuestion,
+  type OnboardingMutation,
+  type OnboardingProposal,
+  type OnboardingStatus,
   type PackSummary,
   type Prep,
   type PromoteRequest,
   type PutMarkdownRequest,
   type PutRulesRequest,
   type PutSettingsRequest,
+  type PutTrackerRequest,
   type ResearchRequest,
   type ResumeChatReply,
   type ResumeMutation,
@@ -35,6 +50,7 @@ import {
   type ResumeSummary,
   type RulesMutation,
   type RulesView,
+  type SentRequest,
   type SettingsMutation,
   type SettingsView,
   type SourceChatReply,
@@ -45,6 +61,9 @@ import {
   type TemplateApproval,
   type TemplateSummary,
   type TemplateUploadView,
+  type Tracker,
+  type TrackerEventInput,
+  type TrackerFollowUpInput,
   type UndoRequest,
   type UndoResult,
   type WorkspaceView,
@@ -55,10 +74,18 @@ export class ApiError extends Error {
     public status: number,
     public code: string,
     message: string,
+    /** Seconds to wait, when the server rate-limits a request. */
+    public retryAfter?: number,
   ) {
     super(message);
     this.name = "ApiError";
   }
+}
+
+/** Set by the app: called when the server says you are signed out or must set up or change a password. */
+let authProblem: (kind: "signed-out" | "setup" | "password-change") => void = () => {};
+export function onAuthProblem(handler: typeof authProblem): void {
+  authProblem = handler;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -72,10 +99,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const data: unknown = await response.json().catch(() => null);
   if (!response.ok) {
     const parsed = ApiErrorSchema.safeParse(data);
+    // Auth endpoints report their own failures (wrong password, rate limit); everything else means "go to sign-in".
+    if (!path.startsWith("/auth/")) {
+      if (response.status === 401) authProblem("signed-out");
+      else if (response.status === 503 && (data as { setupRequired?: boolean } | null)?.setupRequired)
+        authProblem("setup");
+      else if (response.status === 403 && parsed.success && parsed.data.error.code === "password-change-required")
+        authProblem("password-change");
+    }
     throw new ApiError(
       response.status,
       parsed.success ? parsed.data.error.code : "request-failed",
       parsed.success ? parsed.data.error.message : `The request failed (${response.status}). Please try again.`,
+      Number(response.headers.get("Retry-After")) || undefined,
     );
   }
   if (data === null) throw new ApiError(response.status, "invalid-response", "Vita returned an unreadable response.");
@@ -99,7 +135,119 @@ async function discard(path: string): Promise<void> {
   }
 }
 
+export interface TrackerListView {
+  applications: { id: string; tracker: Tracker; derived: TrackerDerived }[];
+  funnel: Record<string, number>;
+}
+export interface TrackerDerived {
+  nextFollowUpDue: string | null;
+  daysSinceLastActivity: number;
+  stale: boolean;
+}
+export interface TrackerView {
+  tracker: Tracker;
+  derived: TrackerDerived;
+  memoryProposals?: MemoryProposal[];
+  sha?: string | null;
+}
+export interface GithubStatus {
+  connected: boolean;
+  login?: string;
+  scopes?: string[];
+  rateLimit?: { remaining?: number; limit?: number; resetAt?: string };
+}
+
 export const api = {
+  onboarding: {
+    status: (signal?: AbortSignal) => get<OnboardingStatus>("/onboarding/status", signal),
+    importResume: (file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      return request<OnboardingProposal>("/onboarding/import", { method: "POST", body: form });
+    },
+    apply: (proposal: OnboardingProposal) => send<OnboardingMutation>("/onboarding/import/apply", proposal),
+    chat: (message: string) =>
+      send<SourceChatReply & { memoryProposals?: MemoryProposal[] }>("/onboarding/chat", { message }),
+    chatApply: (proposal: SourceProposal) => send<MarkdownMutation>("/onboarding/chat/apply", proposal),
+  },
+  letters: {
+    get: (id: string, signal?: AbortSignal) => get<LetterResource>(`/applications/${segment(id)}/letter`, signal),
+    generate: (id: string, body: GenerateLetterRequest) =>
+      send<JobMutation>(`/applications/${segment(id)}/letter`, body),
+    ops: (id: string, body: LetterOpsRequest) => send<LetterMutation>(`/applications/${segment(id)}/letter/ops`, body),
+    chat: (id: string, message: string) =>
+      send<LetterChatReply>(`/applications/${segment(id)}/letter/chat`, { message }),
+    export: (id: string) => send<LetterExportResult>(`/applications/${segment(id)}/letter/export`, {}),
+  },
+  memory: {
+    get: (signal?: AbortSignal) =>
+      get<{ entries: MemoryEntry[]; markdown: string; hash: string | null }>("/memory", signal),
+    add: (body: MemoryInput & { apply?: boolean }) =>
+      send<{ entry?: MemoryEntry; proposal?: MemoryProposal }>("/memory", body),
+    remove: (id: string) => send<{ sha: string | null }>("/memory", { id }, "DELETE"),
+    applyProposal: (proposal: MemoryProposal) => send<{ sha: string | null }>("/memory/propose/apply", proposal),
+    promoteAnswers: (id: string, requirementIds?: string[]) =>
+      send<{ proposal: SourceProposal }>(
+        `/applications/${segment(id)}/answers/promote`,
+        requirementIds ? { requirementIds } : {},
+      ),
+  },
+  tracker: {
+    list: (signal?: AbortSignal) => get<TrackerListView>("/tracker", signal),
+    get: (id: string, signal?: AbortSignal) => get<TrackerView>(`/applications/${segment(id)}/tracker`, signal),
+    put: (id: string, body: PutTrackerRequest) =>
+      send<TrackerView>(`/applications/${segment(id)}/tracker`, body, "PUT"),
+    addEvent: (id: string, body: TrackerEventInput) =>
+      send<TrackerView>(`/applications/${segment(id)}/tracker/events`, body),
+    addFollowUp: (id: string, body: TrackerFollowUpInput) =>
+      send<TrackerView>(`/applications/${segment(id)}/tracker/followups`, body),
+    sent: (id: string, body: SentRequest) => send<TrackerView>(`/applications/${segment(id)}/sent`, body),
+  },
+  github: {
+    get: (signal?: AbortSignal) => get<GithubStatus>("/settings/github", signal),
+    save: (token: string) => send<GithubStatus>("/settings/github", { token }, "PUT"),
+    disconnect: async () => {
+      const response = await fetch("/api/settings/github", { method: "DELETE", credentials: "same-origin" });
+      if (!response.ok && response.status !== 404)
+        throw new ApiError(response.status, "request-failed", "Could not disconnect.");
+    },
+  },
+  auth: {
+    state: (signal?: AbortSignal) => get<AuthState>("/auth/state", signal),
+    setup: (body: { username: string; displayName: string; password: string; setupCode?: string }) =>
+      send<{ user: AccountUser }>("/auth/setup", body),
+    login: (body: { username: string; password: string }) => send<{ user: AccountUser }>("/auth/login", body),
+    logout: async () => {
+      const response = await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+      // Already signed out is fine; the goal is the same.
+      if (!response.ok && response.status !== 401)
+        throw new ApiError(response.status, "request-failed", "Could not sign out.");
+    },
+    changePassword: (body: { currentPassword: string; newPassword: string }) =>
+      send<{ user: AccountUser }>("/auth/password", body),
+  },
+  admin: {
+    users: (signal?: AbortSignal) => get<{ users: AccountUser[] }>("/admin/users", signal),
+    create: (body: { username: string; displayName: string; password: string; isAdmin: boolean }) =>
+      send<{ user: AccountUser }>("/admin/users", body),
+    update: (username: string, body: { displayName?: string; isAdmin?: boolean; disabled?: boolean }) =>
+      send<{ user: AccountUser }>(`/admin/users/${segment(username)}`, body, "PATCH"),
+    resetPassword: (username: string, password: string) =>
+      send<{ user: AccountUser }>(`/admin/users/${segment(username)}/password`, { password }),
+    remove: async (username: string) => {
+      const response = await fetch(`/api/admin/users/${segment(username)}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      const data = (await response.json().catch(() => null)) as {
+        workspace?: string;
+        error?: { message?: string };
+      } | null;
+      if (!response.ok)
+        throw new ApiError(response.status, "request-failed", data?.error?.message ?? "Could not delete.");
+      return { workspace: data?.workspace ?? "" };
+    },
+  },
   health: (signal?: AbortSignal) => get<HealthView>("/health", signal),
   workspace: (signal?: AbortSignal) => get<WorkspaceView>("/workspace", signal),
   outline: {
@@ -137,8 +285,11 @@ export const api = {
   },
   chat: {
     resume: (scope: "application" | "resume", id: string, message: string) =>
-      send<ResumeChatReply>(`/chat/resume/${scope}/${segment(id)}`, { message }),
-    source: (message: string) => send<SourceChatReply>("/chat/source", { message }),
+      send<ResumeChatReply & { memoryProposals?: MemoryProposal[] }>(`/chat/resume/${scope}/${segment(id)}`, {
+        message,
+      }),
+    source: (message: string) =>
+      send<SourceChatReply & { memoryProposals?: MemoryProposal[] }>("/chat/source", { message }),
     applySource: (proposal: SourceProposal) => send<MarkdownMutation>("/chat/source/apply", proposal),
   },
   prep: {

@@ -34,9 +34,11 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { download, flagsFor, parseClaims, resumeToMarkdown } from "@/lib/resume-view";
 import { JobProgress } from "../jobs/JobProgress";
 import { SyncBanner } from "../me/SyncBanner";
+import { ChangeTemplateDialog } from "./ChangeTemplateDialog";
 import { ChatPanel } from "./ChatPanel";
 import { DetailsPanel } from "./DetailsPanel";
 import { FitDialog, type FitState } from "./FitDialog";
+import { JobTabs } from "./JobTabs";
 import { parseGaps, Questions } from "./Questions";
 import { ResumeSheet } from "./ResumeSheet";
 import { Toolbar } from "./Toolbar";
@@ -148,6 +150,7 @@ function Loaded({
   const fitter = useFit(scope, id);
   const promoter = usePromote();
   const [fit, setFit] = useState<FitState | null>(null);
+  const [templates, setTemplates] = useState(false);
   const startFit = async (pages: number) => {
     setFit({ pages, loading: true });
     try {
@@ -286,6 +289,7 @@ function Loaded({
     <div className="flex flex-col gap-6">
       <BackLink {...back} />
       {failureNote}
+      {isJob && <JobTabs id={id} current="resume" />}
       <header className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-display text-3xl font-bold break-words">{title}</h1>
@@ -377,6 +381,7 @@ function Loaded({
             : undefined
         }
         onFit={(pages) => void startFit(pages)}
+        onTemplate={() => setTemplates(true)}
       />
       {details && (
         <DetailsPanel
@@ -389,6 +394,7 @@ function Loaded({
           skipped={unanswered.filter((gap) => skipped.includes(gap.id)).length}
           onAnswerSkipped={() => rememberSkipped([])}
           answers={answered}
+          applicationId={isJob ? id : undefined}
         />
       )}
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -415,6 +421,7 @@ function Loaded({
       >
         <MessageSquareText /> Ask for a change
       </Button>
+      <ChangeTemplateDialog open={templates} onOpenChange={setTemplates} />
       <FitDialog
         state={fit}
         resume={data.resume}

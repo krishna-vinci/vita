@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { GithubCard } from "./GithubCard";
 
 type Server = McpConfig["mcpServers"][string];
 const secretNote = (values?: Record<string, string>) =>
@@ -136,6 +137,7 @@ export function McpSection() {
         Connect tools Vita can use when looking things up, like GitHub. Secret values stay on the server and are never
         shown.
       </p>
+      <GithubCard />
       {query.isPending ? (
         <PageLoading />
       ) : query.isError ? (

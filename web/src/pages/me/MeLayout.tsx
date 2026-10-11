@@ -7,6 +7,7 @@ const tabs = [
   { value: "outline", label: "Outline" },
   { value: "projects", label: "Projects" },
   { value: "resumes", label: "Base resumes" },
+  { value: "memory", label: "Memory" },
 ] as const;
 
 export default function MeLayout() {

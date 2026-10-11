@@ -1,4 +1,10 @@
 export const queryKeys = {
+  auth: ["auth"] as const,
+  users: ["auth", "users"] as const,
+  memory: ["memory"] as const,
+  tracker: ["tracker"] as const,
+  trackerOf: (id: string) => ["tracker", id] as const,
+  letter: (id: string) => ["letter", id] as const,
   workspace: ["workspace"] as const,
   outline: ["outline"] as const,
   projects: ["projects"] as const,
