@@ -22,7 +22,7 @@ export function researchRoutes(runtime: WorkspaceRuntime): Hono {
     const resourceId = input.itemSlug ?? slugify(input.target);
     const job = runtime.jobs.enqueue("research", resourceId, (ctx) =>
       runtime.exclusive(async () => {
-        const result = await researchItem(runtime.ws, input, await runtime.pipelineDeps(ctx));
+        const result = await researchItem(runtime.ws, input, await runtime.researchDeps(ctx));
         return { scope: "research", id: resourceId, sha: null, ...result };
       }),
     );

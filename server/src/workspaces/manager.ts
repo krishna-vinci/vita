@@ -3,6 +3,7 @@ import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import type { Hono } from "hono";
 import { getUserById, listUsers, type User } from "../accounts/users.js";
+import { SecretStore } from "../db/secret.js";
 import { ApiFailure } from "../errors.js";
 import { type RuntimeOptions, WorkspaceRuntime } from "../runtime.js";
 import { createWorkspaceApp } from "../server.js";
@@ -98,6 +99,8 @@ export class WorkspaceManager {
     const runtime = await (this.options.createRuntime ?? WorkspaceRuntime.create)({
       root,
       bundledDir: this.options.bundledDir,
+      githubToken: () =>
+        new SecretStore(this.options.db, this.options.dataDir).get(user.id, "github") ?? process.env.GITHUB_TOKEN,
     });
     return { runtime, app: createWorkspaceApp(runtime) };
   }

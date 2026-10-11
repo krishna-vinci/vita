@@ -28,6 +28,7 @@ import {
   type PipelineDeps,
   parseOutline,
   pdfText,
+  type ResearchDeps,
   RoleError,
   readText,
   recordExportedVersion,
@@ -40,6 +41,7 @@ import {
   tailor,
   undoPaths,
   VerdictCache,
+  type WebFetch,
   type WorkspaceHandle,
   wrapUntrusted,
   writeFileAtomic,
@@ -70,6 +72,8 @@ export interface RuntimeOptions extends WorkspaceHandle {
   runtime?: PipelineDeps["runtime"];
   models?: PipelineDeps["models"];
   retry?: PipelineDeps["retry"];
+  githubToken?: () => string | undefined;
+  researchFetch?: WebFetch;
 }
 
 export class WorkspaceRuntime {
@@ -413,6 +417,13 @@ export class WorkspaceRuntime {
       signal: ctx.signal,
       onProgress: ctx.progress,
       onUsage: ctx.addUsage,
+    };
+  }
+  async researchDeps(ctx: JobContext): Promise<ResearchDeps> {
+    return {
+      ...(await this.pipelineDeps(ctx)),
+      githubToken: this.options.githubToken?.() ?? process.env.GITHUB_TOKEN,
+      fetch: this.options.researchFetch,
     };
   }
   enqueue(

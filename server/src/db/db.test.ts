@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { expect, it } from "vitest";
 import { insertUser, listUsers } from "../accounts/users.js";
 import { openDb } from "./db.js";
+import { migrations } from "./migrations.js";
 
 it("migrates once and persists private account data across database reopen", async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "vita-db-"));
@@ -16,13 +17,15 @@ it("migrates once and persists private account data across database reopen", asy
     const second = openDb(file);
     try {
       expect(listUsers(second)).toHaveLength(1);
-      expect(second.prepare("SELECT COUNT(*) AS count FROM migrations").get()).toMatchObject({ count: 1 });
+      expect(second.prepare("SELECT COUNT(*) AS count FROM migrations").get()).toMatchObject({
+        count: migrations.length,
+      });
       expect(
         second
           .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
           .all()
           .map((row) => row.name),
-      ).toEqual(expect.arrayContaining(["users", "sessions", "settings", "migrations"]));
+      ).toEqual(expect.arrayContaining(["users", "sessions", "settings", "migrations", "secrets"]));
     } finally {
       second.close();
     }

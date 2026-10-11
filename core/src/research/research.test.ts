@@ -234,3 +234,66 @@ it("keeps MCP/codemode exclusive to the researcher and rejects stale source snap
   });
   expect(await readText(root, "projects.md")).toContain("User edit.");
 });
+
+it("researches a GitHub target with built-in github_file directly and through codemode without MCP", async () => {
+  const { faux, deps } = await setup();
+  const sha = "a".repeat(40);
+  const fetcher = vi.fn<typeof fetch>().mockImplementation(
+    async (url) =>
+      new Response(
+        JSON.stringify(
+          String(url).includes("/commits/")
+            ? { sha, commit: { tree: { sha } } }
+            : {
+                type: "file",
+                encoding: "base64",
+                size: 26,
+                content: Buffer.from("Typed catalogue interfaces").toString("base64"),
+              },
+        ),
+      ),
+  );
+  const args = { owner: "fictional", repo: "archive", path: "src/catalogue.ts", ref: "main" };
+  faux.setResponses([
+    (ctx) => {
+      expect(JSON.stringify(ctx)).toContain("prefer the built-in github_repo");
+      expect(getCurrentTools(ctx.messages).map((tool) => tool.name)).toContain("github_file");
+      return fauxAssistantMessage(fauxToolCall("github_file", args));
+    },
+    (ctx) => {
+      const result = ctx.messages.findLast((m) => m.role === "toolResult");
+      expect(result?.isError).toBe(false);
+      expect(JSON.stringify(result?.content)).toContain(`/blob/${sha}/src/catalogue.ts`);
+      expect(JSON.stringify(result?.content)).toContain("untrusted-data");
+      return fauxAssistantMessage(
+        fauxToolCall("codemode", {
+          code: `const result = await tools.github_file(${JSON.stringify(args)}); return result.content;`,
+        }),
+      );
+    },
+    (ctx) => {
+      expect(ctx.messages.findLast((m) => m.role === "toolResult")?.isError).toBe(false);
+      return fauxAssistantMessage(
+        fauxToolCall("submit_evidence", {
+          ...draft,
+          claims: [
+            {
+              text: "Implemented typed catalogue interfaces.",
+              evidence: [{ kind: "code", ref: `https://github.com/fictional/archive/blob/${sha}/src/catalogue.ts` }],
+            },
+          ],
+        }),
+      );
+    },
+  ]);
+  const before = await readText(root, "projects.md");
+  const result = await researchItem(
+    { root, bundledDir },
+    { target: "https://github.com/fictional/archive" },
+    { ...deps, fetch: fetcher },
+  );
+  expect(result.proposal?.after).toContain(`/blob/${sha}/src/catalogue.ts`);
+  expect(await readText(root, "projects.md")).toBe(before);
+  expect(fake.calls).toEqual([]);
+  expect(fetcher).toHaveBeenCalledTimes(4);
+});

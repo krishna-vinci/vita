@@ -40,7 +40,7 @@ them.
 - Record projects, roles and certifications in `projects.md` as an evidence inventory: sources, claims, limits, and measured or
   counted outcomes.
 - A metric interview asks for real numbers when a claim could use one, and stores your answers as dated evidence.
-- A read-only research role can scan your GitHub repositories through an MCP server and propose evidence for your approval.
+- A read-only research role scans public GitHub repositories out of the box and proposes evidence for your approval. Add your own token for private repositories; MCP is optional.
 
 ### Master and base resumes
 
@@ -171,7 +171,8 @@ Configuration lives in the **workspace**, separately from the app checkout.
 | --- | --- |
 | `config/models.yaml` | `default: provider/model-id`, plus `roles` overrides. Choose different resolved models for `writer` and `checker`; the checker cannot fall back to the writer model. |
 | Pi `~/.pi/agent/auth.json` or provider env keys | OAuth/subscription credentials or keys such as `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`. Docker accepts the optional read-only Pi mount described above. |
-| `config/mcp.json` | Pi-format `mcpServers`; secrets through `${ENV}` or `!command`. Research permits explicitly read-only tools and allow-listed web URLs. Use least-privilege credentials. |
+| GitHub (Settings → Integrations) | Public repository research needs no configuration or `gh` CLI. Add a fine-grained token for selected private repositories with **Contents: read** and **Metadata: read**. Tokens are encrypted per user in `vita.db`; `GITHUB_TOKEN` is an optional server fallback for users without a saved token. |
+| `config/mcp.json` | Optional advanced integration. Pi-format `mcpServers`; secrets through `${ENV}` or `!command`. Research permits explicitly read-only tools and allow-listed web URLs. Use least-privilege credentials. |
 | `instructions.md` | Workspace guidance; optional frontmatter selects `roles` and research `sources.urls` / `sources.mcp`. Instance guidance uses `VITA_INSTANCE_DIR/instructions/*.md`; job notes and chat add narrower guidance. Core invariants and write policies remain enforced. |
 | `config/rules.yaml` | Page budgets, bullet length, banned phrases, required sections, section order, date format and locale. |
 | `packs/<id>/pack.yaml` | Profession vocabulary, keyword groups, metric questions and writing guidance; workspace packs override bundled IDs. `general` works across professions, with bundled IT packs available. |
@@ -183,7 +184,7 @@ Role overrides currently include `analyst`, `writer`, `checker`, `ats-reviewer`,
 effective-prompt API expose configuration and instruction warnings. See [architecture](docs/ARCHITECTURE.md) and
 [contributing](CONTRIBUTING.md) for extension contracts.
 
-Server variables: `VITA_DATA_DIR` (default `./vita-home` relative to process cwd), `VITA_HOST` (default `127.0.0.1`), `VITA_PORT` (4317), `VITA_TRUST_PROXY=1` for a trusted TLS proxy, optional `VITA_INSTANCE_DIR`, and `VITA_PUBLIC_ORIGIN` when a proxy rewrites `Host`. Accounts are required on every bind. `VITA_WORKSPACE` is a legacy migration override: if it contains `outline.md` during first setup, the first admin uses it in place. `VITA_PASSWORD_HASH` is no longer read. See [installation](docs/INSTALL.md) for password recovery and backups.
+Server variables: `VITA_DATA_DIR` (default `./vita-home` relative to process cwd), `VITA_HOST` (default `127.0.0.1`), `VITA_PORT` (4317), `VITA_TRUST_PROXY=1` for a trusted TLS proxy, optional `VITA_INSTANCE_DIR`, and `VITA_PUBLIC_ORIGIN` when a proxy rewrites `Host`. Optional `GITHUB_TOKEN` supplies a server-wide GitHub fallback. Accounts are required on every bind. `VITA_WORKSPACE` is a legacy migration override: if it contains `outline.md` during first setup, the first admin uses it in place. `VITA_PASSWORD_HASH` is no longer read. See [installation](docs/INSTALL.md) for password recovery and backups.
 
 ## CLI reference
 

@@ -13,17 +13,20 @@ import type { PipelineDeps, WorkspaceHandle } from "../pipeline/types.js";
 import { parseProjects } from "../source/index.js";
 import { fileHash, resolveInWorkspace } from "../workspace/index.js";
 import { readMcpConfig } from "./config.js";
+import { githubTools } from "./github.js";
 import { evidenceProposal } from "./proposal.js";
 import { researcherRole } from "./role.js";
 import { type WebFetch, webFetchTool } from "./web.js";
 
 export { REDACTED_SECRET, readMcpConfig, redactMcpConfig, writeMcpConfig } from "./config.js";
+export { GitHubClient, GitHubError, githubTools, MAX_GITHUB_FILE_BYTES, MAX_README_BYTES } from "./github.js";
 export { evidenceProposal } from "./proposal.js";
 export { researcherRole } from "./role.js";
 export { fetchWebText, MAX_FETCH_BYTES, type WebFetch } from "./web.js";
 
 export interface ResearchDeps extends PipelineDeps {
   fetch?: WebFetch;
+  githubToken?: string;
   createMcpTransport?: McpTransportFactory;
   /** Effective job/instance/user sources can be supplied by the instructions loader. */
   sources?: { urls: string[]; mcp: string[] };
@@ -72,7 +75,7 @@ export async function researchItem(
         task: "Research the target and submit only verified evidence additions. Nothing is applied automatically.",
       }),
       task: [
-        "Inspect configured read-only MCP sources or allow-listed pages. Call submit_evidence with item, claims, limits, variants and notes. If no evidence is established, submit empty additions and explain missing sources in notes.",
+        "For github.com/<owner>/<repo> targets, prefer github_repo, github_tree, github_file and github_commits. Code search needs a token. Use MCP only when configured, or web_fetch for allow-listed pages. Call submit_evidence with item, claims, limits, variants and notes. If no evidence is established, submit empty additions and explain missing sources in notes.",
         wrapUntrusted("research target", JSON.stringify(request)),
         wrapUntrusted("allow-listed URLs", JSON.stringify(urls)),
       ].join("\n\n"),
@@ -83,7 +86,7 @@ export async function researchItem(
       retry: deps.retry,
       signal: deps.signal,
       onUsage: deps.onUsage,
-      customTools: [webFetchTool(urls, deps.fetch, deps.now)],
+      customTools: [...githubTools(deps.githubToken, deps.fetch), webFetchTool(urls, deps.fetch, deps.now)],
       extensions: researchExtensions(config, resolveInWorkspace(ws.root, "config/mcp.json"), deps.createMcpTransport),
     });
     deps.signal?.throwIfAborted();

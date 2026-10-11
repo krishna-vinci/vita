@@ -119,15 +119,22 @@ No provider is needed to start the server or render an existing resume. Generati
 
 | Variable | Default / behavior |
 | --- | --- |
-| `VITA_DATA_DIR` | `./vita-home` from process cwd; Compose `/data`. Contains `vita.db` and `users/`. |
+| `VITA_DATA_DIR` | `./vita-home` from process cwd; Compose `/data`. Contains `vita.db`, `secret.key` (created when saving a token), and `users/`. |
 | `VITA_WORKSPACE` | Optional legacy first-admin override when it contains `outline.md` at setup. |
 | `VITA_HOST` | `127.0.0.1` locally; Docker `0.0.0.0`. Non-loopback first setup requires a logged code. |
 | `VITA_PORT` | `4317`; update port mapping if changed. |
 | `VITA_TRUST_PROXY` | Only `1` trusts forwarded protocol and client-IP headers. Default off. |
 | `VITA_PUBLIC_ORIGIN` | Optional comma-separated public origins when a proxy rewrites Host. |
+| `GITHUB_TOKEN` | Optional server-wide fallback for GitHub research when a user has no saved token. Public repositories work without it. |
 | `VITA_INSTANCE_DIR` | Optional operator-controlled `instructions/*.md`; mount separately, preferably read-only. |
 
-Models, rules, packs, templates, instructions and MCP configuration are workspace files; see [README configuration](../README.md#configuration). MCP executables must be installed in the image; HTTP endpoints must be reachable. Give MCP credentials only the permissions needed for research.
+Models, rules, packs, templates, instructions and MCP configuration are workspace files; see [README configuration](../README.md#configuration). MCP is an optional advanced integration. MCP executables must be installed in the image; HTTP endpoints must be reachable. Give MCP credentials only the permissions needed for research.
+
+GitHub research works for public repositories out of the box, without the `gh` CLI or an MCP server. For private repositories and higher rate limits, add a fine-grained, read-only GitHub token in **Settings → Integrations**. Select the repositories you want Vita to read and grant **Contents: read** and **Metadata: read**. Code search requires authentication; tree and file tools also work without a token on public repositories.
+
+Tokens are stored per user using AES-256-GCM in `vita.db`, with the key in `VITA_DATA_DIR/secret.key` (0600). They are never saved in workspace files or returned by the settings API. Deleting a user's token restores anonymous research, or the server's `GITHUB_TOKEN` fallback if set. Fine-grained tokens may report an empty scopes list; GitHub's `/user` response provides account and scope metadata.
+
+Power users can still configure read-only MCP servers in `config/mcp.json`, including Pi's `!command` secret resolution. For example, an optional MCP header can use `"Authorization": "!printf 'Bearer '; pass show integrations/github"` if that command and password store are available on the host. Built-in GitHub tools need neither command execution nor MCP setup.
 
 ## TLS and reverse proxies
 
@@ -145,7 +152,7 @@ Before first setup on a loopback bind, Vita also requires a loopback Host to blo
 
 ## Backups and troubleshooting
 
-Stop the server for a consistent backup. Copy the entire `VITA_DATA_DIR`, including `vita.db` and any SQLite sidecar files, every workspace's `.git`, evidence and generated files. Back up **explicit/legacy workspace paths separately** if outside that directory. Back up `.env` and host Pi credentials privately. `.vita/` is disposable cache except for job history needed if you want past jobs visible. Restore while stopped with matching permissions.
+Stop the server for a consistent backup. Copy the entire `VITA_DATA_DIR`, including `vita.db`, `secret.key` (needed to decrypt saved integration tokens), and any SQLite sidecar files, every workspace's `.git`, evidence and generated files. Back up **explicit/legacy workspace paths separately** if outside that directory. Back up `.env` and host Pi credentials privately. `.vita/` is disposable cache except for job history needed if you want past jobs visible. Restore while stopped with matching permissions.
 
 - Lost admin password: use `vita reset-password <username>` against the correct accounts directory.
 - Setup asks for a code: inspect the current startup log; Docker always uses the non-loopback setup rule.

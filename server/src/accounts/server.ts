@@ -1,6 +1,7 @@
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { serveStatic } from "@hono/node-server/serve-static";
+import type { WebFetch } from "@vita/core";
 import { CreateUserRequest, ResetPasswordRequest, UpdateUserRequest, Username } from "@vita/shared";
 import { type Context, Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
@@ -9,7 +10,9 @@ import { ZodError } from "zod";
 import { requestGuard, requireAdmin, SESSION_COOKIE, sessionAuth } from "../auth/middleware.js";
 import { hashPassword } from "../auth/password.js";
 import { type AuthOptions, authRoutes, jsonBody } from "../auth/routes.js";
+import { SecretStore } from "../db/secret.js";
 import { ApiFailure } from "../errors.js";
+import { githubRoutes } from "../routes/github.js";
 import type { WorkspaceManager } from "../workspaces/manager.js";
 import { isLoopback } from "./bootstrap.js";
 import { resolveSession } from "./sessions.js";
@@ -21,11 +24,13 @@ export interface ServerOptions extends Omit<AuthOptions, "db" | "endStreams"> {
   host: string;
   publicOrigins?: string[];
   webDist?: string;
+  githubFetch?: WebFetch;
 }
 export function createAccountServer(options: ServerOptions): Hono {
   const { db, workspaces } = options;
   const app = new Hono();
   app.use("*", requestGuard(db, isLoopback(options.host), options.publicOrigins));
+  app.use("/api/settings/github", bodyLimit({ maxSize: 8192 }));
   app.use("/api/auth/*", bodyLimit({ maxSize: 16_384 }));
   app.use("/api/admin/*", bodyLimit({ maxSize: 16_384 }));
   app.onError((error, c) => {
@@ -52,6 +57,7 @@ export function createAccountServer(options: ServerOptions): Hono {
       );
     await next();
   });
+  app.route("/api", githubRoutes(new SecretStore(db, workspaces.options.dataDir), options.githubFetch));
   app.use("/api/admin/*", requireAdmin);
   app.get("/api/admin/users", (c) => c.json({ users: listUsers(db) }));
   function assertAdmin(c: Context): void {

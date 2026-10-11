@@ -20,4 +20,13 @@ export const migrations = [
   CREATE INDEX sessions_user ON sessions(user_id);
   CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
   CREATE TABLE migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);`,
+  `CREATE TABLE secrets (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    ciphertext BLOB NOT NULL,
+    iv BLOB NOT NULL,
+    tag BLOB NOT NULL,
+    updated TEXT NOT NULL,
+    PRIMARY KEY (user_id, name)
+  );`,
 ];
