@@ -17,6 +17,7 @@ const settings: SettingsView = {
 const clients: QueryClient[] = [];
 beforeEach(() => {
   vi.spyOn(api.settings, "get").mockResolvedValue(settings);
+  vi.spyOn(api.models, "available").mockResolvedValue({ models: [], setupHints: ["Run `pnpm vita login`."] });
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -44,13 +45,13 @@ function mount() {
 it("shows credential status, reveals roles and saves a typed configuration", async () => {
   const save = vi.spyOn(api.settings, "save").mockResolvedValue({ ...settings, sha: null });
   mount();
-  await screen.findByLabelText("Default model");
+  await screen.findByLabelText("Default model model ID");
   expect(screen.getByText("Credentials available")).toBeTruthy();
   expect(screen.getByText("No credentials found")).toBeTruthy();
   fireEvent.click(screen.getByRole("switch", { name: "Advanced: models for each step" }));
-  expect(screen.getAllByRole("combobox")).toHaveLength(4);
+  expect(screen.getAllByRole("combobox")).toHaveLength(5);
   fireEvent.change(screen.getByLabelText("Checking the facts model ID"), { target: { value: "different/check" } });
-  fireEvent.change(screen.getByLabelText("Default model"), { target: { value: "writer/model" } });
+  fireEvent.change(screen.getByLabelText("Default model model ID"), { target: { value: "writer/model" } });
   fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
   await waitFor(() =>
     expect(save).toHaveBeenCalledWith(
@@ -62,17 +63,33 @@ it("shows credential status, reveals roles and saves a typed configuration", asy
 it("keeps the form editable and reports server save failures", async () => {
   vi.spyOn(api.settings, "save").mockRejectedValue(new ApiError(400, "not-found", "Template not installed"));
   mount();
-  await screen.findByLabelText("Default model");
+  await screen.findByLabelText("Default model model ID");
   fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
   expect(await screen.findByText("Template not installed")).toBeTruthy();
-  expect((screen.getByLabelText("Default model") as HTMLInputElement).value).toBe("faux/echo");
+  expect((screen.getByLabelText("Default model model ID") as HTMLInputElement).value).toBe("faux/echo");
 });
 it("rejects malformed model IDs before sending them", async () => {
   const save = vi.spyOn(api.settings, "save");
   mount();
-  await screen.findByLabelText("Default model");
-  fireEvent.change(screen.getByLabelText("Default model"), { target: { value: "missing-provider" } });
+  await screen.findByLabelText("Default model model ID");
+  fireEvent.change(screen.getByLabelText("Default model model ID"), { target: { value: "missing-provider" } });
   fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
   expect(await screen.findByText(/Use provider\/model for each model/)).toBeTruthy();
   expect(save).not.toHaveBeenCalled();
+});
+
+it("shows a setup card with copyable commands when no model has credentials, and a picker when some do", async () => {
+  mount();
+  await screen.findByText("Connect a model provider");
+  expect(screen.getByText("pnpm vita login")).toBeTruthy();
+  expect(screen.getByText("docker compose exec -it vita pnpm vita login")).toBeTruthy();
+  expect(screen.getByRole("link", { name: "Full guide" }).getAttribute("href")).toContain("SELF_HOSTING.md");
+  cleanup();
+  vi.spyOn(api.models, "available").mockResolvedValue({
+    models: [{ id: "faux/echo", provider: "faux", name: "Echo" }],
+    setupHints: [],
+  });
+  mount();
+  await screen.findByRole("combobox", { name: "Default model" });
+  expect(screen.queryByText("Connect a model provider")).toBeNull();
 });

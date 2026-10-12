@@ -1,7 +1,7 @@
 import { PutSettingsRequest, type SettingsView } from "@vita/shared";
 import { type FormEvent, useState } from "react";
 import { toast } from "sonner";
-import { useSaveSettings, useSettings, useTemplates } from "@/api/queries";
+import { useAvailableModels, useSaveSettings, useSettings, useTemplates } from "@/api/queries";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -9,31 +9,30 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { AdvancedSection } from "./settings/AdvancedSection";
+import { ModelPicker } from "./settings/ModelPicker";
+import { ModelSetupCard } from "./settings/ModelSetupCard";
 import { TemplatesSection } from "./settings/TemplatesSection";
 import { UsersSection } from "./settings/UsersSection";
 
 const roles = [
-  { id: "analyst", label: "Reading the job" },
-  { id: "writer", label: "Writing the resume" },
-  { id: "checker", label: "Checking the facts" },
-  { id: "ats-reviewer", label: "Checking the job match" },
+  { id: "analyst", label: "Reading the job", about: "Reads the job post and works out what it asks for." },
+  { id: "writer", label: "Writing the resume", about: "Writes your resume and letters." },
+  { id: "checker", label: "Checking the facts", about: "Checks every line against your evidence." },
+  { id: "ats-reviewer", label: "Checking the job match", about: "Checks the keywords an employer's filter looks for." },
 ] as const;
 
 function SettingsForm({ settings }: { settings: SettingsView }) {
+  const available = useAvailableModels();
+  const models = available.data?.models ?? [];
   const [draft, setDraft] = useState<PutSettingsRequest>({ models: settings.models, template: settings.template });
   const [advanced, setAdvanced] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const save = useSaveSettings();
   const templates = useTemplates();
-  const [choices] = useState(() => [...new Set([settings.models.default, ...Object.values(settings.models.roles)])]);
-  const [selections, setSelections] = useState<Record<string, string>>(() =>
-    Object.fromEntries(roles.map(({ id }) => [id, settings.models.roles[id] ?? "__default__"])),
-  );
-  const customValue = "__custom__";
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const result = PutSettingsRequest.safeParse(draft);
@@ -52,13 +51,13 @@ function SettingsForm({ settings }: { settings: SettingsView }) {
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor="default-model">Default model</FieldLabel>
-          <Input
+          <ModelPicker
             id="default-model"
+            label="Default model"
             value={draft.models.default}
-            onChange={(event) => setDraft({ ...draft, models: { ...draft.models, default: event.target.value } })}
-            placeholder="provider/model"
-            required
+            models={models}
             disabled={save.isPending}
+            onChange={(value) => setDraft({ ...draft, models: { ...draft.models, default: value ?? "" } })}
           />
           <FieldDescription>Used for every step unless you choose a different model below.</FieldDescription>
         </Field>
@@ -122,72 +121,37 @@ function SettingsForm({ settings }: { settings: SettingsView }) {
       {advanced && (
         <FieldGroup id="role-models">
           <FieldDescription>Use a different model to check the writer's work.</FieldDescription>
-          {roles.map(({ id, label }) => {
-            const selected = draft.models.roles[id];
-            return (
-              <Field key={id}>
-                <FieldLabel htmlFor={`role-${id}`}>{label}</FieldLabel>
-                <Select
-                  value={selections[id]}
-                  onValueChange={(value) => {
-                    if (value === selections[id]) return;
-                    setSelections({ ...selections, [id]: value });
-                    const next = { ...draft.models.roles };
-                    if (value === "__default__") delete next[id];
-                    else next[id] = value === customValue ? "" : value;
-                    setDraft({ ...draft, models: { ...draft.models, roles: next } });
-                  }}
-                  disabled={save.isPending}
-                >
-                  <SelectTrigger id={`role-${id}`} className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="__default__">Use default model</SelectItem>
-                      {choices.map((model) => (
-                        <SelectItem key={model} value={model}>
-                          {model}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value={customValue}>Enter a different model</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                {selected !== undefined && (
-                  <>
-                    <FieldLabel htmlFor={`custom-${id}`} className="sr-only">
-                      {label} model ID
-                    </FieldLabel>
-                    <Input
-                      id={`custom-${id}`}
-                      value={selected}
-                      onChange={(event) => {
-                        setSelections({ ...selections, [id]: customValue });
-                        setDraft({
-                          ...draft,
-                          models: { ...draft.models, roles: { ...draft.models.roles, [id]: event.target.value } },
-                        });
-                      }}
-                      placeholder="provider/model"
-                      required
-                      disabled={save.isPending}
-                    />
-                  </>
-                )}
-              </Field>
-            );
-          })}
+          {roles.map(({ id, label, about }) => (
+            <Field key={id}>
+              <FieldLabel htmlFor={`role-${id}`}>{label}</FieldLabel>
+              <FieldDescription>{about}</FieldDescription>
+              <ModelPicker
+                id={`role-${id}`}
+                label={label}
+                allowDefault
+                value={draft.models.roles[id]}
+                models={models}
+                disabled={save.isPending}
+                onChange={(value) => {
+                  const next = { ...draft.models.roles };
+                  if (value === undefined) delete next[id];
+                  else next[id] = value;
+                  setDraft({ ...draft, models: { ...draft.models, roles: next } });
+                }}
+              />
+            </Field>
+          ))}
         </FieldGroup>
       )}
       {(draft.models.roles.checker || draft.models.default) === (draft.models.roles.writer || draft.models.default) && (
-        <Alert>
-          <AlertTitle>Choose a separate checker</AlertTitle>
-          <AlertDescription>
-            The writer and fact checker currently use the same model. Choose a different checker under Advanced before
-            making a resume.
-          </AlertDescription>
-        </Alert>
+        <p>
+          <Badge variant="outline" className="border-warning text-warning">
+            Use a different model for checking
+          </Badge>{" "}
+          <span className="text-sm text-muted-foreground">
+            The writer and the checker use the same model. Pick a different one for the checker in Advanced.
+          </span>
+        </p>
       )}
       {settings.warnings.length > 0 && (
         <Alert>
@@ -213,6 +177,7 @@ function SettingsForm({ settings }: { settings: SettingsView }) {
 }
 export default function SettingsPage() {
   const query = useSettings();
+  const available = useAvailableModels();
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-3">
@@ -225,6 +190,16 @@ export default function SettingsPage() {
         <PageError error={query.error} retry={() => void query.refetch()} />
       ) : (
         <>
+          {available.data && available.data.models.length === 0 && (
+            <ModelSetupCard
+              hints={available.data.setupHints}
+              reloading={available.isFetching}
+              onReload={() => {
+                void available.refetch();
+                void query.refetch();
+              }}
+            />
+          )}
           <SettingsForm settings={query.data} />
           <TemplatesSection />
           <UsersSection />

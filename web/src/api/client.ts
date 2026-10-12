@@ -7,6 +7,7 @@ import {
   type ApplicationResource,
   type ApplicationSummary,
   type AuthState,
+  type AvailableModelsView,
   type CreateApplicationRequest,
   type CreateBaseRequest,
   type EffectivePromptView,
@@ -274,6 +275,7 @@ export const api = {
     ops: (id: string, body: ResumeOpsRequest) => send<ResumeMutation>(`/applications/${segment(id)}/ops`, body),
     export: (id: string) => send<ExportResult>(`/applications/${segment(id)}/export`, {}),
   },
+  models: { available: (signal?: AbortSignal) => get<AvailableModelsView>("/settings/models/available", signal) },
   settings: {
     get: (signal?: AbortSignal) => get<SettingsView>("/settings", signal),
     save: (body: PutSettingsRequest) => send<SettingsMutation>("/settings", body, "PUT"),

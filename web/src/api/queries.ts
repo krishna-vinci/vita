@@ -198,3 +198,6 @@ export const useTrackerMutation = <T, R>(id: string, fn: (input: T) => Promise<R
     },
   });
 };
+
+export const useAvailableModels = () =>
+  useQuery({ queryKey: ["models-available"], queryFn: ({ signal }) => api.models.available(signal), retry: false });
