@@ -7,7 +7,7 @@ A self-hosted resume studio. Paste a job, get a resume that is true to your work
 
 ![Vita's resume workspace: a tailored resume beside a chat for changes](docs/screenshots/resume-workspace.png)
 
-Website and docs: **[vita.krishna.quest/landing](https://vita.krishna.quest/landing/)**
+Website and docs: **[vita.krishna.quest/landing](https://vita.krishna.quest/)**
 
 ## What Vita is
 
