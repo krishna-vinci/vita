@@ -34,6 +34,12 @@ For someone with an existing profile, that takes about one to three minutes. Int
 Vita is organised around four layers: **outline → master → base → job**. Facts are written once and resumes are generated from
 them.
 
+### Getting started
+
+- A first-run welcome offers three ways in: import an old resume (PDF, Word or text) and approve what Vita extracts, answer a
+  short guided interview, or start from a starter outline with guidance for each section.
+- Accounts with a login page: the first admin adds people, and every account has its own workspace.
+
 ### Outline and evidence
 
 - Write freely in `outline.md`. Headings and bullets give it structure, and anything Vita cannot parse is preserved, never an error.
@@ -61,10 +67,21 @@ them.
   proposing cuts.
 - Export Markdown and a LaTeX-compiled PDF, then prepare for the interview: likely questions, stories from your own claims, and
   honest answers for gaps.
+- Write a cover letter for the same job, with the same checks: every paragraph cites your claims, numbers need sources, and a
+  separate checker reviews it before export.
+
+### Tracking and memory
+
+- An application tracker: a board of where each application stands, follow-ups with due dates, quiet applications flagged,
+  interview events with the questions you were asked, contacts, outcomes, and the exact resume and letter versions you sent.
+- Memory of your preferences, decisions and outcomes ("never mention project X for finance roles"), read by every assistant.
+  Every entry is visible and deletable in Me → Memory, and nothing is remembered without your approval.
+- "Yes" answers to gap questions can be saved to your evidence so the next job starts stronger.
 
 ### Templates, packs and rules
 
-- The bundled Rover Base template uses a deterministic LaTeX contract. Upload your own `.tex` or `.zip`, and Vita adapts it
+- Twelve Rover templates are bundled, with previews in a gallery, plus a matching cover-letter template. All use a deterministic
+  LaTeX contract. Upload your own `.tex` or `.zip`, and Vita adapts it
   once in a sandbox and shows both PDFs for your approval.
 - Profession packs (vocabulary, synonym groups, metric questions, section order) are data. `general` plus 13 IT packs are bundled.
 - Rules (page limits, banned phrases, required sections, date format, locale) and layered standing instructions are files you edit.
@@ -95,6 +112,12 @@ Fictional example data.
 | ![Resume workspace with chat](docs/screenshots/resume-workspace.png) | ![Interview prep with honest gap answers](docs/screenshots/interview-prep.png) |
 | **Projects and the metric interview** | **Base resumes** |
 | ![Projects with a metric question](docs/screenshots/projects.png) | ![Master and base resumes](docs/screenshots/base-resumes.png) |
+| **Application tracker** | **Memory** |
+| ![Jobs board with follow-ups and statuses](docs/screenshots/tracker-board.png) | ![What Vita remembers about you](docs/screenshots/memory.png) |
+
+The twelve bundled Rover templates:
+
+![All bundled templates rendering the same fictional resume](docs/screenshots/templates.png)
 
 On a phone, in dark mode, with details shown:
 
@@ -175,7 +198,7 @@ Configuration lives in the **workspace**, separately from the app checkout.
 | `instructions.md` | Workspace guidance; optional frontmatter selects `roles` and research `sources.urls` / `sources.mcp`. Instance guidance uses `VITA_INSTANCE_DIR/instructions/*.md`; job notes and chat add narrower guidance. Core invariants and write policies remain enforced. |
 | `config/rules.yaml` | Page budgets, bullet length, banned phrases, required sections, section order, date format and locale. |
 | `packs/<id>/pack.yaml` | Profession vocabulary, keyword groups, metric questions and writing guidance; workspace packs override bundled IDs. `general` works across professions, with bundled IT packs available. |
-| `templates/<id>/` | LaTeX template contract and bounded layout knobs; workspace templates take precedence over bundled templates. Rover Base is bundled today; the other Rover templates are planned for the next release. |
+| `templates/<id>/` | LaTeX template contract and bounded layout knobs; workspace templates take precedence over bundled templates. Twelve Rover resume templates and a Rover letter template are bundled. |
 | `skills/<name>/SKILL.md` | Workspace role guidance overrides the bundled skill with the same name. |
 
 Role overrides currently include `analyst`, `writer`, `checker`, `ats-reviewer`, `resume-editor`, `source-editor`, `researcher`,
@@ -218,19 +241,14 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and the [design spec](docs/spec
 
 ## Project status
 
-Vita is pre-release. Evidence, generation, editing, rendering, templates, synchronization, research, instructions and metrics
-are in place, with the web app covering Me, Jobs and Settings. One Rover template is bundled today. CI runs package typechecks,
-full faux-provider test suites and real PDF render tests; tagged releases build amd64/arm64 GHCR images with provenance and SBOMs.
-No stable release is promised yet.
+Vita is pre-release. The full loop works end to end with real models: onboarding, evidence and research, master, base and job
+resumes, cover letters, editing, interview prep, the application tracker and memory, with accounts for several people on one
+server. Generation is lean: compact role contexts, cached checker verdicts for unchanged lines and parallel review stages cut cost
+by about half on a real job without weakening any check. CI runs package typechecks, full faux-provider test suites and real PDF
+render tests; tagged releases build amd64/arm64 GHCR images with provenance and SBOMs. No stable release is promised yet.
 
-**Next release:**
-
-- Onboarding from an old resume (PDF, Word or text), a guided interview and a starter outline.
-- All Rover templates, with previews.
-- Cover letters with the same checks as resumes.
-- Memory of your preferences, decisions and outcomes, visible and deletable.
-- An application tracker with status, follow-ups and interview notes.
-- Faster, cheaper generation without weakening any check.
+**Next up:** backups from inside the app, careers beyond IT (more profession packs), and optional cheap classifier models for
+routing.
 
 ## Contributing
 
