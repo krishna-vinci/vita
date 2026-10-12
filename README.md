@@ -17,7 +17,7 @@ each job you paste in. A separate model checks every line against your evidence 
 the checks pass and you approve.
 
 It is for people who apply to jobs and want tailored resumes without inventing anything, and who are comfortable running a Docker
-container or a Node app on their own machine. Vita is a single-user application, not a hosted service. The engine is
+container or a Node app on their own machine. Admins can add accounts with separate workspaces; Vita runs on infrastructure you control. The engine is
 profession-neutral: it works for any career with the bundled `general` pack, and IT packs ship as data.
 
 Your workspace is plain files (Markdown, YAML, JSON) in a git repository you own. Model access runs through the
@@ -102,25 +102,22 @@ On a phone, in dark mode, with details shown:
 
 ## Quick start: Docker
 
-You need Docker with Compose, and a provider API key or a Pi subscription login. From a checkout:
+Follow the complete [self-hosting guide](docs/SELF_HOSTING.md) for Docker or native installs, subscriptions, API keys, local models, TLS and backups. Pi is bundled.
 
 ```sh
-cp .env.example .env
-mkdir -p vita-home
-# The non-root container runs as UID/GID 1000. On Linux, if needed:
-sudo chown 1000:1000 vita-home
-docker compose build
+mkdir vita && cd vita
+curl -fsSL https://raw.githubusercontent.com/krishna-vinci/vita/main/compose.yaml -o compose.yaml
+curl -fsSL https://raw.githubusercontent.com/krishna-vinci/vita/main/.env.example -o .env
+chmod 600 .env
 docker compose up -d
 docker compose logs vita
+docker compose exec -it vita pnpm vita login  # type /login, then /quit
+docker compose restart vita
+docker compose exec vita pnpm vita models --available
+docker compose exec vita pnpm vita doctor
 ```
 
-Open **http://127.0.0.1:4317** and create the first admin account. Docker binds a non-loopback address inside the container, so first setup requires the one-time code printed in the server log. No HTTP Basic password prompt or environment password hash is used.
-
-Accounts live in `vita-home/vita.db`; each user's workspace is initialized on first access in `vita-home/users/<username>/`. Admins add and manage users. Add your name/contact in your workspace's `profile.yaml`, outline and evidence, and configure distinct writer/checker models before generating.
-
-Use provider keys in `.env`, or uncomment the read-only `~/.pi/agent` mount in `compose.yaml` to import Pi OAuth/subscription
-logins. Docker includes checksum-verified Tectonic 0.17.0, poppler, git and a warmed TeX cache.
-[Installation and self-hosting](docs/INSTALL.md) covers credentials, permissions, backups and TLS.
+Open **http://127.0.0.1:4317**, enter the logged setup code, and create the first admin. Choose available models in Settings with a different checker from the writer, then use the welcome import/interview flow to build your sources and generate a master resume. Writable `vita-home` and `pi-agent` mounts preserve accounts, workspaces and refreshed provider logins.
 
 ## Quick start: local development
 
@@ -130,7 +127,9 @@ Install Node.js 22, pnpm 10.28.2, git, Tectonic 0.17.0 and poppler (`pdftotext`,
 corepack enable
 pnpm install --frozen-lockfile --prefer-offline
 pnpm vita setup
+pnpm vita login
 export VITA_DATA_DIR="$PWD/vita-home"
+pnpm vita doctor
 pnpm server
 # Another terminal:
 pnpm web
@@ -170,7 +169,7 @@ Configuration lives in the **workspace**, separately from the app checkout.
 | File or setting | Purpose |
 | --- | --- |
 | `config/models.yaml` | `default: provider/model-id`, plus `roles` overrides. Choose different resolved models for `writer` and `checker`; the checker cannot fall back to the writer model. |
-| Pi `~/.pi/agent/auth.json` or provider env keys | OAuth/subscription credentials or keys such as `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`. Docker accepts the optional read-only Pi mount described above. |
+| Pi `~/.pi/agent/auth.json` or provider env keys | OAuth/subscription credentials or keys such as `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`. Docker persists credentials in writable `./pi-agent:/pi-agent` with `PI_CODING_AGENT_DIR=/pi-agent`. |
 | GitHub (Settings → Integrations) | Public repository research needs no configuration or `gh` CLI. Add a fine-grained token for selected private repositories with **Contents: read** and **Metadata: read**. Tokens are encrypted per user in `vita.db`; `GITHUB_TOKEN` is an optional server fallback for users without a saved token. |
 | `config/mcp.json` | Optional advanced integration. Pi-format `mcpServers`; secrets through `${ENV}` or `!command`. Research permits explicitly read-only tools and allow-listed web URLs. Use least-privilege credentials. |
 | `instructions.md` | Workspace guidance; optional frontmatter selects `roles` and research `sources.urls` / `sources.mcp`. Instance guidance uses `VITA_INSTANCE_DIR/instructions/*.md`; job notes and chat add narrower guidance. Core invariants and write policies remain enforced. |
@@ -180,7 +179,7 @@ Configuration lives in the **workspace**, separately from the app checkout.
 | `skills/<name>/SKILL.md` | Workspace role guidance overrides the bundled skill with the same name. |
 
 Role overrides currently include `analyst`, `writer`, `checker`, `ats-reviewer`, `resume-editor`, `source-editor`, `researcher`,
-`interviewer` and `template-adopter`. Base generation uses the writer model with the `build-base` skill. Settings and the
+`interviewer`, `template-adopter` and `onboarder`. Base generation uses the writer model with the `build-base` skill. Settings and the
 effective-prompt API expose configuration and instruction warnings. See [architecture](docs/ARCHITECTURE.md) and
 [contributing](CONTRIBUTING.md) for extension contracts.
 
@@ -194,6 +193,9 @@ Run commands as `pnpm vita <command>` from the checkout; paths resolve from `cli
 | --- | --- |
 | `init <dir> [--name <name>]` | Initialize a workspace; refuses an existing outline. |
 | `import <dir> --projects <legacy.md>` | Import evidence and preserve free prose. Optional `--outline`, `--name`, `--headline`, repeatable `--contact 'Label=value[=url]'`. Writes source files; back up an existing workspace first. |
+| `login` | Run bundled Pi interactively; type `/login`, complete the provider flow, then `/quit`. |
+| `models [--available]` | List Pi model IDs; mark credentials or filter to available models. |
+| `doctor [dir]` | Check dependencies, cached rendering, credentials, and optional workspace role models; exits 1 on FAIL. |
 | `setup` | Download TeX packages by compiling trusted bundled templates. Needed before offline renders. |
 | `users` | List accounts and workspace paths in `VITA_DATA_DIR/vita.db`. |
 | `reset-password <username>` | Read a new password from stdin and revoke all sessions. Set the same absolute `VITA_DATA_DIR` as the server. |
@@ -238,7 +240,7 @@ Fixtures must be fictional, and never commit credentials, real resumes or privat
 
 ## Security
 
-Vita is single-user and self-hosted. Keep the port on loopback, and use TLS, a VPN or an SSH tunnel for remote access. Model
+Vita is self-hosted with separate account workspaces. Keep the port on loopback, and use TLS, a VPN or an SSH tunnel for remote access. Model
 providers receive the context a role needs, so local storage does not keep provider calls local. There is no telemetry. Report
 vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 

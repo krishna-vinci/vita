@@ -50,9 +50,11 @@ import {
 import {
   type ApplicationResource,
   type ApplicationSummary,
+  type AvailableModelsView,
   JobAnalysis,
   JobView,
   type PutSettingsRequest,
+  providerSetupHints,
   Resume,
   type ResumeOpsRequest,
   type ResumeResource,
@@ -263,6 +265,17 @@ export class WorkspaceRuntime {
         .sort()
         .map((id) => ({ id, hasCredentials: this.options.runtime.hasConfiguredAuth(id) })),
       warnings: modelWarnings(models),
+    };
+  }
+  async availableModels(): Promise<AvailableModelsView> {
+    const runtime = this.options.runtime;
+    await runtime.refresh({ allowNetwork: false, signal: AbortSignal.timeout(10_000) });
+    const available = await runtime.getAvailable(undefined, { signal: AbortSignal.timeout(10_000) });
+    return {
+      models: available
+        .map((model) => ({ id: `${model.provider}/${model.id}`, provider: model.provider, name: model.name }))
+        .sort((a, b) => a.id.localeCompare(b.id)),
+      setupHints: available.length ? [] : [...providerSetupHints],
     };
   }
   async putSettings(input: PutSettingsRequest) {

@@ -174,6 +174,18 @@ export type SettingsView = z.infer<typeof SettingsView>;
 export const SettingsMutation = SettingsView.extend({ sha: CommitSha });
 export type SettingsMutation = z.infer<typeof SettingsMutation>;
 
+// Shared with the CLI doctor so Settings can offer the same next steps.
+export const providerSetupHints = [
+  "Run `pnpm vita login` (Docker: `docker compose exec -it vita pnpm vita login`), then type /login.",
+  "Or set your provider's API key in the server environment (.env for Docker), then recreate/restart Vita.",
+  "For a local or compatible endpoint, add models.json in PI_CODING_AGENT_DIR; see docs/SELF_HOSTING.md.",
+];
+export const AvailableModelsView = z.object({
+  models: z.array(z.object({ id: model, provider: z.string(), name: z.string() })),
+  setupHints: z.array(z.string()),
+});
+export type AvailableModelsView = z.infer<typeof AvailableModelsView>;
+
 export const JobView = z.object({
   id: z.string(),
   kind: z.enum(["master", "base", "tailor", "answers", "prep", "letter", "template-adoption", "research"]),

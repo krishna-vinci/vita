@@ -15,3 +15,6 @@ fixtures
 **/*.test.ts
 **/*.test.tsx
 .agent-runs
+
+vita-home
+pi-agent

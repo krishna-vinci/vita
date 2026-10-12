@@ -198,6 +198,7 @@ export function createWorkspaceApp(runtime: WorkspaceRuntime, options: { webDist
   app.route("/api", syncRoutes(runtime));
   app.route("/api", instructionsRoutes(runtime));
   app.get("/api/settings", async (c) => c.json(await runtime.settings()));
+  app.get("/api/settings/models/available", async (c) => c.json(await runtime.availableModels()));
   app.put("/api/settings", async (c) => c.json(await runtime.putSettings(await body(c, PutSettingsRequest))));
   app.get("/api/jobs", (c) => c.json(runtime.jobs.list()));
   app.get("/api/jobs/:id", (c) => {

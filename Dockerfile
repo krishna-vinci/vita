@@ -19,7 +19,7 @@ ARG TARGETARCH
 ARG VERSION=dev
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
     NODE_ENV=production HOME=/home/vita XDG_CACHE_HOME=/home/vita/.cache \
-    VITA_HOST=0.0.0.0 VITA_PORT=4317 VITA_DATA_DIR=/data
+    VITA_HOST=0.0.0.0 VITA_PORT=4317 VITA_DATA_DIR=/data PI_CODING_AGENT_DIR=/pi-agent
 RUN corepack enable pnpm \
     && apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl git poppler-utils \
@@ -70,27 +70,6 @@ RUN groupmod --new-name vita node \
     && usermod --login vita --home /home/vita node \
     && mkdir -p /data /home/vita/.cache \
     && chown -R vita:vita /data /home/vita
-RUN <<'SH'
-cat > /usr/local/bin/vita-entrypoint <<'SCRIPT'
-#!/bin/sh
-set -eu
-# Pi locks and refreshes auth.json and writes its model cache. Keep the host mount
-# read-only, and import only credentials/model configuration into a private copy.
-if [ -d /pi-agent ]; then
-  mkdir -p /home/vita/.pi/agent
-  chmod 0700 /home/vita/.pi/agent
-  for file in auth.json models.json; do
-    if [ -f "/pi-agent/$file" ]; then
-      cp "/pi-agent/$file" "/home/vita/.pi/agent/$file"
-      chmod 0600 "/home/vita/.pi/agent/$file"
-    fi
-  done
-fi
-mkdir -p "$VITA_DATA_DIR"
-exec "$@"
-SCRIPT
-chmod 0755 /usr/local/bin/vita-entrypoint
-SH
 
 USER vita
 # Warm as the runtime user so --only-cached compiles see the same writable cache.
@@ -99,6 +78,5 @@ EXPOSE 4317
 # Public health does not require account setup or a session.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD node -e 'fetch("http://127.0.0.1:" + (process.env.VITA_PORT || "4317") + "/api/health", {signal: AbortSignal.timeout(4000)}).then(async r => {const b = await r.json(); if (!r.ok || b.ok !== true) process.exit(1)}).catch(() => process.exit(1))'
-WORKDIR /app/server
-ENTRYPOINT ["vita-entrypoint"]
-CMD ["node", "--import", "tsx", "src/main.ts"]
+WORKDIR /app
+CMD ["pnpm", "--filter", "@vita/server", "exec", "node", "--import", "tsx", "src/main.ts"]

@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import * as core from "@vita/core";
 import {
   ApplicationResource,
+  AvailableModelsView,
   ExportResult,
   ImportLegacyResult,
   JobMutation,
@@ -256,6 +257,21 @@ describe("workspace API", () => {
     expect(unchanged.usage).toEqual([]);
     expect(unchanged.review?.checks).toEqual(edited.review?.checks);
     expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it("lists only available models and provides setup hints when no credentials are connected", async () => {
+    const server = await app([]);
+    const response = await server.request("/api/settings/models/available");
+    expect(response.status).toBe(200);
+    const available = AvailableModelsView.parse(await response.json());
+    expect(available.models.map((model) => model.id)).toEqual(["faux/checker", "faux/default", "faux/writer"]);
+    expect(available.models.every((model) => model.provider === "faux" && model.name.length > 0)).toBe(true);
+    expect(available.setupHints).toEqual([]);
+    expect(JSON.stringify(available)).not.toContain("apiKey");
+    vi.spyOn(runtime.options.runtime, "getAvailable").mockResolvedValue([]);
+    const empty = AvailableModelsView.parse(await (await server.request("/api/settings/models/available")).json());
+    expect(empty.models).toEqual([]);
+    expect(empty.setupHints[0]).toContain("pnpm vita login");
   });
 
   it("persists settings, warns about checker model reuse, and never returns credentials", async () => {

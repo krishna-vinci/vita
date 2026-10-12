@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   AnswersRequest,
+  AvailableModelsView,
   ChatRequest,
   CreateApplicationRequest,
   ImportLegacyRequest,
@@ -12,6 +13,19 @@ import {
 } from "./api";
 
 describe("API contracts", () => {
+  it("validates available model IDs and setup hints without credential values", () => {
+    expect(
+      AvailableModelsView.parse({ models: [{ id: "local/model", provider: "local", name: "Model" }], setupHints: [] })
+        .models[0]?.id,
+    ).toBe("local/model");
+    expect(
+      AvailableModelsView.safeParse({ models: [{ id: "invalid", provider: "local", name: "Model" }], setupHints: [] })
+        .success,
+    ).toBe(false);
+    expect(AvailableModelsView.parse({ models: [], setupHints: ["Run `pnpm vita login`."] }).setupHints).toHaveLength(
+      1,
+    );
+  });
   it("validates chat bodies, editor model settings, and exact source proposals", () => {
     expect(ChatRequest.safeParse({ message: " " }).success).toBe(false);
     expect(ChatRequest.safeParse({ message: "Edit", history: [] }).success).toBe(false);

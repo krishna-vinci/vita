@@ -3,10 +3,13 @@ import { fileURLToPath } from "node:url";
 import { Command, Option } from "commander";
 import { resetPasswordCommand, usersCommand } from "./commands/accounts";
 import { checkCommand } from "./commands/check";
+import { doctorCommand } from "./commands/doctor";
 import { hashPasswordCommand } from "./commands/hash-password";
 import { importCommand } from "./commands/import";
 import { initCommand } from "./commands/init";
+import { loginCommand } from "./commands/login";
 import { masterCommand } from "./commands/master";
+import { modelsCommand } from "./commands/models";
 import { renderCommand } from "./commands/render";
 import { setupCommand } from "./commands/setup";
 import { tailorCommand } from "./commands/tailor";
@@ -43,6 +46,21 @@ export function createProgram(): Command {
       if (!(await checkCommand(dir, opts)).ok) process.exitCode = 1;
     });
   program.command("setup").description("Warm the package cache for bundled templates.").action(setupCommand);
+  program
+    .command("login")
+    .description("Connect a model provider through the bundled Pi CLI.")
+    .action(() => loginCommand());
+  program
+    .command("models")
+    .description("List Pi models; mark models with credentials.")
+    .option("--available", "Only models with credentials")
+    .action((options) => modelsCommand(options));
+  program
+    .command("doctor [dir]")
+    .description("Check setup and optional workspace model configuration.")
+    .action(async (dir) => {
+      await doctorCommand(dir);
+    });
   program
     .command("reset-password <username>")
     .description("Read a new password from stdin and revoke all account sessions (VITA_DATA_DIR).")
