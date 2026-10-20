@@ -3,6 +3,7 @@
 % Modified: Vita cover letter contract, profile header and checked paragraphs.
 \documentclass[11pt]{article}
 \usepackage[margin=((( layout.margin_in )))in,a4paper]{geometry}
+\usepackage[bookmarks=false,hidelinks]{hyperref}
 \usepackage{microtype}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{((( layout.section_gap_pt )))pt}
@@ -23,7 +24,7 @@
   \begin{minipage}{0.4\textwidth}
     \raggedleft
 ((* for contact in header.contact *))
-    ((( contact.label ))): ((( contact.value )))((* if not loop.last *)) \\((* endif *))
+    ((* if contact.href *))\href{((( contact.href | url )))}{((( contact.display )))}((* else *))((( contact.display )))((* endif *))((* if not loop.last *)) \\((* endif *))
 ((* endfor *))
   \end{minipage}
 ((* endif *))

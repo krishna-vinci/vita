@@ -12,6 +12,8 @@ page budget to choose relevant items and order them for that direction.
 - Preserve locked bullets exactly, including their visibility and overrides.
 - Prefer relevant, supported outcomes over generic activity descriptions.
 - Keep contact information, qualifications and chronology accurate.
+- Do not put URLs in an item's title, subtitle or location. Project links are added
+  automatically from the evidence links when the resume is rendered.
 - Reword only when the linked claims support the new wording.
 - Never infer a skill, employer, metric or outcome from the direction's name.
 - Keep missing facts as questions; pending answers are not approved evidence.

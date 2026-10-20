@@ -89,3 +89,30 @@ describe("API contracts", () => {
     ).toBe(false);
   });
 });
+
+it("exports per-resume instruction, archive and link contracts with strict limits", async () => {
+  const {
+    CreateBaseRequest,
+    CreateApplicationRequest,
+    PutResumeInstructionsRequest,
+    RegenerateResumeRequest,
+    ArchivedFilter,
+    Item,
+  } = await import("./index");
+  expect(CreateBaseRequest.parse({ name: "Direction", instructions: "Brief" }).instructions).toBe("Brief");
+  expect(CreateApplicationRequest.parse({ jobText: "Role", instructions: "Brief" }).instructions).toBe("Brief");
+  expect(PutResumeInstructionsRequest.parse({ instructions: "" }).instructions).toBe("");
+  expect(RegenerateResumeRequest.parse({})).toEqual({});
+  expect(PutResumeInstructionsRequest.safeParse({ instructions: "x".repeat(20001) }).success).toBe(false);
+  expect(RegenerateResumeRequest.safeParse({ instructions: "x".repeat(20001) }).success).toBe(false);
+  expect(ArchivedFilter.safeParse("include").success).toBe(true);
+  expect(ArchivedFilter.safeParse("only").success).toBe(true);
+  expect(Item.parse({ id: "entry", title: "Entry", links: [] }).links).toEqual([]);
+  expect(
+    Item.safeParse({
+      id: "entry",
+      title: "Entry",
+      links: Array(5).fill({ label: "Site", url: "https://example.test" }),
+    }).success,
+  ).toBe(false);
+});

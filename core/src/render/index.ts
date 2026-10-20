@@ -1,5 +1,6 @@
 export { CompileError, compileTex, tectonicAvailable } from "./compile";
 export { latexEscape } from "./escape";
+export { contactView, linkedResume, loadRenderSources, type RenderSources } from "./links";
 export { renderMarkdown } from "./markdown";
 export { createTexEnv } from "./nunjucks";
 export { type PrescanIssue, prescanTex } from "./prescan";

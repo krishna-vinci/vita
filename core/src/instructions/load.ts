@@ -53,7 +53,14 @@ export function guardInstructions(text: string, file: string, firstLine = 1) {
 
 export async function loadInstructions(
   ws: Pick<WorkspaceHandle, "root">,
-  opts: { role: string; applicationId?: string; chat?: string; jobNotes?: string },
+  opts: {
+    role: string;
+    applicationId?: string;
+    chat?: string;
+    jobNotes?: string;
+    baseId?: string;
+    baseGuidance?: string;
+  },
 ): Promise<{ text: string; sources: InstructionSources; warnings: string[] }> {
   const blocks: string[] = [];
   const sources: InstructionSources = { urls: [], mcp: [] };
@@ -105,6 +112,14 @@ export async function loadInstructions(
   }
   const user = await optionalInstructionText(ws.root, "instructions.md");
   if (user !== undefined) append(user, "instructions.md", "User guidance");
+  if (opts.baseId !== undefined && opts.baseGuidance === undefined) {
+    Slug.parse(opts.baseId);
+    const rel = `resumes/${opts.baseId}/meta.yaml`;
+    const text = await optionalInstructionText(ws.root, rel);
+    const meta = z.object({ instructions: z.string().optional() }).parse(text ? (parseYaml(text) ?? {}) : {});
+    if (meta.instructions) append(meta.instructions, rel, "Base guidance", false);
+  }
+  if (opts.baseGuidance !== undefined) append(opts.baseGuidance, "base instructions", "Base guidance", false);
   if (opts.applicationId !== undefined) {
     Slug.parse(opts.applicationId);
     const rel = `applications/${opts.applicationId}/meta.yaml`;

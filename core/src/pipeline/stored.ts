@@ -1,6 +1,7 @@
+import { parse as parseYaml } from "yaml";
 import { enforcePageLimit } from "../instructions/rules.js";
 import { fileHash } from "../workspace/index.js";
-import { type Context, effectivePack, loadContext } from "./context.js";
+import { type Context, effectivePack, loadContext, optionalText } from "./context.js";
 import { type GenerationInput, generate } from "./generate.js";
 import { withGenerationLock } from "./lock.js";
 import { persist } from "./persist.js";
@@ -11,7 +12,9 @@ export async function generateStored(
   ws: WorkspaceHandle,
   deps: PipelineDeps,
   prefix: string,
-  prepare: (ctx: Context) => Promise<{ input: GenerationInput; extra?: Record<string, string> }>,
+  prepare: (
+    ctx: Context,
+  ) => Promise<{ input: GenerationInput; extra?: Record<string, string>; metadata?: Record<string, unknown> }>,
 ) {
   return withGenerationLock(ws.root, async () => {
     deps.signal?.throwIfAborted();
@@ -19,10 +22,12 @@ export async function generateStored(
     const expected = await fileHash(ws.root, `${prefix}/resume.json`);
     const ctx = await loadContext(ws);
     try {
-      const { input, extra } = await prepare(ctx);
+      const { input, extra, metadata } = await prepare(ctx);
+      const previousMeta = await optionalText(ws.root, `${prefix}/meta.yaml`);
+      const saved = previousMeta ? (parseYaml(previousMeta) ?? {}) : {};
       const usage: RoleUsage[] = [];
       const result = await generate(ctx, input, deps, usage, profile);
-      await persist(ws, prefix, result, deps, usage, extra ?? {}, expected);
+      await persist(ws, prefix, result, deps, usage, extra ?? {}, expected, { ...saved, ...metadata });
       return { resume: result.resume, review: result.review };
     } finally {
       ctx.search.close();

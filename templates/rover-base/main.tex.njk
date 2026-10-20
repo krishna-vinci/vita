@@ -11,6 +11,7 @@
 \titleformat{\section}{\large\bfseries\uppercase}{}{}{}[\titlerule]
 \titleformat*{\subsubsection}{\large\itshape}
 \usepackage{enumitem}
+\usepackage[bookmarks=false,hidelinks]{hyperref}
 \usepackage{microtype}
 \setlength{\parindent}{0pt}
 \setlist[itemize]{noitemsep,leftmargin=1.1em,labelsep=0.45em}
@@ -32,7 +33,7 @@
   \begin{minipage}{0.4\textwidth}
     \raggedleft
 ((* for contact in header.contact *))
-    ((( contact.label ))): ((( contact.value )))((* if not loop.last *)) \\((* endif *))
+    ((* if contact.href *))\href{((( contact.href | url )))}{((( contact.display )))}((* else *))((( contact.display )))((* endif *))((* if not loop.last *)) \\((* endif *))
 ((* endfor *))
   \end{minipage}
 ((* endif *))
@@ -42,7 +43,7 @@
 \section{((( section.title )))}
 ((* if section.kind == "entries" *))
 ((* for item in section.items *))
-\subsection{((( item.title )))((* if item.period *)) \hfill ((( item.period )))((* endif *))}
+\subsection{((( item.title )))((* if item.links.length *)) {\small ((* for link in item.links *))\href{((( link.url | url )))}{((( link.label )))}((* if not loop.last *))\enspace|\enspace{}((* endif *))((* endfor *))}((* endif *))((* if item.period *)) \hfill ((( item.period )))((* endif *))}
 ((* if item.subtitle or item.location *))
 \subsubsection{((* if item.subtitle *))((( item.subtitle )))((* endif *))((* if item.location *)) \hfill ((( item.location )))((* endif *))}
 ((* endif *))

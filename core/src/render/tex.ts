@@ -1,8 +1,10 @@
 import type { Resume } from "@vita/shared";
+import { contactView, linkedResume, type RenderSources } from "./links";
 import { createTexEnv } from "./nunjucks";
 import { type LoadedTemplate, resolveLayout } from "./templates";
 
-export function renderTex(resume: Resume, tpl: LoadedTemplate): string {
+export function renderTex(resume: Resume, tpl: LoadedTemplate, sources: RenderSources = {}): string {
+  resume = linkedResume(resume, sources);
   const sections = resume.sections
     .filter((section) => !section.hidden)
     .map((section) => ({
@@ -23,7 +25,7 @@ export function renderTex(resume: Resume, tpl: LoadedTemplate): string {
       ],
     }));
   return createTexEnv(tpl.dir).render("main.tex.njk", {
-    header: resume.header,
+    header: { ...resume.header, contact: resume.header.contact.map(contactView) },
     sections,
     layout: resolveLayout(tpl.meta, resume.layout),
   });

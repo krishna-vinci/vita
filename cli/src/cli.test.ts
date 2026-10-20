@@ -252,3 +252,25 @@ it("prints plain-language gap questions with their requirement ids", () => {
     "Gap: req-long: Do you have experience with leading a team across multiple locations?",
   );
 });
+
+it("renders source-derived entry links through the CLI without modifying the saved resume", async () => {
+  const root = await copyProfile("developer");
+  const saved = await core.readText(root, "resumes/master/resume.json");
+  const resume = Resume.parse(JSON.parse(saved));
+  const entry = resume.sections.find((section) => section.kind === "entries")?.items[0];
+  if (!entry) throw new Error("Missing fixture entry");
+  entry.source = "linked-entry";
+  await core.writeTextAtomic(root, "resumes/master/resume.json", JSON.stringify(resume));
+  await core.writeTextAtomic(
+    root,
+    "projects.md",
+    "## Linked Entry\n```yaml\nlinks: [https://example.test/entry]\n```\n",
+  );
+  vi.spyOn(core, "compileTex").mockResolvedValue({ pdf: Buffer.from("%PDF-stub"), log: "" });
+  vi.spyOn(core, "pdfText").mockResolvedValue({ text: core.renderMarkdown(resume), pages: 1 });
+  const out = join(dir, "output");
+  expect((await renderCommand(root, { out })).ok).toBe(true);
+  expect(await readFile(join(out, "resume.tex"), "utf8")).toContain("\\href{https://example.test/entry}{Website}");
+  expect(await readFile(join(out, "resume.md"), "utf8")).toContain("[Website](<https://example.test/entry>)");
+  expect(JSON.parse(await core.readText(root, "resumes/master/resume.json"))).toEqual(resume);
+});

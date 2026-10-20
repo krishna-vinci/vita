@@ -91,3 +91,8 @@ gap for interview prep.
 Call `submit_resume` once with the full resume object. If it is unavailable,
 return the resume JSON for host validation and state that it was not saved.
 Write no files.
+
+## Links
+
+Do not put URLs in an item's title, subtitle or location. Project links are added
+automatically from the evidence links when the resume is rendered.

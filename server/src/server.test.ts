@@ -1,4 +1,4 @@
-import { cp, mkdtemp, rm, symlink } from "node:fs/promises";
+import { cp, mkdtemp, readdir, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -444,4 +444,216 @@ describe("generation API", () => {
     expect(text).toContain('"scope":"outline"');
     await reader.cancel();
   });
+});
+
+async function seedBaseAndApplication() {
+  const root = runtime.ws.root;
+  await core.writeTextAtomic(
+    root,
+    "resumes/direction/base.yaml",
+    "name: Direction\npacks: [general]\ntemplate: rover-base\nrules: {max_pages: 1}\n",
+  );
+  await core.writeTextAtomic(
+    root,
+    "resumes/direction/resume.json",
+    JSON.stringify({ ...resume, id: "direction", kind: "base", parent: "master" }),
+  );
+  await core.writeTextAtomic(root, "resumes/direction/meta.yaml", "instructions: Keep it brief.\n");
+  await core.writeTextAtomic(
+    root,
+    "applications/example/resume.json",
+    JSON.stringify({ ...resume, id: "example", kind: "job", parent: "direction" }),
+  );
+  await core.writeTextAtomic(
+    root,
+    "applications/example/meta.yaml",
+    "baseId: direction\nnotes: Original guidance.\nanswers: {req: no}\n",
+  );
+  await core.writeTextAtomic(root, "applications/example/analysis.json", JSON.stringify(analysis));
+  await core.writeTextAtomic(root, "applications/example/job.md", "Catalogue service");
+  await core.writeTextAtomic(root, "applications/example/letter.json", "{}");
+  await core.writeTextAtomic(root, "applications/example/prep.md", "Preparation");
+  await core.writeTextAtomic(root, "applications/example/tracker.yaml", JSON.stringify({ status: "draft" }));
+  await core.commitPaths(root, ["resumes/direction", "applications/example"], "Fixture resources", "system");
+}
+it("archives and unarchives bases and applications, filters lists and tracker and undoes metadata changes", async () => {
+  const server = await app();
+  await seedBaseAndApplication();
+  for (const [plural, scope, id] of [
+    ["resumes", "resume", "direction"],
+    ["applications", "application", "example"],
+  ] as const) {
+    const archived = await server.request(`/api/${plural}/${id}/archive`, post());
+    expect(archived.status, await archived.clone().text()).toBe(200);
+    expect((await archived.json()).archived).toMatch(/^\d{4}-\d\d-\d\dT/);
+    expect(
+      (await (await server.request(`/api/${plural}`)).json()).some((entry: { id: string }) => entry.id === id),
+    ).toBe(false);
+    expect(
+      (await (await server.request(`/api/${plural}?archived=only`)).json()).map((entry: { id: string }) => entry.id),
+    ).toContain(id);
+    expect(
+      (await (await server.request(`/api/${plural}?archived=include`)).json()).map((entry: { id: string }) => entry.id),
+    ).toContain(id);
+    if (scope === "application") {
+      expect((await (await server.request("/api/tracker")).json()).applications).toEqual([]);
+      expect((await (await server.request("/api/tracker?archived=only")).json()).applications).toHaveLength(1);
+      expect((await runtime.application(id)).resume.parent).toBe("direction");
+    }
+    expect((await server.request("/api/undo", post({ scope, id }))).status).toBe(200);
+    expect((await runtime.resource(scope, id)).archived).toBeUndefined();
+    await server.request(`/api/${plural}/${id}/archive`, post());
+    expect((await server.request(`/api/${plural}/${id}/unarchive`, post())).status).toBe(200);
+    expect((await runtime.resource(scope, id)).archived).toBeUndefined();
+  }
+  expect((await server.request("/api/resumes?archived=bad")).status).toBe(400);
+  expect((await server.request("/api/tracker?archived=bad")).status).toBe(400);
+});
+it("protects master, requires archive and references to be removed, and commits whole-folder permanent deletion", async () => {
+  const server = await app();
+  await seedBaseAndApplication();
+  for (const action of ["archive", "unarchive"]) {
+    const response = await server.request(`/api/resumes/master/${action}`, post());
+    expect(response.status).toBe(409);
+    expect(await response.json()).toHaveProperty("error.code", "master-protected");
+  }
+  expect(await (await server.request("/api/resumes/master", { method: "DELETE" })).json()).toHaveProperty(
+    "error.code",
+    "master-protected",
+  );
+  for (const url of ["/api/resumes/direction", "/api/applications/example"]) {
+    const response = await server.request(url, { method: "DELETE" });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toHaveProperty("error.code", "archive-first");
+    await server.request(`${url}/archive`, post());
+  }
+  // baseId is authoritative even if an older resume has a different parent.
+  await core.writeTextAtomic(
+    runtime.ws.root,
+    "applications/example/resume.json",
+    JSON.stringify({ ...resume, id: "example", kind: "job", parent: "master" }),
+  );
+  const inUse = await server.request("/api/resumes/direction", { method: "DELETE" });
+  expect(inUse.status).toBe(409);
+  expect(await inUse.json()).toMatchObject({
+    error: { code: "base-in-use", details: { applications: [{ id: "example", title: analysis.title }] } },
+  });
+  for (const [plural, id] of [
+    ["applications", "example"],
+    ["resumes", "direction"],
+  ]) {
+    const response = await server.request(`/api/${plural}/${id}`, { method: "DELETE" });
+    expect(response.status, await response.clone().text()).toBe(200);
+    expect(await response.json()).toMatchObject({ deleted: true, sha: expect.stringMatching(/^[a-f0-9]{40}$/) });
+    await expect(readdir(join(runtime.ws.root, `${plural}/${id}`))).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(core.readText(runtime.ws.root, `${plural}/${id}/resume.json`)).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+    expect((await core.log(runtime.ws.root, 1))[0]).toMatchObject({
+      author: "user",
+      message: `Permanently delete ${plural === "resumes" ? "resume" : "application"}: ${id}`,
+    });
+  }
+  expect((await (await server.request("/api/tracker?archived=include")).json()).applications).toEqual([]);
+  expect((await server.request("/api/undo", post({ scope: "application", id: "example" }))).status).toBe(404);
+  expect((await server.request("/api/applications/bad_id", { method: "DELETE" })).status).toBe(400);
+});
+it("rejects lifecycle and instruction changes immediately while that resource has an active job", async () => {
+  const server = await app();
+  await seedBaseAndApplication();
+  for (const [plural, scope, kind, id] of [
+    ["resumes", "resume", "base", "direction"],
+    ["applications", "application", "answers", "example"],
+  ] as const) {
+    const job = runtime.jobs.enqueue(kind, id, async (ctx) => {
+      await new Promise<void>((resolve) => ctx.signal.addEventListener("abort", () => resolve(), { once: true }));
+      return { scope, id, sha: null };
+    });
+    for (const [suffix, init] of [
+      ["archive", post()],
+      ["unarchive", post()],
+      ["instructions", put({ instructions: "New" })],
+      ["regenerate", post()],
+      ["", { method: "DELETE" }],
+    ] as const) {
+      const response = await server.request(`/api/${plural}/${id}${suffix ? `/${suffix}` : ""}`, init);
+      expect(response.status).toBe(409);
+      expect(await response.json()).toHaveProperty("error.code", "resource-busy");
+    }
+    runtime.jobs.cancel(job.id);
+    await runtime.jobs.idle();
+  }
+});
+it("stores create instructions, updates notes through the alias and enqueues existing application regeneration", async () => {
+  const server = await app([{ tool: "submit_analysis", arguments: analysis }, ...draft(), ...draft()]);
+  stubRender();
+  const queued = await server.request(
+    "/api/applications",
+    post({ jobText: "Catalogue service", instructions: "Keep it concise.", notes: "Legacy notes." }),
+  );
+  expect(queued.status).toBe(202);
+  const job = (await queued.json()).job;
+  await runtime.jobs.idle();
+  const id = runtime.jobs.get(job.id)?.result?.id;
+  if (!id) throw new Error("Missing created application id");
+  expect(await core.readText(runtime.ws.root, `applications/${id}/meta.yaml`)).toContain("notes: Keep it concise.");
+  expect(await runtime.application(id)).toMatchObject({ notes: "Keep it concise.", instructions: "Keep it concise." });
+  const updated = await server.request(
+    `/api/applications/${id}/instructions`,
+    put({ instructions: "Use shorter sentences." }),
+  );
+  expect(updated.status).toBe(200);
+  expect((await runtime.application(id)).instructions).toBe("Use shorter sentences.");
+  const rerun = await server.request(
+    `/api/applications/${id}/regenerate`,
+    post({ instructions: "Put recent work first." }),
+  );
+  expect(rerun.status).toBe(202);
+  const rerunJob = (await rerun.json()).job;
+  expect(rerunJob).toMatchObject({ kind: "answers", resourceId: id });
+  await runtime.jobs.idle();
+  expect(runtime.jobs.get(rerunJob.id)).toMatchObject({ status: "done", result: { id } });
+  expect((await runtime.application(id)).instructions).toBe("Put recent work first.");
+  await server.request(`/api/applications/${id}/instructions`, put({ instructions: "" }));
+  expect((await runtime.application(id)).notes).toBe("");
+  expect(
+    (await server.request(`/api/applications/${id}/instructions`, put({ instructions: "x".repeat(20001) }))).status,
+  ).toBe(400);
+});
+it("creates base instructions, updates them and regenerates through the base job", async () => {
+  const server = await app([...draft(false), ...draft(false)]);
+  stubRender();
+  const created = await server.request(
+    "/api/resumes",
+    post({ name: "Direction", instructions: "Emphasize coordination." }),
+  );
+  expect(created.status).toBe(202);
+  const job = (await created.json()).job;
+  await runtime.jobs.idle();
+  expect(runtime.jobs.get(job.id)).toMatchObject({ status: "done" });
+  expect((await runtime.resource("resume", "direction")).instructions).toBe("Emphasize coordination.");
+  expect(
+    (await server.request("/api/resumes/direction/instructions", put({ instructions: "Keep to one page." }))).status,
+  ).toBe(200);
+  const response = await server.request("/api/resumes/direction/regenerate", post());
+  expect(response.status).toBe(202);
+  const rerun = (await response.json()).job;
+  expect(rerun).toMatchObject({ kind: "base", resourceId: "direction" });
+  await runtime.jobs.idle();
+  expect(runtime.jobs.get(rerun.id)).toMatchObject({ status: "done", result: { id: "direction" } });
+  expect((await runtime.resource("resume", "direction")).instructions).toBe("Keep to one page.");
+});
+
+it("refuses permanent deletion through resource and nested symlinks", async () => {
+  const server = await app();
+  await seedBaseAndApplication();
+  await server.request("/api/applications/example/archive", post());
+  await symlink(join(runtime.ws.root, "profile.yaml"), join(runtime.ws.root, "applications/example/profile-link"));
+  const nested = await server.request("/api/applications/example", { method: "DELETE" });
+  expect(nested.status).toBe(403);
+  expect(await core.readText(runtime.ws.root, "profile.yaml")).toBeTruthy();
+  await rm(join(runtime.ws.root, "applications/example/profile-link"));
+  await symlink(join(runtime.ws.root, "applications/example"), join(runtime.ws.root, "applications/alias"));
+  expect((await server.request("/api/applications/alias", { method: "DELETE" })).status).toBe(403);
+  expect((await runtime.application("example")).archived).toBeTruthy();
 });

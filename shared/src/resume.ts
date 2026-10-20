@@ -23,6 +23,9 @@ export const Bullet = z.object({
 });
 export type Bullet = z.infer<typeof Bullet>;
 
+export const ItemLink = z.object({ label: z.string(), url: z.string() });
+export type ItemLink = z.infer<typeof ItemLink>;
+
 export const Item = z.object({
   id: z.string().min(1),
   title: z.string(),
@@ -32,6 +35,7 @@ export const Item = z.object({
   bullets: z.array(Bullet).default([]),
   hidden: z.boolean().optional(),
   source: z.string().optional(),
+  links: z.array(ItemLink).max(4).optional(),
 });
 export type Item = z.infer<typeof Item>;
 

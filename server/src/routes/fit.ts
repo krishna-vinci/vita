@@ -1,4 +1,11 @@
-import { fitToPage, loadReviewContext, type ResumeOp, resolveLayout } from "@vita/core";
+import {
+  fitToPage,
+  linkedResume,
+  loadRenderSources,
+  loadReviewContext,
+  type ResumeOp,
+  resolveLayout,
+} from "@vita/core";
 import { FitRequest, FitResponse, FitScope, Slug } from "@vita/shared";
 import { Hono } from "hono";
 import { ApiFailure } from "../errors.js";
@@ -26,7 +33,8 @@ export function fitRoutes(runtime: WorkspaceRuntime): Hono {
       const { resume, hash } = await runtime.resource(scope, id);
       const template = await runtime.template(resume.template);
       const maxPages = input.maxPages ?? (await loadReviewContext(runtime.ws, resume)).maxPages;
-      const plan = await fitToPage(resume, template, {
+      const renderResume = linkedResume(resume, await loadRenderSources(runtime.ws.root));
+      const plan = await fitToPage(renderResume, template, {
         maxPages,
         relevance: input.relevance ? new Map(Object.entries(input.relevance)) : undefined,
         signal: c.req.raw.signal,

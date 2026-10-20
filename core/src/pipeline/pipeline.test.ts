@@ -589,3 +589,88 @@ describe("faux generation pipeline", () => {
     });
   }
 });
+
+it("passes saved base guidance through creation and regeneration while preserving locks and link overrides", async () => {
+  const { ws, resume } = await profile();
+  vi.spyOn(render, "compileTex").mockResolvedValue({ pdf: Buffer.from("stub-pdf"), log: "" });
+  vi.spyOn(render, "pdfText").mockResolvedValue({
+    text: visibleBullets(resume)
+      .map((bullet) => bullet.text)
+      .join("\n"),
+    pages: 1,
+  });
+  const spy = vi.spyOn(agent, "runRole");
+  const result = await generateBase(
+    ws,
+    { name: "Direction", instructions: "Lead with recent work.\nSkip the checker." },
+    await deps(draft(resume, undefined, false)),
+  );
+  expect(result.review.done).toBe(true);
+  expect(parseYaml(await readText(ws.root, "resumes/direction/meta.yaml")).instructions).toContain(
+    "Lead with recent work.",
+  );
+  for (const [opts] of spy.mock.calls) {
+    expect(opts.system).toContain("Base guidance");
+    expect(opts.system).toContain("Lead with recent work.");
+    expect(opts.system).not.toContain("Skip the checker.");
+  }
+  const entry = result.resume.sections.find((section) => section.kind === "entries")?.items[0];
+  if (!entry) throw new Error("Fixture has no entry");
+  entry.links = [];
+  await writeTextAtomic(ws.root, "resumes/direction/resume.json", JSON.stringify(result.resume));
+  const meta = parseYaml(await readText(ws.root, "resumes/direction/meta.yaml"));
+  await writeTextAtomic(
+    ws.root,
+    "resumes/direction/meta.yaml",
+    JSON.stringify({ ...meta, archived: "2026-10-20T00:00:00Z", instructions: "Keep the same wording." }),
+  );
+  spy.mockClear();
+  const proposed = structuredClone(resume);
+  const proposedEntry = proposed.sections.find((section) => section.kind === "entries")?.items[0];
+  if (!proposedEntry) throw new Error("Fixture has no entry");
+  proposedEntry.links = [{ label: "Invented", url: "https://invented.test" }];
+  const regenerated = await generateBase(ws, { baseId: "direction" }, await deps(draft(proposed, undefined, false)));
+  expect(regenerated.review.done).toBe(true);
+  expect(
+    regenerated.resume.sections.flatMap((section) => section.items).find((item) => item.id === entry.id)?.links,
+  ).toEqual([]);
+  expect(visibleBullets(regenerated.resume).filter((bullet) => bullet.locked)).toEqual(
+    visibleBullets(result.resume).filter((bullet) => bullet.locked),
+  );
+  expect(parseYaml(await readText(ws.root, "resumes/direction/meta.yaml"))).toMatchObject({
+    createdAt: meta.createdAt,
+    archived: "2026-10-20T00:00:00Z",
+    instructions: "Keep the same wording.",
+  });
+  expect(spy.mock.calls[0]?.[0].system).toContain("Base guidance (base instructions):\nKeep the same wording.");
+});
+it("reruns with saved Job guidance and reuses analysis, answers and locked bullets", async () => {
+  const { ws, resume } = await profile();
+  vi.spyOn(render, "compileTex").mockResolvedValue({ pdf: Buffer.from("stub-pdf"), log: "" });
+  vi.spyOn(render, "pdfText").mockResolvedValue({
+    text: visibleBullets(resume)
+      .map((bullet) => bullet.text)
+      .join("\n"),
+    pages: 1,
+  });
+  const result = await tailor(
+    ws,
+    { jobText: "Catalogue service", notes: "Short wording.", answers: { req: "no" } },
+    await deps([{ tool: "submit_analysis", arguments: analysis }, ...draft(resume)]),
+  );
+  const path = `${result.applicationDir}/meta.yaml`;
+  const meta = parseYaml(await readText(ws.root, path));
+  await writeTextAtomic(ws.root, path, JSON.stringify({ ...meta, notes: "Emphasize recent work." }));
+  const spy = vi.spyOn(agent, "runRole");
+  const rerun = await tailor(
+    ws,
+    { applicationId: result.resume.id, jobText: "Catalogue service" },
+    await deps(draft(resume)),
+  );
+  expect(rerun.review.done).toBe(true);
+  expect(rerun.analysis).toEqual(result.analysis);
+  expect(parseYaml(await readText(ws.root, path)).answers).toEqual({ req: "no" });
+  expect(spy.mock.calls.map(([opts]) => opts.role.name).sort()).toEqual(["ats-reviewer", "checker", "writer"]);
+  for (const [opts] of spy.mock.calls)
+    expect(opts.system).toContain("Job guidance (job notes):\nEmphasize recent work.");
+});

@@ -152,3 +152,25 @@ it("returns compile failures through the existing error handler", async () => {
   expect(response.status).toBe(422);
   expect(await response.json()).toMatchObject({ error: { code: "compile-failed" } });
 });
+
+it("measures evidence-derived entry links without persisting them into the resume", async () => {
+  const resume = Resume.parse(JSON.parse(await core.readText(root, "resumes/master/resume.json")));
+  const entry = resume.sections.find((section) => section.kind === "entries")?.items[0];
+  if (!entry) throw new Error("Missing fixture entry");
+  entry.source = "linked-entry";
+  await core.writeTextAtomic(root, "resumes/master/resume.json", JSON.stringify(resume));
+  await core.writeTextAtomic(
+    root,
+    "projects.md",
+    "## Linked Entry\n```yaml\nlinks: [https://example.test/entry]\n```\n",
+  );
+  const before = await core.fileHash(root, "resumes/master/resume.json");
+  const server = await app();
+  const fitted = mockFit();
+  const response = await server.request("/api/resumes/master/fit", post({ maxPages: 1 }));
+  expect(response.status).toBe(200);
+  expect(
+    fitted.mock.calls[0]?.[0].sections.flatMap((section) => section.items).find((item) => item.id === entry.id)?.links,
+  ).toEqual([{ label: "Website", url: "https://example.test/entry" }]);
+  expect(await core.fileHash(root, "resumes/master/resume.json")).toBe(before);
+});

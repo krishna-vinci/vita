@@ -7,7 +7,14 @@ import {
   markApplicationSent,
   putTracker,
 } from "@vita/core";
-import { PutTrackerRequest, SentRequest, Slug, TrackerEventInput, TrackerFollowUpInput } from "@vita/shared";
+import {
+  ArchivedFilter,
+  PutTrackerRequest,
+  SentRequest,
+  Slug,
+  TrackerEventInput,
+  TrackerFollowUpInput,
+} from "@vita/shared";
 import { type Context, Hono } from "hono";
 import { ZodError, type z } from "zod";
 import { ApiFailure } from "../errors.js";
@@ -32,7 +39,9 @@ export function trackerRoutes(runtime: WorkspaceRuntime): Hono {
       runtime.changed("application", result.sha, id);
       return result;
     });
-  app.get("/tracker", async (c) => c.json(await listTracker(runtime.ws)));
+  app.get("/tracker", async (c) =>
+    c.json(await listTracker(runtime.ws, new Date(), ArchivedFilter.optional().parse(c.req.query("archived")))),
+  );
   app.get("/applications/:id/tracker", async (c) => {
     const tracker = await loadTracker(runtime.ws, Slug.parse(c.req.param("id")));
     return c.json({ tracker, derived: deriveTracker(tracker) });
