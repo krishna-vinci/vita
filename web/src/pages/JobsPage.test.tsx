@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, expect, it, vi } from "vitest";
 import { api } from "@/api/client";
@@ -44,4 +44,18 @@ it("renders applications as text with review status and detail links", async () 
   expect(screen.getByText("Ready to export")).toBeTruthy();
   expect(screen.getByRole("link", { name: /Example company/ }).getAttribute("href")).toBe("/jobs/example");
   expect(document.querySelector("script")).toBeNull();
+});
+it("shows archived jobs with restore, and the delete dialog lists what goes", async () => {
+  const gone = { id: "old", title: "Old role", company: "Old Co", baseId: "master", done: true, pdfUrl: null };
+  vi.spyOn(api.applications, "list").mockImplementation(async (_signal, filter) => (filter === "only" ? [gone] : []));
+  const remove = vi.spyOn(api.applications, "remove").mockResolvedValue({ deleted: true, sha: null });
+  mount();
+  fireEvent.click(await screen.findByRole("button", { name: /Archived \(1\)/ }));
+  expect(screen.getByRole("button", { name: /Restore/ })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Delete permanently/ }));
+  const dialog = await screen.findByRole("alertdialog");
+  for (const text of ["the resume", "the cover letter", "interview prep", "the tracker card"])
+    expect(within(dialog).getByText(text)).toBeTruthy();
+  fireEvent.click(within(dialog).getByRole("button", { name: "Delete permanently" }));
+  await waitFor(() => expect(remove).toHaveBeenCalledWith("old", expect.anything()));
 });

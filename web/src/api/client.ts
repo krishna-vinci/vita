@@ -10,6 +10,7 @@ import {
   type AvailableModelsView,
   type CreateApplicationRequest,
   type CreateBaseRequest,
+  type DeleteResourceResult,
   type EffectivePromptView,
   type ExportResult,
   type FitResponse,
@@ -40,10 +41,13 @@ import {
   type Prep,
   type PromoteRequest,
   type PutMarkdownRequest,
+  type PutResumeInstructionsRequest,
   type PutRulesRequest,
   type PutSettingsRequest,
   type PutTrackerRequest,
+  type RegenerateResumeRequest,
   type ResearchRequest,
+  type ResourceMetadataMutation,
   type ResumeChatReply,
   type ResumeMutation,
   type ResumeOpsRequest,
@@ -77,6 +81,8 @@ export class ApiError extends Error {
     message: string,
     /** Seconds to wait, when the server rate-limits a request. */
     public retryAfter?: number,
+    /** Structured detail the server adds to some errors, such as the jobs that use a base resume. */
+    public details?: unknown,
   ) {
     super(message);
     this.name = "ApiError";
@@ -113,6 +119,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       parsed.success ? parsed.data.error.code : "request-failed",
       parsed.success ? parsed.data.error.message : `The request failed (${response.status}). Please try again.`,
       Number(response.headers.get("Retry-After")) || undefined,
+      parsed.success ? parsed.data.error.details : undefined,
     );
   }
   if (data === null) throw new ApiError(response.status, "invalid-response", "Vita returned an unreadable response.");
@@ -135,6 +142,8 @@ async function discard(path: string): Promise<void> {
     );
   }
 }
+
+const archivedQuery = (archived?: "include" | "only") => (archived ? `?archived=${archived}` : "");
 
 export interface TrackerListView {
   applications: { id: string; tracker: Tracker; derived: TrackerDerived }[];
@@ -194,7 +203,8 @@ export const api = {
       ),
   },
   tracker: {
-    list: (signal?: AbortSignal) => get<TrackerListView>("/tracker", signal),
+    list: (signal?: AbortSignal, archived?: "include" | "only") =>
+      get<TrackerListView>(`/tracker${archivedQuery(archived)}`, signal),
     get: (id: string, signal?: AbortSignal) => get<TrackerView>(`/applications/${segment(id)}/tracker`, signal),
     put: (id: string, body: PutTrackerRequest) =>
       send<TrackerView>(`/applications/${segment(id)}/tracker`, body, "PUT"),
@@ -261,14 +271,30 @@ export const api = {
     importLegacy: (body: ImportLegacyRequest) => send<ImportLegacyResult>("/projects/import-legacy", body),
   },
   resumes: {
-    list: (signal?: AbortSignal) => get<ResumeSummary[]>("/resumes", signal),
+    list: (signal?: AbortSignal, archived?: "include" | "only") =>
+      get<ResumeSummary[]>(`/resumes${archivedQuery(archived)}`, signal),
+    archive: (id: string) => send<ResourceMetadataMutation>(`/resumes/${segment(id)}/archive`, {}),
+    unarchive: (id: string) => send<ResourceMetadataMutation>(`/resumes/${segment(id)}/unarchive`, {}),
+    remove: (id: string) => request<DeleteResourceResult>(`/resumes/${segment(id)}`, { method: "DELETE" }),
+    saveInstructions: (id: string, body: PutResumeInstructionsRequest) =>
+      send<ResourceMetadataMutation>(`/resumes/${segment(id)}/instructions`, body, "PUT"),
+    regenerate: (id: string, body: RegenerateResumeRequest) =>
+      send<JobMutation>(`/resumes/${segment(id)}/regenerate`, body),
     get: (id: string, signal?: AbortSignal) => get<ResumeResource>(`/resumes/${segment(id)}`, signal),
     create: (body: CreateBaseRequest) => send<JobMutation>("/resumes", body),
     generateMaster: () => send<JobMutation>("/master/generate", {}),
     ops: (id: string, body: ResumeOpsRequest) => send<ResumeMutation>(`/resumes/${segment(id)}/ops`, body),
   },
   applications: {
-    list: (signal?: AbortSignal) => get<ApplicationSummary[]>("/applications", signal),
+    list: (signal?: AbortSignal, archived?: "include" | "only") =>
+      get<ApplicationSummary[]>(`/applications${archivedQuery(archived)}`, signal),
+    archive: (id: string) => send<ResourceMetadataMutation>(`/applications/${segment(id)}/archive`, {}),
+    unarchive: (id: string) => send<ResourceMetadataMutation>(`/applications/${segment(id)}/unarchive`, {}),
+    remove: (id: string) => request<DeleteResourceResult>(`/applications/${segment(id)}`, { method: "DELETE" }),
+    saveInstructions: (id: string, body: PutResumeInstructionsRequest) =>
+      send<ResourceMetadataMutation>(`/applications/${segment(id)}/instructions`, body, "PUT"),
+    regenerate: (id: string, body: RegenerateResumeRequest) =>
+      send<JobMutation>(`/applications/${segment(id)}/regenerate`, body),
     get: (id: string, signal?: AbortSignal) => get<ApplicationResource>(`/applications/${segment(id)}`, signal),
     create: (body: CreateApplicationRequest) => send<JobMutation>("/applications", body),
     answers: (id: string, body: AnswersRequest) => send<JobMutation>(`/applications/${segment(id)}/answers`, body),

@@ -20,6 +20,7 @@ import {
   useResumes,
   useUndo,
 } from "@/api/queries";
+import { InstructionsDialog } from "@/components/InstructionsDialog";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -151,6 +152,7 @@ function Loaded({
   const promoter = usePromote();
   const [fit, setFit] = useState<FitState | null>(null);
   const [templates, setTemplates] = useState(false);
+  const [instructionsOpen, setInstructionsOpen] = useState(false);
   const startFit = async (pages: number) => {
     setFit({ pages, loading: true });
     try {
@@ -332,7 +334,7 @@ function Loaded({
                             const made = await create.mutateAsync({
                               jobText: app?.jobText ?? "",
                               baseId: base.id,
-                              notes: app?.notes,
+                              instructions: data.instructions ?? app?.notes,
                             });
                             navigate(`/jobs/new?job=${encodeURIComponent(made.job.id)}`);
                           } catch (error) {
@@ -382,6 +384,7 @@ function Loaded({
         }
         onFit={(pages) => void startFit(pages)}
         onTemplate={() => setTemplates(true)}
+        onInstructions={() => setInstructionsOpen(true)}
       />
       {details && (
         <DetailsPanel
@@ -422,6 +425,13 @@ function Loaded({
         <MessageSquareText /> Ask for a change
       </Button>
       <ChangeTemplateDialog open={templates} onOpenChange={setTemplates} />
+      <InstructionsDialog
+        open={instructionsOpen}
+        onOpenChange={setInstructionsOpen}
+        scope={scope}
+        id={id}
+        saved={data.instructions ?? (app?.notes || "")}
+      />
       <FitDialog
         state={fit}
         resume={data.resume}

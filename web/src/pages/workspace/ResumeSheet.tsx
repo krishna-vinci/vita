@@ -18,7 +18,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { type Bullet, type Item, type Resume, type Section, slugify } from "@vita/shared";
+import { type Bullet, contactView, type Item, type Resume, type Section, slugify } from "@vita/shared";
 import { Eye, EyeOff } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -110,7 +110,7 @@ export function ResumeSheet({
     void ok;
     setLocal(null);
   };
-  const contact = resume.header.contact.map((entry) => entry.value).filter(Boolean);
+  const contact = resume.header.contact.filter((entry) => entry.value).map(contactView);
   const active = activeId ? bullets.get(activeId) : undefined;
   return (
     <DndContext
@@ -131,7 +131,20 @@ export function ResumeSheet({
         <h2 className="text-center text-[26px] leading-none font-semibold">{resume.header.name}</h2>
         {resume.header.headline && <p className="text-center text-sheet-muted">{resume.header.headline}</p>}
         {contact.length > 0 && (
-          <p className="text-center text-sm break-words text-sheet-muted">{contact.join(" · ")}</p>
+          <p className="text-center text-sm break-words text-sheet-muted">
+            {contact.map((entry, index) => (
+              <span key={`${entry.label}-${entry.value}`}>
+                {index > 0 && " · "}
+                {entry.href ? (
+                  <a href={entry.href} target="_blank" rel="noreferrer" className="hover:underline">
+                    {entry.display}
+                  </a>
+                ) : (
+                  entry.display
+                )}
+              </span>
+            ))}
+          </p>
         )}
         {resume.sections.map((section) => (
           <SectionView key={section.id} section={section} flags={flags} ctx={ctx} order={order} bullets={bullets} />
@@ -226,6 +239,23 @@ function ItemView({
             )}
           </span>
         </div>
+      )}
+      {!item.hidden && item.links && item.links.length > 0 && (
+        <ul aria-label="Links" className="m-0 flex list-none flex-wrap gap-1.5 p-0 font-sans">
+          {item.links.map((link) => (
+            <li key={`${link.label}:${link.url}`}>
+              <a
+                href={/^https?:\/\//i.test(link.url) ? link.url : undefined}
+                target="_blank"
+                rel="noreferrer noopener"
+                title={link.url}
+                className="inline-flex max-w-full items-center rounded-full border border-sheet-muted/40 px-2 py-0.5 text-xs font-normal break-all text-sheet-muted hover:text-sheet-ink"
+              >
+                {link.label}
+              </a>
+            </li>
+          ))}
+        </ul>
       )}
       {!item.hidden && (
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
