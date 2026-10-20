@@ -201,3 +201,49 @@ export const useTrackerMutation = <T, R>(id: string, fn: (input: T) => Promise<R
 
 export const useAvailableModels = () =>
   useQuery({ queryKey: ["models-available"], queryFn: ({ signal }) => api.models.available(signal), retry: false });
+
+const lifecycleKeys = [
+  queryKeys.resumes,
+  queryKeys.archivedResumes,
+  queryKeys.applications,
+  queryKeys.archivedApplications,
+  queryKeys.tracker,
+  queryKeys.jobs,
+  queryKeys.workspace,
+] as const;
+export const useArchivedResumes = (enabled = true) =>
+  useQuery({
+    queryKey: queryKeys.archivedResumes,
+    queryFn: ({ signal }) => api.resumes.list(signal, "only"),
+    enabled,
+  });
+export const useArchivedApplications = (enabled = true) =>
+  useQuery({
+    queryKey: queryKeys.archivedApplications,
+    queryFn: ({ signal }) => api.applications.list(signal, "only"),
+    enabled,
+  });
+export const useArchiveResume = () => useApiMutation(api.resumes.archive, lifecycleKeys);
+export const useUnarchiveResume = () => useApiMutation(api.resumes.unarchive, lifecycleKeys);
+export const useDeleteResume = () => useApiMutation(api.resumes.remove, lifecycleKeys);
+export const useArchiveApplication = () => useApiMutation(api.applications.archive, lifecycleKeys);
+export const useUnarchiveApplication = () => useApiMutation(api.applications.unarchive, lifecycleKeys);
+export const useDeleteApplication = () => useApiMutation(api.applications.remove, lifecycleKeys);
+
+/** Saves a resume's instructions, optionally regenerating with them (a background job). */
+export const useResumeInstructions = (scope: "application" | "resume", id: string) => {
+  const client = useQueryClient();
+  const target = scope === "resume" ? api.resumes : api.applications;
+  const refresh = () =>
+    Promise.all([
+      client.invalidateQueries({ queryKey: scope === "resume" ? queryKeys.resume(id) : queryKeys.application(id) }),
+      client.invalidateQueries({ queryKey: queryKeys.jobs }),
+    ]);
+  return useMutation({
+    mutationFn: async (input: { instructions: string; regenerate: boolean }) => {
+      if (input.regenerate) return target.regenerate(id, { instructions: input.instructions });
+      return target.saveInstructions(id, { instructions: input.instructions });
+    },
+    onSuccess: refresh,
+  });
+};

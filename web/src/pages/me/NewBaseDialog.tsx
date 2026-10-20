@@ -2,6 +2,7 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useCreateBase, usePacks } from "@/api/queries";
+import { instructionExamples } from "@/components/InstructionsDialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -16,10 +17,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 export function NewBaseDialog({ disabled }: { disabled?: boolean }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [instructions, setInstructions] = useState("");
   const [error, setError] = useState("");
   const create = useCreateBase();
   const packs = usePacks();
@@ -27,10 +30,15 @@ export function NewBaseDialog({ disabled }: { disabled?: boolean }) {
   const submit = async () => {
     setError("");
     try {
-      await create.mutateAsync({ name: name.trim(), ...(chosen.length ? { packs: chosen } : {}) });
+      await create.mutateAsync({
+        name: name.trim(),
+        ...(chosen.length ? { packs: chosen } : {}),
+        ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
+      });
       toast.success(`Writing "${name.trim()}" now.`);
       setOpen(false);
       setName("");
+      setInstructions("");
       setChosen([]);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "Could not start. Please try again.");
@@ -71,6 +79,17 @@ export function NewBaseDialog({ disabled }: { disabled?: boolean }) {
               placeholder="e.g. AI backend"
               autoFocus
               required
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="base-instructions">Instructions for this base (optional)</Label>
+            <Textarea
+              id="base-instructions"
+              value={instructions}
+              onChange={(event) => setInstructions(event.target.value)}
+              placeholder={instructionExamples}
+              className="min-h-20"
+              maxLength={20_000}
             />
           </div>
           {packs.data && packs.data.length > 0 && (

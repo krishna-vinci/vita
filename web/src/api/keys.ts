@@ -10,6 +10,8 @@ export const queryKeys = {
   projects: ["projects"] as const,
   resumes: ["resumes"] as const,
   resume: (id: string) => ["resumes", id] as const,
+  archivedResumes: ["archived-resumes"] as const,
+  archivedApplications: ["archived-applications"] as const,
   applications: ["applications"] as const,
   application: (id: string) => ["applications", id] as const,
   templates: ["templates"] as const,

@@ -1,12 +1,40 @@
 import type { ApplicationSummary, TrackerStatus } from "@vita/shared";
-import { AlarmClock, ArrowUpRight, BriefcaseBusiness, GraduationCap, LayoutGrid, List, Plus } from "lucide-react";
+import {
+  AlarmClock,
+  Archive,
+  ArrowUpRight,
+  BriefcaseBusiness,
+  ChevronDown,
+  GraduationCap,
+  LayoutGrid,
+  List,
+  MoreHorizontal,
+  Plus,
+  Trash2,
+  Undo2,
+} from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import type { TrackerListView } from "@/api/client";
-import { useApplications, useTrackerList } from "@/api/queries";
+import {
+  useApplications,
+  useArchiveApplication,
+  useArchivedApplications,
+  useDeleteApplication,
+  useTrackerList,
+  useUnarchiveApplication,
+} from "@/api/queries";
+import { DeleteDialog } from "@/components/DeleteDialog";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { boardColumns, isDue, statusLabel } from "@/lib/tracker-view";
 
@@ -50,21 +78,130 @@ function Flags({ track }: { track?: Tracked }) {
   );
 }
 
+function JobMenu({ app }: { app: ApplicationSummary }) {
+  const archive = useArchiveApplication();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="-mt-2 -mr-2 size-11 shrink-0"
+          aria-label={`More for ${app.title}`}
+        >
+          <MoreHorizontal />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem
+          disabled={archive.isPending}
+          onSelect={() =>
+            archive.mutate(app.id, {
+              onSuccess: () => toast.success(`Archived "${app.title}". Find it under Archived.`),
+              onError: (error) => toast.error(error.message),
+            })
+          }
+        >
+          <Archive /> Archive
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function ArchivedJobs() {
+  const archived = useArchivedApplications();
+  const restore = useUnarchiveApplication();
+  const remove = useDeleteApplication();
+  const [open, setOpen] = useState(false);
+  const [target, setTarget] = useState<ApplicationSummary | null>(null);
+  const list = archived.data ?? [];
+  if (list.length === 0) return null;
+  return (
+    <section aria-label="Archived jobs" className="flex flex-col gap-3">
+      <Button
+        variant="ghost"
+        className="h-11 w-fit px-2 text-muted-foreground"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        <ChevronDown className={open ? "" : "-rotate-90"} /> Archived ({list.length})
+      </Button>
+      {open && (
+        <ul className="flex flex-col gap-2">
+          {list.map((app) => (
+            <li
+              key={app.id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-card p-3"
+            >
+              <span className="flex min-w-0 flex-col">
+                <span className="font-medium break-words">{app.title}</span>
+                {app.company && <span className="text-sm text-muted-foreground break-words">{app.company}</span>}
+              </span>
+              <span className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  className="h-11"
+                  disabled={restore.isPending}
+                  onClick={() =>
+                    restore.mutate(app.id, {
+                      onSuccess: () => toast.success(`Restored "${app.title}".`),
+                      onError: (error) => toast.error(error.message),
+                    })
+                  }
+                >
+                  <Undo2 /> Restore
+                </Button>
+                <Button variant="ghost" className="h-11 text-destructive" onClick={() => setTarget(app)}>
+                  <Trash2 /> Delete permanently
+                </Button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <DeleteDialog
+        open={!!target}
+        onOpenChange={(next) => !next && setTarget(null)}
+        name={`"${target?.title ?? ""}"`}
+        onConfirm={async () => {
+          if (!target) return;
+          await remove.mutateAsync(target.id);
+          toast.success(`Deleted "${target.title}".`);
+        }}
+      >
+        <div className="text-sm">
+          <p>This removes everything for this job:</p>
+          <ul className="mt-1 list-disc pl-5 text-muted-foreground">
+            <li>the resume</li>
+            <li>the cover letter</li>
+            <li>interview prep</li>
+            <li>the tracker card</li>
+          </ul>
+        </div>
+      </DeleteDialog>
+    </section>
+  );
+}
+
 function JobCard({ row }: { row: Row }) {
   const status = row.track?.tracker.status;
   const id = encodeURIComponent(row.app.id);
   return (
     <li className="flex flex-col gap-2 rounded-xl border bg-card p-4">
-      <Link
-        to={`/jobs/${id}`}
-        className="flex flex-col gap-1 rounded-sm focus-visible:outline-2 focus-visible:outline-ring"
-      >
-        <span className="flex items-start justify-between gap-2">
-          <span className="font-display text-base font-medium break-words">{row.app.title}</span>
-          <ArrowUpRight className="mt-1 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-        </span>
-        {row.app.company && <span className="text-sm text-muted-foreground break-words">{row.app.company}</span>}
-      </Link>
+      <div className="flex items-start justify-between gap-2">
+        <Link
+          to={`/jobs/${id}`}
+          className="flex min-w-0 flex-col gap-1 rounded-sm focus-visible:outline-2 focus-visible:outline-ring"
+        >
+          <span className="flex items-start gap-2">
+            <span className="font-display text-base font-medium break-words">{row.app.title}</span>
+            <ArrowUpRight className="mt-1 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          </span>
+          {row.app.company && <span className="text-sm text-muted-foreground break-words">{row.app.company}</span>}
+        </Link>
+        <JobMenu app={row.app} />
+      </div>
       <div className="flex flex-wrap gap-1.5">
         <Badge variant={row.app.done ? "secondary" : "outline"}>
           {row.app.done ? "Ready to export" : "Needs review"}
@@ -220,6 +357,7 @@ export default function JobsPage() {
           </section>
         </>
       )}
+      <ArchivedJobs />
     </div>
   );
 }

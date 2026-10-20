@@ -15,6 +15,7 @@ export * from "./api-sync";
 export * from "./api-templates";
 export * from "./api-tracker";
 export { BaseConfig } from "./base";
+export * from "./contact";
 export { Claim, Evidence, EvidenceKind, ItemMeta, Metric } from "./evidence";
 export { ClaimId, EvidenceId, Slug, slugify } from "./ids";
 export { Pack } from "./pack";

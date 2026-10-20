@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useCancelJob, useCreateApplication, useJob, useResumes, useWorkspace } from "@/api/queries";
+import { instructionExamples } from "@/components/InstructionsDialog";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,7 @@ export default function NewJobPage() {
 function JobForm({ jobId, onJob }: { jobId: string; onJob: (id: string) => void }) {
   const navigate = useNavigate();
   const [jobText, setJobText] = useState("");
-  const [notes, setNotes] = useState("");
+  const [instructions, setInstructions] = useState("");
   const [baseId, setBaseId] = useState("auto");
   const bases = useResumes();
   const create = useCreateApplication();
@@ -68,7 +69,7 @@ function JobForm({ jobId, onJob }: { jobId: string; onJob: (id: string) => void 
     try {
       const made = await create.mutateAsync({
         jobText,
-        notes: notes.trim() || undefined,
+        instructions: instructions.trim() || undefined,
         baseId: baseId === "auto" ? undefined : baseId,
       });
       onJob(made.job.id);
@@ -113,14 +114,19 @@ function JobForm({ jobId, onJob }: { jobId: string; onJob: (id: string) => void 
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="job-notes">Anything I should know? (optional)</Label>
+          <Label htmlFor="job-instructions">Instructions for this resume</Label>
           <Textarea
-            id="job-notes"
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            placeholder="e.g. I'd like to lead with my teaching work"
-            className="min-h-20"
+            id="job-instructions"
+            value={instructions}
+            onChange={(event) => setInstructions(event.target.value)}
+            placeholder={instructionExamples}
+            className="min-h-24"
+            maxLength={20_000}
           />
+          <p className="text-sm text-muted-foreground">
+            Optional. Tell Vita what to lead with, what to leave out, or how long it should be. You can change this
+            later and rewrite.
+          </p>
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="job-base">Start from</Label>
