@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { readdir } from "node:fs/promises";
 import {
+  type ArchivedFilter,
   MemoryInput,
   type MemoryProposal,
   PutTrackerRequest,
@@ -61,7 +62,7 @@ export function deriveTracker(tracker: Tracker, now = new Date(), createdAt?: st
     stale: ["applied", "screening"].includes(tracker.status) && now.getTime() - lastActivity > 14 * 86_400_000,
   };
 }
-export async function listTracker(ws: Pick<WorkspaceHandle, "root">, now = new Date()) {
+export async function listTracker(ws: Pick<WorkspaceHandle, "root">, now = new Date(), archived?: ArchivedFilter) {
   const funnel = Object.fromEntries(TrackerStatus.options.map((status) => [status, 0])) as Record<
     TrackerStatus,
     number
@@ -78,6 +79,8 @@ export async function listTracker(ws: Pick<WorkspaceHandle, "root">, now = new D
     if (!Slug.safeParse(id).success) continue;
     const meta = await optionalText(ws.root, `${prefix(id)}/meta.yaml`);
     if (meta === undefined) continue;
+    const isArchived = !!parseYaml(meta)?.archived;
+    if (archived === "only" ? !isArchived : archived !== "include" && isArchived) continue;
     const tracker = await loadTracker(ws, id);
     const createdAt = parseYaml(meta)?.createdAt;
     applications.push({

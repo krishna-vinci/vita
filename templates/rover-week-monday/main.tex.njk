@@ -49,7 +49,7 @@
 ((* if header.contact.length *))
   \medskip
 ((* for contact in header.contact *))
-  ((( contact.label ))): ((( contact.value )))((* if not loop.last *)) \quad ((* endif *))
+  ((* if contact.href *))\href{((( contact.href | url )))}{((( contact.display )))}((* else *))((( contact.display )))((* endif *))((* if not loop.last *)) \quad ((* endif *))
 ((* endfor *))
   \par
 ((* endif *))
@@ -59,7 +59,7 @@
 \section{((( section.title )))}
 ((* if section.kind == "entries" *))
 ((* for item in section.items *))
-\subsection{((( item.title )))((* if item.period *)) \rside{((( item.period )))}((* endif *))}
+\subsection{((( item.title )))((* if item.links.length *)) {\small ((* for link in item.links *))\href{((( link.url | url )))}{((( link.label )))}((* if not loop.last *))\enspace|\enspace{}((* endif *))((* endfor *))}((* endif *))((* if item.period *)) \rside{((( item.period )))}((* endif *))}
 ((* if item.subtitle or item.location *))
 \subsubsection{((* if item.subtitle *))((( item.subtitle )))((* endif *))((* if item.location *)) \rside{((( item.location )))}((* endif *))}
 ((* endif *))

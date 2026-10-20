@@ -99,12 +99,19 @@ it("supports the standard bundled-template cache warm-up context", async () => {
 
 it("compiles Rover Letter and passes the real PDF reading-order check", async (context) => {
   if (!available) return context.skip();
-  const result = await renderLetter(ws, "example", letter, profile, {
-    title: "Coordinator",
-    company: "Example",
-    requirements: [],
-    baseScores: [],
-  });
+  const result = await renderLetter(
+    ws,
+    "example",
+    letter,
+    { ...profile, contact: [{ label: "GitHub", value: "https://github.com/example" }] },
+    {
+      title: "Coordinator",
+      company: "Example",
+      requirements: [],
+      baseScores: [],
+    },
+  );
+  expect(result.tex).toContain("\\href{https://github.com/example}{example}");
   expect(result.pdf.subarray(0, 4).toString()).toBe("%PDF");
   expect(result.render).toMatchObject({ ok: true, pages: 1, missingBullets: [], outOfOrder: [] });
 });

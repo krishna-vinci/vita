@@ -7,6 +7,7 @@
 \usepackage{scholax}
 
 \setcounter{secnumdepth}{0}
+\usepackage[bookmarks=false,hidelinks]{hyperref}
 \usepackage{microtype}
 
 \usepackage{enumitem}
@@ -37,7 +38,7 @@
 ((* if header.contact.length *))
   \medskip
 ((* for contact in header.contact *))
-  ((( contact.label ))): ((( contact.value )))((* if not loop.last *)) \quad ((* endif *))
+  ((* if contact.href *))\href{((( contact.href | url )))}{((( contact.display )))}((* else *))((( contact.display )))((* endif *))((* if not loop.last *)) \quad ((* endif *))
 ((* endfor *))
   \par
 ((* endif *))
@@ -49,7 +50,7 @@
 ((* if section.items.length *))
 \begin{enumerate}[leftmargin=2em,labelsep=0.45em,label={[\arabic*]}]
 ((* for item in section.items *))
-\item ((* if item.title *))\textbf{((( item.title )))}((* endif *))
+\item ((* if item.title *))\textbf{((( item.title )))}((* endif *))((* if item.links.length *)) {\small ((* for link in item.links *))\href{((( link.url | url )))}{((( link.label )))}((* if not loop.last *))\enspace|\enspace{}((* endif *))((* endfor *))}((* endif *))
 ((* if item.subtitle *)) ((( item.subtitle )))((* endif *))
 ((* if item.period *)) \hfill ((( item.period )))((* endif *))
 ((* if item.location *)) ((( item.location )))((* endif *))
@@ -61,7 +62,7 @@
 ((* endif *))
 ((* elif section.kind == "entries" *))
 ((* for item in section.items *))
-\subsection{((( item.title )))((* if item.period *)) \hfill ((( item.period )))((* endif *))}
+\subsection{((( item.title )))((* if item.links.length *)) {\small ((* for link in item.links *))\href{((( link.url | url )))}{((( link.label )))}((* if not loop.last *))\enspace|\enspace{}((* endif *))((* endfor *))}((* endif *))((* if item.period *)) \hfill ((( item.period )))((* endif *))}
 ((* if item.subtitle or item.location *))
 \subsubsection{((* if item.subtitle *))((( item.subtitle )))((* endif *))((* if item.location *)) \hfill ((( item.location )))((* endif *))}
 ((* endif *))

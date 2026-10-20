@@ -72,10 +72,22 @@ for (const id of ids) {
       if (!available) context.skip();
       const root = new URL(`../../../fixtures/${fixture}/`, import.meta.url);
       const resume = Resume.parse(JSON.parse(await readFile(new URL("resumes/master/resume.json", root), "utf8")));
+      resume.header.contact = [
+        { label: "Website", value: "https://www.example.test/" },
+        { label: "Email", value: "alex@example.test" },
+      ];
+      const entry = resume.sections.find((section) => section.kind === "entries")?.items[0];
+      if (!entry) throw new Error("Fixture needs an entry");
+      entry.links = [
+        { label: "Website", url: "https://example.test/site?x=1%25#section" },
+        { label: "GitHub", url: "https://github.com/example/records" },
+      ];
       const rules = parse(await readFile(new URL("config/rules.yaml", root), "utf8")) as { max_pages: number };
       const template = await loadTemplate([templatesDir], id);
+      const tex = renderTex({ ...resume, template: id }, template);
+      expect(tex).toContain("\\href{https://example.test/site?x=1\\%25\\#section}{Website}");
       const { pdf } = await compileTex({
-        tex: renderTex({ ...resume, template: id }, template),
+        tex,
         assetsDir: template.dir,
       });
       const extracted = await pdfText(pdf);

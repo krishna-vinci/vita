@@ -31,6 +31,8 @@ export interface SystemPromptOptions<O> {
   task: string;
   applicationId?: string;
   jobNotes?: string;
+  baseId?: string;
+  baseGuidance?: string;
   chat?: string;
   onWarning?: (message: string) => void;
 }
@@ -60,6 +62,8 @@ export async function buildSystemPrompt<O>(opts: SystemPromptOptions<O>): Promis
       role: opts.role.name,
       applicationId: opts.applicationId,
       jobNotes: opts.jobNotes,
+      baseId: opts.baseId,
+      baseGuidance: opts.baseGuidance,
       chat: opts.chat,
     },
   );

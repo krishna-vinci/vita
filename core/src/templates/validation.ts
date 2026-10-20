@@ -85,7 +85,7 @@ export function validateProposal(proposal: AdoptionProposal, original: string): 
       throw new TemplateError("invalid-proposal", "Unsafe or dynamic template property");
     if (
       node.typename === "Filter" &&
-      !["join", "default", "length", "latex", "escape"].includes(String(node.name?.value))
+      !["join", "default", "length", "latex", "escape", "url"].includes(String(node.name?.value))
     )
       throw new TemplateError("invalid-proposal", "Unsupported template filter");
     for (const child of Object.values(node)) visit(child, loops);

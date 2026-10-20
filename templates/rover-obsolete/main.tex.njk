@@ -83,7 +83,7 @@
 \begin{minipage}[c]{0.28\textwidth}\raggedright\small
 ((* for contact in header.contact *))
 ((* if loop.index % 2 == 1 *))
-((( contact.label ))): ((( contact.value )))\par
+((* if contact.href *))\href{((( contact.href | url )))}{((( contact.display )))}((* else *))((( contact.display )))((* endif *))\par
 ((* endif *))
 ((* endfor *))
 \end{minipage}\hfill
@@ -98,7 +98,7 @@
 \hfill\begin{minipage}[c]{0.28\textwidth}\raggedleft\small
 ((* for contact in header.contact *))
 ((* if loop.index % 2 == 0 *))
-((( contact.label ))): ((( contact.value )))\par
+((* if contact.href *))\href{((( contact.href | url )))}{((( contact.display )))}((* else *))((( contact.display )))((* endif *))\par
 ((* endif *))
 ((* endfor *))
 \end{minipage}
@@ -109,7 +109,7 @@
 \section{((( section.title )))}
 ((* if section.kind == "entries" *))
 ((* for item in section.items *))
-\subsection{((( item.title )))((* if item.period *)) \hfill ((( item.period )))((* endif *))}
+\subsection{((( item.title )))((* if item.links.length *)) {\small ((* for link in item.links *))\href{((( link.url | url )))}{((( link.label )))}((* if not loop.last *))\enspace|\enspace{}((* endif *))((* endfor *))}((* endif *))((* if item.period *)) \hfill ((( item.period )))((* endif *))}
 ((* if item.subtitle or item.location *))
 \subsubsection{((* if item.subtitle *))((( item.subtitle )))((* endif *))((* if item.location *)) \hfill ((( item.location )))((* endif *))}
 ((* endif *))

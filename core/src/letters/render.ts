@@ -1,7 +1,15 @@
 import { join } from "node:path";
 import type { JobAnalysis, Letter, Profile, Resume } from "@vita/shared";
 import type { WorkspaceHandle } from "../pipeline/types.js";
-import { checkRender, compileTex, createTexEnv, loadTemplate, pdfText, resolveLayout } from "../render/index.js";
+import {
+  checkRender,
+  compileTex,
+  contactView,
+  createTexEnv,
+  loadTemplate,
+  pdfText,
+  resolveLayout,
+} from "../render/index.js";
 import { resolveInWorkspace } from "../workspace/index.js";
 
 /** Reuse the exact resume lint/checker/render checks with one paragraph per bullet. */
@@ -45,7 +53,7 @@ export async function renderLetter(
     "rover-letter",
   );
   const tex = createTexEnv(template.dir).render("main.tex.njk", {
-    header: profile,
+    header: { ...profile, contact: profile.contact.map(contactView) },
     letter: { ...letter, paragraphs: letter.paragraphs.filter((paragraph) => !paragraph.hidden) },
     company: analysis.company ?? "",
     recipient: analysis.recipient ?? "",

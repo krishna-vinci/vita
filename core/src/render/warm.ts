@@ -40,7 +40,10 @@ export async function warmTemplateCache(templatesDir: string): Promise<void> {
       header: {
         name: "Alex Example",
         headline: "Coordinator",
-        contact: [{ label: "Email", value: "alex@example.test" }],
+        contact: [
+          { label: "Email", value: "alex@example.test" },
+          { label: "Website", value: "https://example.test/" },
+        ],
       },
       sections: [
         { id: "summary", title: "Summary", kind: "summary", text: "Clear communication and careful planning." },
@@ -52,6 +55,10 @@ export async function warmTemplateCache(templatesDir: string): Promise<void> {
             {
               id: "role",
               title: "Example Cooperative",
+              links: [
+                { label: "Website", url: "https://example.test/review?x=1%25#notes" },
+                { label: "GitHub", url: "https://github.com/example/records" },
+              ],
               subtitle: "Coordinator",
               period: "2024–2026",
               location: "Example City",

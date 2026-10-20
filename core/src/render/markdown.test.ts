@@ -12,7 +12,7 @@ it("renders a fixed Markdown format with only visible content", async () => {
 
     Operations coordinator
 
-    Email: alex@example.test
+    [alex@example.test](<mailto:alex@example.test>)
 
     ## Summary
 

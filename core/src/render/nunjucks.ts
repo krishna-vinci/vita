@@ -1,5 +1,7 @@
 import nunjucks from "nunjucks";
-import { latexEscape } from "./escape";
+import { latexEscape, latexUrlEscape } from "./escape";
+
+import { safeHref } from "./links";
 
 class RawTex {
   constructor(readonly value: string) {}
@@ -68,6 +70,7 @@ export function createTexEnv(searchPath: string): nunjucks.Environment {
       commentEnd: "=))",
     },
   });
+  env.addFilter("url", (value: unknown) => new RawTex(latexUrlEscape(safeHref(String(value)) ?? "")));
   env.addFilter("raw", (value: unknown) => (value == null ? value : new RawTex(String(value))));
   env.addFilter("latex", (value: unknown) => {
     if (value == null) return value;

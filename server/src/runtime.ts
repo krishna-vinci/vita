@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { readdir, readFile } from "node:fs/promises";
+import { lstat, readdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import {
   applyOps,
@@ -20,6 +20,7 @@ import {
   initWorkspace,
   lintResume,
   loadModelsConfig,
+  loadRenderSources,
   loadReviewContext,
   loadTemplate,
   log,
@@ -50,6 +51,7 @@ import {
 import {
   type ApplicationResource,
   type ApplicationSummary,
+  type ArchivedFilter,
   type AvailableModelsView,
   JobAnalysis,
   JobView,
@@ -65,7 +67,7 @@ import {
   Slug,
   visibleBullets,
 } from "@vita/shared";
-import { parse as parseYaml } from "yaml";
+import { parse as parseYaml, stringify } from "yaml";
 import { ApiFailure } from "./errors.js";
 import { EventHub } from "./events.js";
 import { type JobContext, JobRunner } from "./jobs/runner.js";
@@ -188,7 +190,10 @@ export class WorkspaceRuntime {
       fileHash(this.ws.root, `${prefix}/resume.json`),
     ]);
     const pdf = `${prefix}/${scope === "application" ? "out/" : ""}resume.pdf`;
+    const metadata = await this.metadata(scope, id);
     return {
+      archived: typeof metadata.archived === "string" ? metadata.archived : undefined,
+      instructions: String((scope === "application" ? metadata.notes : metadata.instructions) ?? ""),
       resume: Resume.parse(JSON.parse(text)),
       review: reviewText ? Review.parse(JSON.parse(reviewText)) : null,
       hash: hash ?? "",
@@ -201,7 +206,7 @@ export class WorkspaceRuntime {
     return {
       ...resource,
       jobText: await readText(this.ws.root, `${prefix}/job.md`),
-      notes: (await this.optional(`${prefix}/notes.md`)) ?? "",
+      notes: resource.instructions ?? "",
       analysis: JobAnalysis.parse(JSON.parse(await readText(this.ws.root, `${prefix}/analysis.json`))),
       gaps: resource.review?.gaps ?? [],
       answers: await this.answers(prefix),
@@ -214,13 +219,16 @@ export class WorkspaceRuntime {
     if (!answers || typeof answers !== "object") return {};
     return Object.fromEntries(Object.entries(answers).map(([key, value]) => [key, String(value)]));
   }
-  async resumes(): Promise<ResumeSummary[]> {
+  async resumes(archived?: ArchivedFilter): Promise<ResumeSummary[]> {
     const results: ResumeSummary[] = [];
     for (const id of await this.ids("resumes")) {
       if ((await this.optional(`resumes/${id}/resume.json`)) === undefined) continue;
       const resource = await this.resource("resume", id);
       if (resource.resume.kind === "job") continue;
+      if (archived === "only" ? !resource.archived : archived !== "include" && resource.archived) continue;
       results.push({
+        archived: resource.archived,
+        instructions: resource.instructions,
         id,
         name:
           id === "master"
@@ -233,21 +241,134 @@ export class WorkspaceRuntime {
     }
     return results;
   }
-  async applications(): Promise<ApplicationSummary[]> {
+  async applications(archived?: ArchivedFilter): Promise<ApplicationSummary[]> {
     const results: ApplicationSummary[] = [];
     for (const id of await this.ids("applications")) {
       if ((await this.optional(`applications/${id}/resume.json`)) === undefined) continue;
       const resource = await this.application(id);
+      if (archived === "only" ? !resource.archived : archived !== "include" && resource.archived) continue;
       results.push({
+        archived: resource.archived,
+        instructions: resource.instructions,
         id,
         title: resource.analysis.title,
         company: resource.analysis.company,
-        baseId: resource.resume.parent,
+        baseId: String((await this.metadata("application", id)).baseId ?? resource.resume.parent ?? "") || null,
         done: resource.review?.done ?? false,
         pdfUrl: resource.pdfUrl,
       });
     }
     return results.reverse();
+  }
+  async metadata(scope: "resume" | "application", id: string): Promise<Record<string, unknown>> {
+    const text = await this.optional(`${this.prefix(scope, id)}/meta.yaml`);
+    return text ? (parseYaml(text) ?? {}) : {};
+  }
+  assertAvailable(scope: "resume" | "application", id: string) {
+    if (this.jobs.hasActive(scope, id))
+      throw new ApiFailure(409, "resource-busy", "Generation is still running for this resource");
+  }
+  private async mutableResource(scope: "resume" | "application", id: string) {
+    if (scope === "resume" && id === "master")
+      throw new ApiFailure(
+        409,
+        "master-protected",
+        "The master cannot be archived, deleted or given base instructions",
+      );
+    this.assertAvailable(scope, id);
+    const resource = await this.resource(scope, id);
+    if (scope === "resume" && resource.resume.kind !== "base")
+      throw new ApiFailure(409, "master-protected", "Only base resumes support this action");
+    return resource;
+  }
+  private async saveMetadata(
+    scope: "resume" | "application",
+    id: string,
+    metadata: Record<string, unknown>,
+    message: string,
+  ) {
+    const rel = `${this.prefix(scope, id)}/meta.yaml`;
+    await writeTextAtomic(this.ws.root, rel, stringify(metadata));
+    const sha = await commitPaths(this.ws.root, [rel], message, "user");
+    this.changed(scope, sha, id);
+    return {
+      archived: typeof metadata.archived === "string" ? metadata.archived : undefined,
+      instructions: String((scope === "application" ? metadata.notes : metadata.instructions) ?? ""),
+      sha,
+    };
+  }
+  async archive(scope: "resume" | "application", id: string, archived: boolean) {
+    this.assertAvailable(scope, id);
+    return this.exclusive(async () => {
+      await this.mutableResource(scope, id);
+      const meta = await this.metadata(scope, id);
+      if (archived) meta.archived ??= new Date().toISOString();
+      else delete meta.archived;
+      return this.saveMetadata(scope, id, meta, `${archived ? "Archive" : "Unarchive"} ${scope}: ${id}`);
+    });
+  }
+  async putInstructions(scope: "resume" | "application", id: string, instructions: string) {
+    this.assertAvailable(scope, id);
+    return this.exclusive(async () => {
+      await this.mutableResource(scope, id);
+      const meta = await this.metadata(scope, id);
+      meta[scope === "application" ? "notes" : "instructions"] = instructions;
+      return this.saveMetadata(scope, id, meta, `Update ${scope} instructions: ${id}`);
+    });
+  }
+  async regenerate(scope: "resume" | "application", id: string, instructions?: string) {
+    this.assertAvailable(scope, id);
+    return this.exclusive(async () => {
+      await this.mutableResource(scope, id);
+      let sha: string | null = null;
+      if (instructions !== undefined) {
+        const meta = await this.metadata(scope, id);
+        meta[scope === "application" ? "notes" : "instructions"] = instructions;
+        sha = (await this.saveMetadata(scope, id, meta, `Update ${scope} instructions: ${id}`)).sha;
+      }
+      return {
+        job: this.enqueue(scope === "resume" ? "base" : "answers", id, scope === "resume" ? { baseId: id } : {}),
+        sha,
+      };
+    });
+  }
+  async deleteResource(scope: "resume" | "application", id: string) {
+    this.assertAvailable(scope, id);
+    return this.exclusive(async () => {
+      await this.mutableResource(scope, id);
+      const meta = await this.metadata(scope, id);
+      if (!meta.archived)
+        throw new ApiFailure(409, "archive-first", "Archive this resource before permanently deleting it");
+      if (scope === "resume") {
+        const references: { id: string; title: string }[] = [];
+        for (const appId of await this.ids("applications")) {
+          const metadata = await this.metadata("application", appId);
+          const text = await this.optional(`${this.prefix("application", appId)}/resume.json`);
+          const resume = text ? Resume.parse(JSON.parse(text)) : undefined;
+          if (metadata.baseId === id || resume?.parent === id) {
+            const analysis = await this.optional(`${this.prefix("application", appId)}/analysis.json`);
+            references.push({ id: appId, title: analysis ? JobAnalysis.parse(JSON.parse(analysis)).title : appId });
+          }
+        }
+        if (references.length)
+          throw new ApiFailure(409, "base-in-use", "Applications still use this base", { applications: references });
+      }
+      const prefix = this.prefix(scope, id);
+      // Refuse symlinks throughout the resource before recursively removing its files.
+      const validate = async (rel: string): Promise<void> => {
+        const absolute = resolveInWorkspace(this.ws.root, rel);
+        const stat = await lstat(path.join(this.ws.root, rel));
+        if (relFromRoot(this.ws.root, absolute) !== rel)
+          throw new ApiFailure(403, "path-forbidden", "Cannot delete a redirected resource");
+        if (stat.isSymbolicLink()) throw new ApiFailure(403, "path-forbidden", "Cannot delete a symlink resource");
+        if (stat.isDirectory()) for (const name of await readdir(absolute)) await validate(`${rel}/${name}`);
+      };
+      await validate(prefix);
+      await rm(resolveInWorkspace(this.ws.root, prefix), { recursive: true });
+      const sha = await commitPaths(this.ws.root, [prefix], `Permanently delete ${scope}: ${id}`, "user");
+      this.changed(scope, sha, id);
+      return { deleted: true as const, sha };
+    });
   }
   async settings(): Promise<SettingsView> {
     const models = this.options.models ?? (await loadModelsConfig(this.ws.root));
@@ -448,6 +569,7 @@ export class WorkspaceRuntime {
       jobText?: string;
       baseId?: string;
       notes?: string;
+      instructions?: string;
       answers?: Record<string, string>;
     },
   ) {
@@ -462,7 +584,13 @@ export class WorkspaceRuntime {
         } else if (kind === "base") {
           const result = await generateBase(
             this.ws,
-            { name: input.name ?? "", packs: input.packs, template: (await this.settings()).template },
+            {
+              name: input.name,
+              packs: input.packs,
+              template: (await this.settings()).template,
+              instructions: input.instructions,
+              baseId: input.baseId,
+            },
             deps,
           );
           resultId = result.id;
@@ -476,7 +604,7 @@ export class WorkspaceRuntime {
               applicationId: existing ? (id ?? undefined) : undefined,
               slug: existing ? undefined : `job-${ctx.signal.aborted ? "cancelled" : randomUUID().slice(0, 12)}`,
               answers: input.answers,
-              notes: existing?.notes ?? input.notes,
+              notes: existing?.instructions ?? input.instructions ?? input.notes,
               template: (await this.settings()).template,
             },
             deps,
@@ -536,7 +664,8 @@ export class WorkspaceRuntime {
       });
       if (!preliminary.done) throw new ApiFailure(409, "review-blocked", preliminary.blocking.join("; "));
       const template = await this.template(resource.resume.template);
-      const tex = renderTex(resource.resume, template);
+      const sources = await loadRenderSources(this.ws.root);
+      const tex = renderTex(resource.resume, template, sources);
       const compiled = await compileTex({ tex, assetsDir: template.dir });
       const render = checkRender(resource.resume, await pdfText(compiled.pdf), maxPages);
       const done = evaluateDone({ ...certification, render });
@@ -546,7 +675,7 @@ export class WorkspaceRuntime {
       // Do not replace the last good PDF until compile and extraction both pass.
       await writeFileAtomic(this.ws.root, `${prefix}/out/resume.pdf`, compiled.pdf);
       await writeTextAtomic(this.ws.root, `${prefix}/out/resume.tex`, tex);
-      await writeTextAtomic(this.ws.root, `${prefix}/out/resume.md`, renderMarkdown(resource.resume));
+      await writeTextAtomic(this.ws.root, `${prefix}/out/resume.md`, renderMarkdown(resource.resume, sources));
       await writeTextAtomic(this.ws.root, `${prefix}/review.json`, `${JSON.stringify(review, null, 2)}\n`);
       const sha = await commitPaths(
         this.ws.root,
@@ -563,6 +692,7 @@ export class WorkspaceRuntime {
     return this.exclusive(async () => {
       if (this.jobs.hasActive())
         throw new ApiFailure(409, "workspace-busy", "Wait for generation before undoing a change");
+      if (scope === "resume" || scope === "application") await this.resource(scope, id ?? "");
       const paths = scope === "outline" || scope === "projects" ? [`${scope}.md`] : [this.prefix(scope, id ?? "")];
       // A resume or job can be undone back to its generated first version, never past it.
       const sha = await undoPaths(

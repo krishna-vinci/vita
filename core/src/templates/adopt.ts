@@ -111,7 +111,7 @@ export async function proposeAdoption(
         root: ws.root,
         system,
         task: [
-          "Replace fictional sample content with header, sections and layout placeholders using nbconvert delimiters. Call submit_template with templateYaml, mainTexNjk, notes. Keep every original usepackage/newcommand line exactly. Use only for/if tags and no file includes, function calls or raw filters.",
+          "Replace fictional sample content with header, sections and layout placeholders using nbconvert delimiters. Call submit_template with templateYaml, mainTexNjk, notes. Keep every original usepackage/newcommand line exactly. Use only for/if tags and no file includes, function calls or raw filters. Load hyperref with hidelinks and microtype (preserve existing package lines). Header contacts have label, value, href and display: render href with \\href{((( contact.href | url )))}{((( contact.display )))} when set, otherwise display, with no Label: prefix. Entry item.links contains engine-resolved {label, url} pairs: render small clickable links after item.title, using the url filter for href targets; display and label use normal automatic escaping. Explicit links: [] hides entry links.",
           wrapUntrusted(upload.mainFile, original),
           wrapUntrusted("other files", JSON.stringify(upload.files.filter((name) => name !== upload.mainFile))),
           wrapUntrusted("preview resume", JSON.stringify(resume)),

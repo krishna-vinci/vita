@@ -2,12 +2,15 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { CompileError, importLegacyProjects, OpError, PathEscapeError, serializeProjects } from "@vita/core";
 import {
   AnswersRequest,
+  ArchivedFilter,
   CreateApplicationRequest,
   CreateBaseRequest,
   EmptyRequest,
   ImportLegacyRequest,
   PutMarkdownRequest,
+  PutResumeInstructionsRequest,
   PutSettingsRequest,
+  RegenerateResumeRequest,
   ResumeOpsRequest,
   Slug,
   slugify,
@@ -65,7 +68,16 @@ export function createWorkspaceApp(runtime: WorkspaceRuntime, options: { webDist
   );
   app.onError((error, c) => {
     if (error instanceof ApiFailure)
-      return c.json({ error: { code: error.code, message: error.message } }, error.status);
+      return c.json(
+        {
+          error: {
+            code: error.code,
+            message: error.message,
+            ...(error.details === undefined ? {} : { details: error.details }),
+          },
+        },
+        error.status,
+      );
     if (error instanceof ZodError)
       return c.json(
         {
@@ -125,7 +137,9 @@ export function createWorkspaceApp(runtime: WorkspaceRuntime, options: { webDist
       : { ...before, sha: null };
     return c.json({ before: before.markdown, markdown, report: imported.report, hash: saved.hash, sha: saved.sha });
   });
-  app.get("/api/resumes", async (c) => c.json(await runtime.resumes()));
+  app.get("/api/resumes", async (c) =>
+    c.json(await runtime.resumes(ArchivedFilter.optional().parse(c.req.query("archived")))),
+  );
   app.get("/api/resumes/:id", async (c) => c.json(await runtime.resource("resume", id(c))));
   app.post("/api/resumes", async (c) => {
     const input = await body(c, CreateBaseRequest);
@@ -143,7 +157,9 @@ export function createWorkspaceApp(runtime: WorkspaceRuntime, options: { webDist
       throw new ApiFailure(409, "resource-busy", "Master generation is already queued");
     return c.json({ job: runtime.enqueue("master", "master", {}), sha: null }, 202);
   });
-  app.get("/api/applications", async (c) => c.json(await runtime.applications()));
+  app.get("/api/applications", async (c) =>
+    c.json(await runtime.applications(ArchivedFilter.optional().parse(c.req.query("archived")))),
+  );
   app.post("/api/applications", async (c) => {
     const input = await body(c, CreateApplicationRequest);
     if (input.baseId) await runtime.resource("resume", input.baseId);
@@ -162,6 +178,21 @@ export function createWorkspaceApp(runtime: WorkspaceRuntime, options: { webDist
     ["resumes", "resume"],
     ["applications", "application"],
   ] as const) {
+    for (const action of ["archive", "unarchive"] as const) {
+      app.post(`/api/${plural}/:id/${action}`, async (c) => {
+        await body(c, EmptyRequest, true);
+        return c.json(await runtime.archive(scope, id(c), action === "archive"));
+      });
+    }
+    app.delete(`/api/${plural}/:id`, async (c) => c.json(await runtime.deleteResource(scope, id(c))));
+    app.put(`/api/${plural}/:id/instructions`, async (c) => {
+      const input = await body(c, PutResumeInstructionsRequest);
+      return c.json(await runtime.putInstructions(scope, id(c), input.instructions));
+    });
+    app.post(`/api/${plural}/:id/regenerate`, async (c) => {
+      const input = await body(c, RegenerateResumeRequest, true);
+      return c.json(await runtime.regenerate(scope, id(c), input.instructions), 202);
+    });
     app.post(`/api/${plural}/:id/ops`, async (c) =>
       c.json(await runtime.ops(scope, id(c), await body(c, ResumeOpsRequest))),
     );

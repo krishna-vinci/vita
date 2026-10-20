@@ -25,7 +25,15 @@ import {
 import { atsReviewerRole, checkerRole, writerRole } from "../agent/roles.js";
 import { enforcePageLimit } from "../instructions/rules.js";
 import { lintResume } from "../lint/index.js";
-import { checkRender, compileTex, loadTemplate, pdfText, renderMarkdown, renderTex } from "../render/index.js";
+import {
+  checkRender,
+  compileTex,
+  loadTemplate,
+  pdfText,
+  type RenderSources,
+  renderMarkdown,
+  renderTex,
+} from "../render/index.js";
 import type { Selection } from "../search/index.js";
 import { resolveInWorkspace } from "../workspace/index.js";
 import type { Context } from "./context.js";
@@ -50,7 +58,13 @@ export function roleRunner(
   deps: PipelineDeps,
   usage: RoleUsage[],
   models = effectiveModels(deps),
-  guidance: { applicationId?: string; jobNotes?: string; onWarning?: (message: string) => void } = {},
+  guidance: {
+    applicationId?: string;
+    jobNotes?: string;
+    baseId?: string;
+    baseGuidance?: string;
+    onWarning?: (message: string) => void;
+  } = {},
 ) {
   return async <O>(
     role: RoleSpec<O>,
@@ -101,6 +115,14 @@ function carryUserState(draft: Resume, seed?: Resume): Resume {
       .flatMap((section) => section.items.flatMap((item) => item.bullets))
       .map((bullet) => [bullet.id, bullet]) ?? [],
   );
+  for (const section of result.sections) {
+    for (const item of section.items) {
+      // Link overrides belong to the person; models cannot supply or change them.
+      const previousItem = seed?.sections.flatMap((section) => section.items).find((entry) => entry.id === item.id);
+      delete item.links;
+      if (previousItem?.links !== undefined) item.links = structuredClone(previousItem.links);
+    }
+  }
   for (const section of result.sections)
     for (const item of section.items)
       for (const bullet of item.bullets) {
@@ -166,6 +188,7 @@ export interface GenerationInput {
   answerClaims?: { id: string; text: string }[];
   direction?: string;
   notes?: string;
+  baseGuidance?: string;
 }
 
 export async function generate(
@@ -195,6 +218,8 @@ export async function generate(
   const run = roleRunner(ctx, deps, usage, models, {
     applicationId: input.kind === "job" ? input.id : undefined,
     jobNotes: input.notes,
+    baseId: input.kind === "base" ? input.id : undefined,
+    baseGuidance: input.baseGuidance,
     onWarning: (message) => {
       if (!warnings.includes(message)) warnings.push(message);
     },
@@ -212,6 +237,7 @@ export async function generate(
   let tex = "";
   let pdf: Buffer | undefined;
   let markdown = "";
+  const renderSources: RenderSources = { projects: ctx.projectsText, outline: ctx.outlineText };
   const evidence = writerEvidence(ctx, input);
   const writerSession = new RoleSession();
   const cache = deps.verdictCache ?? new VerdictCache();
@@ -300,14 +326,14 @@ export async function generate(
       deps.onProgress?.({ stage: "render", round });
       pdf = undefined;
       tex = "";
-      markdown = renderMarkdown(current);
+      markdown = renderMarkdown(current, renderSources);
       const renderTask = async (): Promise<Review["render"]> => {
         try {
           const template = await loadTemplate(
             [resolveInWorkspace(ctx.ws.root, "templates"), join(ctx.ws.bundledDir, "templates")],
             current.template,
           );
-          tex = renderTex(current, template);
+          tex = renderTex(current, template, renderSources);
           const compiled = await compileTex({ tex, assetsDir: template.dir });
           const result = checkRender(current, await pdfText(compiled.pdf), input.maxPages);
           pdf = compiled.pdf;

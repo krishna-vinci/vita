@@ -5,7 +5,9 @@ import { Slug } from "./ids";
 import { Resume, SectionKind } from "./resume";
 import { Finding, Review } from "./review";
 
-export const ApiError = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
+export const ApiError = z.object({
+  error: z.object({ code: z.string(), message: z.string(), details: z.unknown().optional() }),
+});
 export type ApiError = z.infer<typeof ApiError>;
 export const CommitSha = z
   .string()
@@ -74,12 +76,27 @@ export type ResumeOpsRequest = z.infer<typeof ResumeOpsRequest>;
 export const CreateBaseRequest = z.strictObject({
   name: z.string().trim().min(1).max(200),
   packs: z.array(Slug).max(30).optional(),
+  instructions: z.string().max(20_000).optional(),
 });
 export const CreateApplicationRequest = z.strictObject({
   jobText: z.string().trim().min(1).max(200_000),
   baseId: Slug.optional(),
   notes: z.string().max(20_000).optional(),
+  instructions: z.string().max(20_000).optional(),
 });
+export const PutResumeInstructionsRequest = z.strictObject({ instructions: z.string().max(20_000) });
+export type PutResumeInstructionsRequest = z.infer<typeof PutResumeInstructionsRequest>;
+export const RegenerateResumeRequest = z.strictObject({ instructions: z.string().max(20_000).optional() });
+export type RegenerateResumeRequest = z.infer<typeof RegenerateResumeRequest>;
+export const ArchivedFilter = z.enum(["include", "only"]);
+export type ArchivedFilter = z.infer<typeof ArchivedFilter>;
+export const ResourceMetadata = z.object({ archived: z.string().optional(), instructions: z.string().optional() });
+export type ResourceMetadata = z.infer<typeof ResourceMetadata>;
+export const ResourceMetadataMutation = ResourceMetadata.extend({ sha: CommitSha });
+export type ResourceMetadataMutation = z.infer<typeof ResourceMetadataMutation>;
+export const DeleteResourceResult = z.object({ deleted: z.literal(true), sha: CommitSha });
+export type DeleteResourceResult = z.infer<typeof DeleteResourceResult>;
+
 export const AnswersRequest = z.strictObject({
   answers: z.record(id, z.string().max(20_000)).refine((answers) => Object.keys(answers).length <= 100),
 });
@@ -99,6 +116,7 @@ export const RoleUsage = z.object({
 });
 export type RoleUsage = z.infer<typeof RoleUsage>;
 export const ResumeSummary = z.object({
+  ...ResourceMetadata.shape,
   id: Slug,
   name: z.string(),
   kind: z.enum(["master", "base"]),
@@ -107,6 +125,7 @@ export const ResumeSummary = z.object({
 });
 export type ResumeSummary = z.infer<typeof ResumeSummary>;
 export const ApplicationSummary = z.object({
+  ...ResourceMetadata.shape,
   id: Slug,
   title: z.string(),
   company: z.string().optional(),
@@ -116,6 +135,7 @@ export const ApplicationSummary = z.object({
 });
 export type ApplicationSummary = z.infer<typeof ApplicationSummary>;
 export const ResumeResource = z.object({
+  ...ResourceMetadata.shape,
   resume: Resume,
   review: Review.nullable(),
   pdfUrl: z.string().nullable(),
