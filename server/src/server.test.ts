@@ -657,3 +657,19 @@ it("refuses permanent deletion through resource and nested symlinks", async () =
   expect((await server.request("/api/applications/alias", { method: "DELETE" })).status).toBe(403);
   expect((await runtime.application("example")).archived).toBeTruthy();
 });
+
+it("returns display-only links per item without writing them into the resume", async () => {
+  const root = join(dir, "workspace");
+  const stored = Resume.parse(JSON.parse(await core.readText(root, "resumes/master/resume.json")));
+  const item = stored.sections.flatMap((section) => section.items).find((entry) => entry.bullets.length > 0);
+  if (!item) throw new Error("fixture has no item with bullets");
+  item.links = [{ label: "Website", url: "https://example.test/project" }];
+  await core.writeTextAtomic(root, "resumes/master/resume.json", JSON.stringify(stored, null, 2));
+  const server = await app();
+  const body = await (await server.request("/api/resumes/master")).json();
+  expect(body.links[item.id]).toEqual(item.links);
+  for (const other of stored.sections.flatMap((section) => section.items))
+    expect(body.links).toHaveProperty([other.id]);
+  const after = Resume.parse(JSON.parse(await core.readText(root, "resumes/master/resume.json")));
+  expect(after).toEqual(stored);
+});

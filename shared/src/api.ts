@@ -2,7 +2,7 @@ import { z } from "zod";
 import { JobAnalysis } from "./analysis";
 import { MemoryProposal } from "./api-memory";
 import { Slug } from "./ids";
-import { Resume, SectionKind } from "./resume";
+import { ItemLink, Resume, SectionKind } from "./resume";
 import { Finding, Review } from "./review";
 
 export const ApiError = z.object({
@@ -140,6 +140,8 @@ export const ResumeResource = z.object({
   review: Review.nullable(),
   pdfUrl: z.string().nullable(),
   hash: z.string(),
+  /** Display-only links per item id, as the PDF renders them (overrides or derived from evidence). */
+  links: z.record(z.string(), z.array(ItemLink)).optional(),
 });
 export type ResumeResource = z.infer<typeof ResumeResource>;
 export const ResumeMutation = ResumeResource.extend({

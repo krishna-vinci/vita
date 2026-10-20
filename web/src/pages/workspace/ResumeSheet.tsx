@@ -216,6 +216,7 @@ function ItemView({
   ids: string[];
   bullets: ReadonlyMap<string, Bullet>;
 }) {
+  const links = item.links ?? ctx.links?.[item.id] ?? [];
   const heading = [item.title, item.subtitle].filter(Boolean).join(", ");
   const when = [item.period, item.location].filter(Boolean).join(" · ");
   // The list itself accepts drops, so a line can be dragged into an item that has no lines yet.
@@ -240,9 +241,9 @@ function ItemView({
           </span>
         </div>
       )}
-      {!item.hidden && item.links && item.links.length > 0 && (
+      {!item.hidden && links.length > 0 && (
         <ul aria-label="Links" className="m-0 flex list-none flex-wrap gap-1.5 p-0 font-sans">
-          {item.links.map((link) => (
+          {links.map((link) => (
             <li key={`${link.label}:${link.url}`}>
               <a
                 href={/^https?:\/\//i.test(link.url) ? link.url : undefined}

@@ -1,4 +1,4 @@
-import type { CheckNote } from "@vita/shared";
+import type { CheckNote, ItemLink } from "@vita/shared";
 import type { SourceClaim } from "@/lib/resume-view";
 
 /** Everything a line of the resume can ask the page to do. */
@@ -22,4 +22,6 @@ export interface SheetContext {
   changed: ReadonlySet<string>;
   claims: ReadonlyMap<string, SourceClaim>;
   checks: ReadonlyMap<string, CheckNote>;
+  /** Links per item id as the PDF shows them. */
+  links?: Readonly<Record<string, ItemLink[]>>;
 }

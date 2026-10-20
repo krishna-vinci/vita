@@ -18,6 +18,7 @@ import {
   generateBase,
   generateMaster,
   initWorkspace,
+  linkedResume,
   lintResume,
   loadModelsConfig,
   loadRenderSources,
@@ -191,10 +192,18 @@ export class WorkspaceRuntime {
     ]);
     const pdf = `${prefix}/${scope === "application" ? "out/" : ""}resume.pdf`;
     const metadata = await this.metadata(scope, id);
+    const resume = Resume.parse(JSON.parse(text));
+    // The same links the PDF shows, for the editor; never written back into the resume.
+    const links = Object.fromEntries(
+      linkedResume(resume, await loadRenderSources(this.ws.root)).sections.flatMap((section) =>
+        section.items.map((item) => [item.id, item.links ?? []] as const),
+      ),
+    );
     return {
       archived: typeof metadata.archived === "string" ? metadata.archived : undefined,
       instructions: String((scope === "application" ? metadata.notes : metadata.instructions) ?? ""),
-      resume: Resume.parse(JSON.parse(text)),
+      resume,
+      links,
       review: reviewText ? Review.parse(JSON.parse(reviewText)) : null,
       hash: hash ?? "",
       pdfUrl: (await fileHash(this.ws.root, pdf)) ? `/api/files/${pdf}` : null,

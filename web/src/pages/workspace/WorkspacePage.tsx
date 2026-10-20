@@ -412,6 +412,7 @@ function Loaded({
             changed: new Set([...changed, ...thread.changed]),
             claims,
             checks,
+            links: data.links,
           }}
         />
         <aside className="sticky top-6 hidden h-[calc(100dvh-6rem)] rounded-xl border bg-card p-4 lg:flex lg:flex-col">
