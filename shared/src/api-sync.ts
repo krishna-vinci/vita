@@ -37,3 +37,15 @@ export type PromoteRequest = z.infer<typeof PromoteRequest>;
 export const SyncMutation = z.object({ sha: CommitSha });
 export type SyncMutation = z.infer<typeof SyncMutation>;
 export const SyncSuggestions = z.array(SyncSuggestion);
+
+export const SyncStaleResume = z.object({
+  id: Slug,
+  kind: z.enum(["master", "base", "job"]),
+  parent: z.string().nullable(),
+  reason: z.enum(["outline changed", "projects changed", "master changed", "profile changed"]),
+});
+export type SyncStaleResume = z.infer<typeof SyncStaleResume>;
+export const SyncStatus = z.object({ stale: z.array(SyncStaleResume) });
+export type SyncStatus = z.infer<typeof SyncStatus>;
+export const SyncCascade = z.object({ jobIds: z.array(z.string()) });
+export type SyncCascade = z.infer<typeof SyncCascade>;

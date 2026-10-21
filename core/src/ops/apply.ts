@@ -53,6 +53,9 @@ function userEdit(bullet: Bullet, ctx: OpContext): void {
   if (ctx.by === "user") {
     bullet.origin = "user";
     bullet.locked = true;
+    bullet.lockedAt = ctx.now();
+    bullet.editedAt = bullet.lockedAt;
+    delete bullet.updatedFromSource;
   }
 }
 
@@ -125,7 +128,11 @@ export function applyOps(
         }
         userEdit(bullet, ctx);
         // Explicit unlock must remain possible for a user.
-        if (op.op === "bullet.lock") bullet.locked = op.locked;
+        if (op.op === "bullet.lock") {
+          bullet.locked = op.locked;
+          if (op.locked) bullet.lockedAt = ctx.now();
+          else delete bullet.lockedAt;
+        }
         changed.add(bullet.id);
         break;
       }
@@ -157,6 +164,7 @@ export function applyOps(
           locked: ctx.by === "user",
           ...(variant ? { variantOf: variant.id } : {}),
         };
+        userEdit(bullet, ctx);
         item.bullets.splice(index, 0, bullet);
         changed.add(bullet.id);
         break;

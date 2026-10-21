@@ -146,3 +146,86 @@ Body text. <!-- c:body -->
     expect(buildClaimIndex({ preamble: [], items: [] }, parseOutline("")).claims.size).toBe(0);
   });
 });
+
+it.each(["developer", "nurse", "teacher", "accountant"])(
+  "indexes the %s fixture summary as the person's statement",
+  async (name) => {
+    const { readFile } = await import("node:fs/promises");
+    const outline = parseOutline(
+      await readFile(new URL(`../../../fixtures/${name}/outline.md`, import.meta.url), "utf8"),
+    );
+    const index = buildClaimIndex(parseProjects("").doc, outline);
+    expect(index.claims.get("outline.summary")).toMatchObject({
+      text: outline.summary?.text,
+      source: "outline",
+      evidence: [
+        { id: "outline-summary-statement", kind: "statement", ref: "outline.md", text: outline.summary?.text },
+      ],
+    });
+    expect(outline.summary?.text.length).toBeGreaterThan(0);
+  },
+);
+
+it.each(["Summary", "pRoFeSsIoNaL sUmMaRy", "PROFILE"])("preserves prose and explicit anchors under %s", (title) => {
+  const raw = `# Person\n## ${title} <!-- c:my-summary -->\nMy own opening.\n\n- My own emphasis. <!-- c:my-emphasis -->\n## Experience\n- A separate fact. <!-- c:work -->\n`;
+  const outline = parseOutline(raw);
+  const index = buildClaimIndex(parseProjects("").doc, outline);
+  for (const id of ["outline.summary", "my-summary", "my-emphasis"])
+    expect(index.claims.get(id)?.text).toBe("My own opening.\n\nMy own emphasis.");
+  expect(outline.raw).toBe(raw);
+});
+
+it.each(["strict", "balanced", "trust"] as const)(
+  "enforces summary citations in %s mode even with a user override",
+  (honesty) => {
+    const index = buildClaimIndex(parseProjects("").doc, parseOutline("## Summary\nPrepared reliable records.\n"));
+    const resume = Resume.parse({
+      id: "master",
+      kind: "master",
+      parent: null,
+      template: "rover-base",
+      header: { name: "Alex" },
+      sections: [
+        {
+          id: "summary",
+          kind: "summary",
+          title: "Summary",
+          items: [
+            {
+              id: "summary-item",
+              title: "",
+              bullets: [
+                {
+                  id: "summary-line",
+                  text: "Prepared other work.",
+                  claims: [],
+                  origin: "user",
+                  locked: true,
+                  override: { reason: "this-resume-only", at: "2026-01-01" },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const ctx = { index, pack: Pack.parse({ id: "general", name: "General" }), rules: { honesty } };
+    const bullet = resume.sections[0]?.items[0]?.bullets[0];
+    if (!bullet) throw new Error("Missing summary");
+    // A summary the person wrote in this resume is their override: it warns, never blocks.
+    expect(lintResume(resume, ctx)).toContainEqual(
+      expect.objectContaining({ rule: "summary-source", severity: "warn" }),
+    );
+    bullet.origin = "ai";
+    bullet.locked = false;
+    expect(lintResume(resume, ctx)).toContainEqual(
+      expect.objectContaining({ rule: "summary-source", severity: honesty === "trust" ? "warn" : "block" }),
+    );
+    // Re-rendering or editing an approved resume only warns.
+    expect(lintResume(resume, { ...ctx, voice: "warn" })).toContainEqual(
+      expect.objectContaining({ rule: "summary-source", severity: "warn" }),
+    );
+    bullet.claims = ["outline.summary"];
+    expect(lintResume(resume, ctx).some((finding) => finding.rule === "summary-source")).toBe(false);
+  },
+);

@@ -89,7 +89,8 @@ gap for interview prep.
 
 ## What you may not do
 
-- Never modify or delete locked or user-origin bullets; carry them through as-is.
+- Carry protected locked or user-origin bullets through as-is. The engine releases
+  older locks when their source changes; regenerate released lines from current sources.
 - Hidden bullets stay hidden.
 - Do not add a bullet for a requirement the claims do not support; unmet
   requirements are gaps for interview prep, not resume lines (principle 11).
@@ -97,6 +98,11 @@ gap for interview prep.
   line (principle 6).
 
 ## Submit
+
+When `outline.summary` exists, the summary must cite it and use the person's own
+outline summary. For a job, trim or reorder emphasis without replacing it with
+experience text. A protected summary edited inside this resume remains its local
+override until the outline is newer. Write summaries as bullets, not section.text.
 
 Call `submit_resume` once with the full resume object. If it is unavailable,
 return the resume JSON for host validation and state that it was not saved.

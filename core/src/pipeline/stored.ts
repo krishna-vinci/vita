@@ -1,5 +1,6 @@
 import { parse as parseYaml } from "yaml";
 import { enforcePageLimit } from "../instructions/rules.js";
+import { generationHead } from "../sync/history.js";
 import { fileHash } from "../workspace/index.js";
 import { type Context, effectivePack, loadContext, optionalText } from "./context.js";
 import { type GenerationInput, generate } from "./generate.js";
@@ -19,6 +20,7 @@ export async function generateStored(
   return withGenerationLock(ws.root, async () => {
     deps.signal?.throwIfAborted();
     const profile = await loadProfile(ws.root);
+    const generationSourceSha = await generationHead(ws.root);
     const expected = await fileHash(ws.root, `${prefix}/resume.json`);
     const ctx = await loadContext(ws);
     try {
@@ -27,7 +29,11 @@ export async function generateStored(
       const saved = previousMeta ? (parseYaml(previousMeta) ?? {}) : {};
       const usage: RoleUsage[] = [];
       const result = await generate(ctx, input, deps, usage, profile);
-      await persist(ws, prefix, result, deps, usage, extra ?? {}, expected, { ...saved, ...metadata });
+      await persist(ws, prefix, result, deps, usage, extra ?? {}, expected, {
+        ...saved,
+        ...metadata,
+        generationSourceSha,
+      });
       return { resume: result.resume, review: result.review };
     } finally {
       ctx.search.close();

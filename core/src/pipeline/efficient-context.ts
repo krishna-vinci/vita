@@ -40,6 +40,7 @@ export function writerEvidence(ctx: Context, input: GenerationInput) {
     ? input.selection.items.flatMap((item) => item.variantIds)
     : [...ctx.index.variants.keys()];
   const ids = new Set([
+    ...(ctx.index.claims.has("outline.summary") ? ["outline.summary"] : []),
     ...(input.selection?.claimIds ?? ctx.index.claims.keys()),
     ...variantIds,
     ...(input.seed ? visibleBullets(input.seed).flatMap((bullet) => bullet.claims) : []),

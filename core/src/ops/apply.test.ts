@@ -23,6 +23,8 @@ describe("applyOps", () => {
       claims: ["project.notes"],
       origin: "user",
       locked: true,
+      lockedAt: context().now(),
+      editedAt: context().now(),
     });
     expect(result.changedBullets).toEqual(["one"]);
     expect(original).toEqual(snapshot);
@@ -444,4 +446,17 @@ it("protects locked item metadata from AI and rejects unsafe link schemes atomic
     expect(() =>
       applyOps(resume, [{ op: "item.set", id: "first", links: [{ label: "Website", url }] }], context()),
     ).toThrow(/http|Invalid/);
+});
+
+it("records lock times, clears a source-update notice on editing, and supports explicit unlock", () => {
+  const original = sampleResume();
+  bullet(original).updatedFromSource = { at: context().now(), previousText: "Older wording" };
+  const locked = applyOps(original, [{ op: "bullet.lock", id: "one", locked: true }], context()).resume;
+  expect(bullet(locked).lockedAt).toBe(context().now());
+  const edited = applyOps(locked, [{ op: "bullet.edit", id: "one", text: "My new wording" }], context()).resume;
+  expect(bullet(edited).editedAt).toBe(context().now());
+  expect(bullet(edited).updatedFromSource).toBeUndefined();
+  const unlocked = applyOps(edited, [{ op: "bullet.lock", id: "one", locked: false }], context()).resume;
+  expect(bullet(unlocked).locked).toBe(false);
+  expect(bullet(unlocked).lockedAt).toBeUndefined();
 });

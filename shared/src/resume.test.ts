@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Resume, visibleBullets } from "./resume";
+import { Bullet, Resume, visibleBullets } from "./resume";
 
 const header = {
   id: "master",
@@ -133,4 +133,16 @@ describe("Resume", () => {
       "visible-last",
     ]);
   });
+});
+
+it("round-trips source-update metadata and accepts ISO lock/edit times", () => {
+  const bullet = Bullet.parse({
+    id: "line",
+    text: "Updated wording",
+    lockedAt: "2026-01-02T12:00:00+05:30",
+    editedAt: "2026-01-02T06:30:00.000Z",
+    updatedFromSource: { at: "2026-01-03T12:00:00.000Z", previousText: "My old wording" },
+  });
+  expect(Bullet.parse(JSON.parse(JSON.stringify(bullet)))).toEqual(bullet);
+  expect(Bullet.safeParse({ ...bullet, editedAt: "yesterday" }).success).toBe(false);
 });

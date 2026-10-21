@@ -78,6 +78,20 @@ export function lintResume(resume: Resume, ctx: LintContext): Finding[] {
     ...ctx.rules,
     section_order: ctx.rules.section_order ?? ctx.pack.section_order,
   });
+  if (ctx.index.claims.has("outline.summary"))
+    for (const section of resume.sections.filter((section) => !section.hidden && section.kind === "summary"))
+      for (const item of section.items.filter((item) => !item.hidden))
+        for (const bullet of item.bullets.filter((bullet) => !bullet.hidden))
+          if (!bullet.claims.includes("outline.summary"))
+            findings.push({
+              rule: "summary-source",
+              // Blocks AI drafts only: a summary the person wrote in this resume is their override, and
+              // re-rendering an approved resume must not be refused over it.
+              severity:
+                ctx.rules.honesty === "trust" || ctx.voice === "warn" || bullet.origin === "user" ? "warn" : "block",
+              bulletId: bullet.id,
+              message: "Summary must cite outline.summary and use the person's outline summary.",
+            });
   for (const section of resume.sections.filter((section) => !section.hidden && section.kind === "list")) {
     const items = section.items.filter((item) => !item.hidden);
     const item = items[0];

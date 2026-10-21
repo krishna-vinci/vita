@@ -13,6 +13,7 @@ import { parse as parseYaml, stringify } from "yaml";
 import { z } from "zod";
 import { analystRole } from "../agent/roles.js";
 import { selectEvidence } from "../search/index.js";
+import { generationHead } from "../sync/history.js";
 import { commitPaths, fileHash, readText, resolveInWorkspace, writeTextAtomic } from "../workspace/index.js";
 import { answerClaimId, effectivePack, findGaps, loadContext, mergeKeywords, optionalText } from "./context.js";
 import { answerFact, expandGroup, gapQuestion, requirementCoveredByText, requirementLabel } from "./coverage.js";
@@ -41,6 +42,7 @@ export async function tailor(
   return withGenerationLock(ws.root, async () => {
     deps.signal?.throwIfAborted();
     const profile = await loadProfile(ws.root);
+    const generationSourceSha = await generationHead(ws.root);
     const date = localDate((deps.now ?? (() => new Date()))());
     if (input.slug !== undefined) Slug.parse(input.slug);
     if (input.baseId !== undefined) Slug.parse(input.baseId);
@@ -109,12 +111,7 @@ export async function tailor(
       if (requestedBaseId && requestedBaseId !== "master" && !base)
         throw new Error(`Base not found: ${requestedBaseId}`);
       if (requestedBaseId === "master" && !ctx.master) throw new Error("Master resume not found");
-      const seed = existing ? structuredClone(existing) : (base?.resume ?? ctx.master);
-      if (existing && seed) {
-        for (const section of seed.sections)
-          for (const item of section.items)
-            for (const bullet of item.bullets) if (bullet.origin === "user") bullet.locked = true;
-      }
+      const seed = base?.resume ?? ctx.master;
       const pack = await effectivePack(ctx, base);
       analysis = {
         ...analysis,
@@ -249,6 +246,7 @@ export async function tailor(
           template: existing?.template ?? base?.config.template ?? seed?.template ?? input.template ?? "rover-base",
           maxPages: base?.config.rules.max_pages ?? ctx.rules.max_pages,
           seed,
+          userState: existing,
           baseConfig: base?.config,
           analysis,
           pack,
@@ -286,6 +284,7 @@ export async function tailor(
         expected,
         {
           ...metadata,
+          generationSourceSha,
           status: result.review.done ? "done" : "draft",
           createdAt: metadata.createdAt ?? date,
           title: analysis.title,

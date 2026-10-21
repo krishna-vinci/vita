@@ -36,6 +36,7 @@ import {
   resolveLayout,
 } from "../render/index.js";
 import type { Selection } from "../search/index.js";
+import { releaseStaleBullets } from "../sync/freshness.js";
 import { resolveInWorkspace } from "../workspace/index.js";
 import type { Context } from "./context.js";
 import { evaluateDone } from "./done.js";
@@ -45,6 +46,18 @@ import type { PipelineDeps, RoleUsage } from "./types.js";
 
 export function data(source: string, value: unknown): string {
   return wrapUntrusted(source, typeof value === "string" ? value : JSON.stringify(value));
+}
+
+function freshResumeId(resume: Resume, stem: string): string {
+  const ids = new Set(
+    resume.sections.flatMap((section) => [
+      section.id,
+      ...section.items.flatMap((item) => [item.id, ...item.bullets.map((bullet) => bullet.id)]),
+    ]),
+  );
+  let id = stem;
+  for (let n = 2; ids.has(id); n++) id = `${stem}-${n}`;
+  return id;
 }
 
 export function effectiveModels(deps: PipelineDeps): PipelineDeps["models"] {
@@ -131,6 +144,9 @@ function carryUserState(draft: Resume, seed?: Resume): Resume {
         const previous = original.get(bullet.id);
         // A model cannot grant itself a user override, user origin, or a lock.
         delete bullet.override;
+        delete bullet.lockedAt;
+        delete bullet.editedAt;
+        delete bullet.updatedFromSource;
         bullet.origin = "ai";
         bullet.locked = false;
         if (
@@ -140,6 +156,9 @@ function carryUserState(draft: Resume, seed?: Resume): Resume {
         ) {
           if (previous.override) bullet.override = structuredClone(previous.override);
           bullet.origin = previous.origin;
+          if (previous.lockedAt) bullet.lockedAt = previous.lockedAt;
+          if (previous.editedAt) bullet.editedAt = previous.editedAt;
+          if (previous.updatedFromSource) bullet.updatedFromSource = previous.updatedFromSource;
         }
       }
   for (const section of seed?.sections ?? [])
@@ -177,6 +196,8 @@ export interface GenerationInput {
   template: string;
   maxPages: number;
   seed?: Resume;
+  /** Existing local edits are overlaid on the current parent, never used as an outdated parent. */
+  userState?: Resume;
   baseConfig?: BaseConfig;
   analysis: JobAnalysis;
   pack: Pack;
@@ -222,6 +243,37 @@ export async function generate(
     },
   };
   const models = effectiveModels(deps);
+  const released: Awaited<ReturnType<typeof releaseStaleBullets>>["released"] = [];
+  let seed = input.seed;
+  if (seed) {
+    const prepared = await releaseStaleBullets(ctx.ws.root, seed);
+    seed = prepared.resume;
+    const inherited = seed.id !== input.id || seed.kind !== input.kind;
+    if (inherited && ctx.index.claims.has("outline.summary")) {
+      // A parent's local summary override belongs to that resume alone.
+      for (const section of seed.sections.filter((section) => section.kind === "summary")) {
+        delete section.text;
+        for (const item of section.items)
+          for (const bullet of item.bullets) {
+            bullet.text = ctx.index.claims.get("outline.summary")?.text ?? "";
+            bullet.claims = ["outline.summary"];
+            bullet.origin = "ai";
+            bullet.locked = false;
+            delete bullet.override;
+            delete bullet.lockedAt;
+            delete bullet.editedAt;
+            delete bullet.updatedFromSource;
+          }
+      }
+    }
+    released.push(...prepared.released.filter((entry) => !inherited || entry.section.kind !== "summary"));
+  }
+  if (input.userState) {
+    const local = await releaseStaleBullets(ctx.ws.root, input.userState);
+    released.unshift(...local.released);
+    seed = seed ? carryUserState({ ...seed, layout: local.resume.layout }, local.resume) : local.resume;
+  }
+  input = { ...input, seed };
   input = { ...input, maxPages: enforcePageLimit(input.maxPages, ctx.lockedMaxPages) };
   const warnings: string[] = [];
   const run = roleRunner(ctx, deps, usage, models, {
@@ -255,6 +307,14 @@ export async function generate(
   const cache = deps.verdictCache ?? new VerdictCache();
   const context = [
     data("selected claims, variants and items", evidence),
+    data(
+      "outline summary (the person's own words; mandatory summary source)",
+      ctx.index.claims.get("outline.summary") ?? null,
+    ),
+    data(
+      "lines released because their source is newer (regenerate these)",
+      released.map(({ bullet, section, item }) => ({ bullet, sectionId: section.id, itemId: item.id })),
+    ),
     data("analysis", input.analysis),
     data("selection", input.selection ?? null),
     data(
@@ -310,6 +370,7 @@ export async function generate(
                   : []),
                 `Use action voice and confirmed relationship/contribution for scope: sole permits Built for the whole project; team needs owned parts or explicit team scope; contributor needs Contributed X to Y. Never assume sole ownership. Put experience roles in Item.subtitle. Skills must use list sections with labelled category items. Follow per-item bullet budgets, aiming for ${Math.round((input.minFill ?? ctx.rules.min_fill) * 100)}–100% fill with supported relevant content only.`,
                 "The engine supplies the header from profile.yaml. Return the resume content without a header through submit_resume.",
+                "When outline.summary exists, include a summary section whose bullets cite outline.summary and use only that person's summary. You may shorten it or reorder emphasis for a job; never substitute experience claims or other text. Preserve a protected local summary override verbatim.",
                 context,
                 data("previous resume", resume ?? null),
                 data("previous review", review ?? null),
@@ -324,6 +385,45 @@ export async function generate(
         { ...draft, header, id: input.id, kind: input.kind, parent: input.parent, template: input.template },
         input.seed,
       );
+      const summary = ctx.index.claims.get("outline.summary");
+      if (summary) {
+        // Migrate uncited legacy section.text using the source, never bless arbitrary model prose.
+        let section = resume.sections.find((section) => section.kind === "summary");
+        if (!section) {
+          const id = freshResumeId(resume, "summary");
+          section = { id, title: "Summary", kind: "summary", items: [] };
+          resume.sections.unshift(section);
+        }
+        if (!section.items.some((item) => item.bullets.length)) {
+          delete section.text;
+          const itemId = freshResumeId(resume, "summary-item");
+          section.items.push({ id: itemId, title: "", bullets: [] });
+          section.items.at(-1)?.bullets.push({
+            id: freshResumeId(resume, "summary-bullet"),
+            text: summary.text,
+            claims: [summary.id],
+            origin: "ai",
+            locked: false,
+          });
+        } else delete section.text;
+      }
+      for (const section of resume.sections)
+        for (const item of section.items)
+          for (const bullet of item.bullets) {
+            if (bullet.locked) continue;
+            const previous =
+              released.find((entry) => entry.bullet.id === bullet.id) ??
+              released.find(
+                (entry) =>
+                  (section.kind === "summary" && entry.section.kind === "summary") ||
+                  bullet.claims.some((id) => entry.bullet.claims.includes(id)),
+              );
+            if (previous)
+              bullet.updatedFromSource = {
+                at: (deps.now ?? (() => new Date()))().toISOString(),
+                previousText: previous.bullet.text,
+              };
+          }
       deps.onProgress?.({ stage: "lint", round });
       const lint: Finding[] = lintResume(resume, { index: ctx.index, pack: input.pack, rules: ctx.rules });
       if (lint.length)

@@ -68,5 +68,22 @@ export function buildClaimIndex(projects: ProjectsDoc, outline: Outline): ClaimI
       });
     }
   }
+  if (outline.summary) {
+    // The canonical alias survives heading/prose edits; explicit source anchors stay usable too.
+    for (const id of new Set(["outline.summary", ...outline.summary.claimIds])) {
+      index.claims.set(id, {
+        id,
+        text: outline.summary.text,
+        source: "outline",
+        itemSlug: null,
+        itemName: null,
+        evidence: [
+          { id: "outline-summary-statement", kind: "statement", ref: "outline.md", text: outline.summary.text },
+        ],
+        metrics: [],
+        limits: [],
+      });
+    }
+  }
   return index;
 }

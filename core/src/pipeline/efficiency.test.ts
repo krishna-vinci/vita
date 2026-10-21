@@ -10,6 +10,7 @@ import * as rendering from "../render/index.js";
 import { type Context, effectivePack, loadContext } from "./context.js";
 import { baseSummaries, checkerContext, VerdictCache, writerEvidence } from "./efficient-context.js";
 import { type GenerationInput, generate } from "./generate.js";
+import { citeFixtureSummary } from "./test-fixtures.js";
 import type { PipelineDeps } from "./types.js";
 
 const bundledDir = fileURLToPath(new URL("../../../", import.meta.url));
@@ -31,7 +32,7 @@ beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "vita-efficiency-"));
   await cp(join(bundledDir, "fixtures/developer"), root, { recursive: true });
   ctx = await loadContext({ root, bundledDir });
-  resume = required(ctx.master);
+  resume = citeFixtureSummary(required(ctx.master));
   input = {
     kind: "job",
     id: "test-job",

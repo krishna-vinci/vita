@@ -15,6 +15,7 @@ import {
   resumes,
   SyncConflictError,
 } from "./context.js";
+import { bulletFreshness } from "./freshness.js";
 import { headSha, sourceAt } from "./history.js";
 
 function suggestions(
@@ -27,9 +28,13 @@ function suggestions(
   for (const [claimId, claim] of before.index.claims) {
     const current = after.index.claims.get(claimId);
     if (current?.text === claim.text) continue;
-    for (const { bullet } of nodes(resume)) {
-      if (!bullet.claims.includes(claimId)) continue;
-      const text = current ? claimText(bullet, after.index) : undefined;
+    for (const { bullet, section } of nodes(resume)) {
+      if (!bullet.claims.includes(claimId) && !(claimId === "outline.summary" && section.kind === "summary")) continue;
+      const text = current
+        ? claimId === "outline.summary"
+          ? current.text
+          : claimText(bullet, after.index)
+        : undefined;
       if (current ? bullet.text === text : bullet.hidden) continue;
       result.push({
         resumeId: id,
@@ -64,7 +69,22 @@ export async function suggestDownstream(ws: WorkspaceHandle, sinceSha: string): 
   const head = await headSha(ws.root);
   const before = await sourceAt(ws.root, sinceSha);
   const after = await sourceAt(ws.root, head);
-  return (await resumes(ws)).flatMap(({ id, resume }) => suggestions(id, resume, before, after));
+  const result: SyncSuggestion[] = [];
+  for (const { id, resume } of await resumes(ws))
+    result.push(...(await explainLocks(ws, resume, suggestions(id, resume, before, after))));
+  return result;
+}
+
+async function explainLocks(ws: WorkspaceHandle, resume: Resume, picks: SyncSuggestion[]) {
+  if (!picks.some((pick) => pick.locked)) return picks;
+  const newer = await bulletFreshness(ws.root, resume);
+  for (const pick of picks) {
+    const node = nodes(resume).find(({ bullet }) => bullet.id === pick.bulletId);
+    if (node && pick.locked && (await newer(node.bullet, node.section, node.item)))
+      pick.reason +=
+        " Your outline or evidence changed after this line was locked or edited; regeneration will update it.";
+  }
+  return picks;
 }
 
 function pendingKey(pick: SyncSuggestion): string {
@@ -110,7 +130,9 @@ export async function pendingSyncSuggestions(ws: WorkspaceHandle): Promise<SyncS
   const result: SyncSuggestion[] = [];
   for (const { id, resume } of entries) {
     const { sinceSha, pending } = await metadata(ws, id);
-    result.push(...withPending(id, resume, await sourceAt(ws.root, sinceSha), after, pending));
+    result.push(
+      ...(await explainLocks(ws, resume, withPending(id, resume, await sourceAt(ws.root, sinceSha), after, pending))),
+    );
   }
   return result;
 }

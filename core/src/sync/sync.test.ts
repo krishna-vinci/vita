@@ -302,3 +302,39 @@ it("reserves outline claim ids when creating a new variant anchor", async () => 
   });
   expect(await readText(root, "projects.md")).toContain("<!-- v:example-item-promoted-2 -->");
 });
+
+it("suggests summary updates and explains when their source is newer than a lock", async () => {
+  const original = await resume();
+  original.sections.unshift({
+    id: "summary",
+    title: "Summary",
+    kind: "summary",
+    items: [
+      {
+        id: "summary-item",
+        title: "",
+        bullets: [
+          { id: "summary-line", text: "My older local summary.", claims: ["outline-a"], origin: "user", locked: true },
+        ],
+      },
+    ],
+  });
+  await writeTextAtomic(root, "resumes/master/resume.json", JSON.stringify(original));
+  const text = (await readText(root, "outline.md")).replace("# Fictional profile\n", "");
+  await writeTextAtomic(root, "outline.md", `## Professional Summary\nPrepared clear guidance.\n${text}`);
+  const checkpoint = required(
+    await commitPaths(root, ["outline.md", "resumes/master/resume.json"], "Generate master resume: master", "writer"),
+  );
+  await writeTextAtomic(root, "outline.md", `## Professional Summary\nPrepared reliable guidance.\n${text}`);
+  await commitPaths(root, ["outline.md"], "Rewrite summary", "user");
+  const picks = await suggestDownstream(ws(), checkpoint);
+  expect(picks).toContainEqual(
+    expect.objectContaining({
+      claimId: "outline.summary",
+      bulletId: "summary-line",
+      after: "Prepared reliable guidance.",
+      locked: true,
+      reason: expect.stringContaining("changed after this line was locked or edited"),
+    }),
+  );
+});
