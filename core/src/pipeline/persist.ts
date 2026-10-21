@@ -31,6 +31,7 @@ export async function persist(
       parent: result.resume.parent,
       createdAt: metadata.createdAt ?? localDate((deps.now ?? (() => new Date()))()),
       usage,
+      generatedAt: (deps.now ?? (() => new Date()))().toISOString(),
       warnings: result.warnings,
     }),
     [`${output}/resume.tex`]: result.tex,

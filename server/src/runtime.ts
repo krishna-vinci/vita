@@ -612,10 +612,14 @@ export class WorkspaceRuntime {
       instructions?: string;
       answers?: Record<string, string>;
       skip?: boolean;
+      afterJobs?: string[];
     },
   ) {
     return this.jobs.enqueue(kind, id, (ctx) =>
       this.exclusive(async () => {
+        for (const dependency of input.afterJobs ?? [])
+          if (this.jobs.get(dependency)?.status !== "done")
+            throw new Error("Upstream regeneration did not finish; retry the cascade before regenerating this resume.");
         const deps = await this.pipelineDeps(ctx);
         let resultId: string;
         const scope = kind === "master" || kind === "base" ? "resume" : "application";

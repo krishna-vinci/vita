@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,6 +8,8 @@ import { comparison, type EvaluationCase, evaluate, main } from "../../../script
 import * as agent from "../agent/index.js";
 import * as render from "../render/index.js";
 
+import { citeFixtureSummary } from "./test-fixtures.js";
+
 const bundledDir = fileURLToPath(new URL("../../../", import.meta.url));
 it("runs both fixture workspaces in faux mode, records outcomes and usage, writes JSON/comparison without source changes", async () => {
   const dir = await mkdtemp(join(tmpdir(), "vita-eval-smoke-"));
@@ -16,7 +18,11 @@ it("runs both fixture workspaces in faux mode, records outcomes and usage, write
   try {
     const cases: EvaluationCase[] = JSON.parse(await readFile(join(bundledDir, "scripts/eval/cases.json"), "utf8"));
     for (const entry of cases) {
-      entry.workspace = join(bundledDir, "fixtures", basename(entry.workspace));
+      const source = join(bundledDir, "fixtures", basename(entry.workspace));
+      entry.workspace = join(dir, "fixtures", basename(source));
+      await cp(source, entry.workspace, { recursive: true });
+      const file = join(entry.workspace, "resumes/master/resume.json");
+      await writeFile(file, JSON.stringify(citeFixtureSummary(Resume.parse(JSON.parse(await readFile(file, "utf8"))))));
       entry.job = join(bundledDir, "scripts/eval", entry.job);
     }
     const before = await Promise.all(
@@ -85,4 +91,4 @@ it("runs both fixture workspaces in faux mode, records outcomes and usage, write
     else process.env.PI_CODING_AGENT_DIR = previous;
     await rm(dir, { recursive: true, force: true });
   }
-});
+}, 15_000);

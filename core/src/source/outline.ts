@@ -26,7 +26,10 @@ export interface Outline {
   preamble: string[];
   sections: OutlineSection[];
   raw: string;
+  summary?: { text: string; claimIds: string[] };
 }
+
+export const summarySectionNames = ["summary", "professional summary", "profile"];
 
 export function parseOutline(markdown: string): Outline {
   const outline: Outline = { preamble: [], sections: [], raw: markdown };
@@ -85,6 +88,35 @@ export function parseOutline(markdown: string): Outline {
         }
       }
     }
+  const summary = outline.sections.find((section) =>
+    summarySectionNames.includes(readAnchor(section.title).text.trim().toLowerCase()),
+  );
+  if (summary) {
+    const end = outline.sections.find((section) => section.line > summary.line)?.line;
+    let fence: string | undefined;
+    const claimIds = new Set<string>();
+    const headingAnchor = readAnchor(summary.title).anchor?.claim;
+    if (headingAnchor) claimIds.add(headingAnchor);
+    const prose = sourceLines(markdown)
+      .slice(summary.line, end === undefined ? undefined : end - 1)
+      .flatMap(({ text }) => {
+        if (fence) {
+          if (fenceEnd(text, fence)) fence = undefined;
+          return [];
+        }
+        const start = fenceStart(text);
+        if (start) {
+          fence = start.marker;
+          return [];
+        }
+        const parsed = readAnchor(bulletText(text) ?? text);
+        if (parsed.anchor?.claim) claimIds.add(parsed.anchor.claim);
+        return [parsed.text];
+      })
+      .join("\n")
+      .trim();
+    if (prose) outline.summary = { text: prose, claimIds: [...claimIds] };
+  }
   return outline;
 }
 

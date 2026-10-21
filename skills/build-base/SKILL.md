@@ -10,6 +10,11 @@ page budget to choose relevant items and order them for that direction.
 
 - Use facts and claim IDs already present in the master and evidence inventory.
 - Preserve locked bullets exactly, including their visibility and overrides.
+- Use the current master supplied by the engine. Regenerate lines whose older
+  locks the engine released after a source change.
+- Cite `outline.summary` in the summary and use that outline text, trimming or
+  reordering emphasis only. Preserve a protected local summary override until
+  the outline becomes newer. Store summary content in bullets, not section.text.
 - Prefer relevant, supported outcomes over generic activity descriptions.
 - Keep contact information, qualifications and chronology accurate.
 - Do not put URLs in an item's title, subtitle or location. Project links are added

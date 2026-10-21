@@ -20,6 +20,7 @@ import {
   WorkspaceView,
 } from "@vita/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { citeFixtureSummary } from "../../core/src/pipeline/test-fixtures.js";
 import * as engineRender from "../../core/src/render/index.js";
 import { WorkspaceRuntime } from "./runtime.js";
 import { createWorkspaceApp as createServer } from "./server.js";
@@ -38,8 +39,9 @@ beforeEach(async () => {
   const root = join(dir, "workspace");
   await cp(join(bundledDir, "fixtures/developer"), root, { recursive: true });
   await core.ensureRepo(root);
+  resume = citeFixtureSummary(Resume.parse(JSON.parse(await core.readText(root, "resumes/master/resume.json"))));
+  await core.writeTextAtomic(root, "resumes/master/resume.json", JSON.stringify(resume));
   await core.commitPaths(root, ["."], "Fixture", "system");
-  resume = Resume.parse(JSON.parse(await core.readText(root, "resumes/master/resume.json")));
 });
 afterEach(async () => {
   await runtime?.close();

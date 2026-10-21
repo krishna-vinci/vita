@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as core from "@vita/core";
-import { SyncMutation, SyncSuggestions } from "@vita/shared";
+import { SyncCascade, SyncMutation, SyncStatus, SyncSuggestions } from "@vita/shared";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { changeSource, required, sampleResume, setup } from "../../../core/src/sync/test-fixtures.js";
 import { WorkspaceRuntime } from "../runtime.js";
@@ -157,4 +157,147 @@ it("validates request bodies, identifiers and history hashes before invoking syn
     ).status,
   ).toBe(400);
   expect(apply).not.toHaveBeenCalled();
+});
+
+async function cascadeFixture() {
+  await core.writeTextAtomic(root, "profile.yaml", "name: Alex\ncontact: []\n");
+  await core.writeTextAtomic(root, "resumes/direction/base.yaml", "name: Direction\ntemplate: rover-base\n");
+  for (const id of ["job-live", "job-archived"]) {
+    const resume = { ...sampleResume(id), kind: "job", parent: "direction" };
+    await core.writeTextAtomic(root, `applications/${id}/resume.json`, JSON.stringify(resume));
+    await core.writeTextAtomic(root, `applications/${id}/job.md`, "Example role");
+    await core.writeTextAtomic(
+      root,
+      `applications/${id}/analysis.json`,
+      JSON.stringify({ title: "Example", requirements: [], baseScores: [] }),
+    );
+    await core.writeTextAtomic(
+      root,
+      `applications/${id}/meta.yaml`,
+      id === "job-archived" ? "archived: 2026-01-01\nbaseId: direction\n" : "baseId: direction\n",
+    );
+  }
+  await core.commitPaths(root, ["."], "Fixture resources", "system");
+  // These resumes were generated from the same source snapshot.
+  const sha = required((await core.log(root, 1))[0]).sha;
+  for (const prefix of ["resumes/master", "resumes/direction", "applications/job-live"])
+    await core.writeTextAtomic(root, `${prefix}/meta.yaml`, `generationSourceSha: ${sha}\n`);
+  await core.commitPaths(root, ["resumes", "applications"], "Save generation checkpoints", "system");
+}
+
+it("queues cascade master, bases, then live jobs; each handler reads its regenerated parent", async () => {
+  await cascadeFixture();
+  await changeSource(root);
+  const server = await app();
+  const order: string[] = [];
+  const review = {
+    round: 1,
+    lint: [],
+    checks: [],
+    ats: [],
+    render: null,
+    gaps: [],
+    overrides: [],
+    done: false,
+    blocking: [],
+    suggestions: [],
+  };
+  const master = sampleResume();
+  required(master.sections[0]?.items[0]?.bullets[0]).text = "New master content";
+  vi.spyOn(core, "generateMaster").mockImplementation(async () => {
+    order.push("master");
+    await core.writeTextAtomic(root, "resumes/master/resume.json", JSON.stringify(master));
+    await core.commitPaths(root, ["resumes/master/resume.json"], "Generate master resume: master", "writer");
+    return { resume: master, review };
+  });
+  vi.spyOn(core, "generateBase").mockImplementation(async () => {
+    order.push("base");
+    const text = await core.readText(root, "resumes/master/resume.json");
+    expect(text).toContain("New master content");
+    const base = { ...master, id: "direction", kind: "base" as const, parent: "master" };
+    await core.writeTextAtomic(root, "resumes/direction/resume.json", JSON.stringify(base));
+    await core.commitPaths(root, ["resumes/direction/resume.json"], "Generate base resume: direction", "writer");
+    return { id: "direction", resume: base, review };
+  });
+  vi.spyOn(core, "tailor").mockImplementation(async (_ws, input) => {
+    order.push("job");
+    expect(await core.readText(root, "resumes/direction/resume.json")).toContain("New master content");
+    expect(input.applicationId).toBe("job-live");
+    return {
+      applicationDir: "applications/job-live",
+      status: "draft",
+      resume: { ...master, id: "job-live", kind: "job", parent: "direction" },
+      review,
+      analysis: { title: "Example", requirements: [], baseScores: [] },
+    };
+  });
+  const status = SyncStatus.parse(await (await server.request("/api/sync/status")).json());
+  expect(status.stale.map((entry: { id: string; reason: string }) => [entry.id, entry.reason])).toEqual([
+    ["master", "outline changed"],
+    ["direction", "outline changed"],
+    ["job-live", "outline changed"],
+  ]);
+  const response = await server.request("/api/sync/cascade", { method: "POST" });
+  expect(response.status).toBe(202);
+  const { jobIds } = SyncCascade.parse(await response.json());
+  expect(jobIds).toHaveLength(3);
+  await runtime.jobs.idle();
+  expect(order).toEqual(["master", "base", "job"]);
+  expect(jobIds.map((id: string) => runtime.jobs.get(id)?.status)).toEqual(["done", "done", "done"]);
+});
+
+it("rejects a busy cascade and prevents dependants from running after upstream failure", async () => {
+  await cascadeFixture();
+  await changeSource(root);
+  const server = await app();
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  runtime.jobs.enqueue("master", "master", async () => {
+    await gate;
+    return { scope: "resume", id: "master", sha: null };
+  });
+  const busy = await server.request("/api/sync/cascade", { method: "POST" });
+  expect(busy.status).toBe(409);
+  expect(await busy.json()).toMatchObject({ error: { code: "workspace-busy" } });
+  release();
+  await runtime.jobs.idle();
+  vi.spyOn(core, "generateMaster").mockRejectedValue(new Error("Master generation failed"));
+  const base = vi.spyOn(core, "generateBase");
+  const tailor = vi.spyOn(core, "tailor");
+  const { jobIds } = await (await server.request("/api/sync/cascade", { method: "POST" })).json();
+  await runtime.jobs.idle();
+  expect(base).not.toHaveBeenCalled();
+  expect(tailor).not.toHaveBeenCalled();
+  expect(jobIds.map((id: string) => runtime.jobs.get(id)?.status)).toEqual(["failed", "failed", "failed"]);
+});
+
+it.each([
+  ["outline.md", "outline changed"],
+  ["projects.md", "projects changed"],
+  ["profile.yaml", "profile changed"],
+  ["resumes/master/resume.json", "master changed"],
+])("reports %s changes against generation checkpoints", async (file, reason) => {
+  await cascadeFixture();
+  const server = await app();
+  expect(await (await server.request("/api/sync/status")).json()).toEqual({ stale: [] });
+  const text = await core.readText(root, file);
+  await core.writeTextAtomic(
+    root,
+    file,
+    file.endsWith(".json")
+      ? text.replace("Prepared the outline.", "Changed master text.")
+      : `${text}\n# Source change\n`,
+  );
+  await core.commitPaths(root, [file], "Update source", "user");
+  const { stale } = await (await server.request("/api/sync/status")).json();
+  expect(stale).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ id: "direction", reason }),
+      expect.objectContaining({ id: "job-live", reason }),
+    ]),
+  );
+  expect(stale.some((entry: { id: string }) => entry.id === "job-archived")).toBe(false);
+  if (reason === "master changed") expect(stale.some((entry: { id: string }) => entry.id === "master")).toBe(false);
 });

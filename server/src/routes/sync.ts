@@ -5,6 +5,7 @@ import {
   promoteBullet,
   SyncConflictError,
   suggestDownstream,
+  syncStatus,
 } from "@vita/core";
 import { PromoteRequest, SyncApplyRequest } from "@vita/shared";
 import { type Context, Hono } from "hono";
@@ -35,6 +36,24 @@ export function syncRoutes(runtime: WorkspaceRuntime): Hono {
         throw error;
       }
     });
+  app.get("/sync/status", async (c) => c.json(await syncStatus(runtime.ws)));
+  app.post("/sync/cascade", async (c) =>
+    exclusive(async () => {
+      const { stale } = await syncStatus(runtime.ws);
+      const parents = new Map<string, string>();
+      const jobIds: string[] = [];
+      for (const resume of stale) {
+        const dependency = resume.parent ? parents.get(resume.parent) : undefined;
+        const job = runtime.enqueue(resume.kind === "job" ? "answers" : resume.kind, resume.id, {
+          ...(resume.kind === "base" ? { baseId: resume.id } : {}),
+          afterJobs: dependency ? [dependency] : [],
+        });
+        jobIds.push(job.id);
+        if (resume.kind !== "job") parents.set(resume.id, job.id);
+      }
+      return c.json({ jobIds }, 202);
+    }),
+  );
   app.get("/sync/suggestions", async (c) =>
     exclusive(async () => {
       const sinceSha = z

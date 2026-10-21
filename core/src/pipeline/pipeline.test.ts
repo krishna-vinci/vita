@@ -15,6 +15,7 @@ import { commitPaths, ensureRepo, log, readText, writeTextAtomic } from "../work
 import { BaseGenerationError, generateBase } from "./base.js";
 import { generateMaster } from "./master.js";
 import { tailor as tailorJob } from "./tailor.js";
+import { citeFixtureSummary } from "./test-fixtures.js";
 import type { PipelineDeps } from "./types.js";
 
 // These existing scenarios expect a draft. Pending applications are covered separately below.
@@ -58,7 +59,7 @@ afterEach(async () => {
 async function profile(name = "developer", unlock = false) {
   const root = join(dir, "workspace");
   await cp(join(bundledDir, "fixtures", name), root, { recursive: true });
-  const resume = Resume.parse(JSON.parse(await readText(root, "resumes/master/resume.json")));
+  const resume = citeFixtureSummary(Resume.parse(JSON.parse(await readText(root, "resumes/master/resume.json"))));
   if (unlock) for (const bullet of visibleBullets(resume)) bullet.locked = false;
   await writeTextAtomic(root, "resumes/master/resume.json", JSON.stringify(resume));
   await ensureRepo(root);
@@ -354,7 +355,7 @@ describe("faux generation pipeline", () => {
     );
     expect(result.review.round).toBe(2);
     expect(result.review.done).toBe(false);
-    expect(result.review.blocking.some((reason) => reason.includes("unsupported: work-bullet-1"))).toBe(true);
+    expect(result.review.blocking.some((reason) => reason.includes("unsupported: summary-bullet"))).toBe(true);
     expect(JSON.parse(await readText(ws.root, `${result.applicationDir}/review.json`)).done).toBe(false);
   });
 
