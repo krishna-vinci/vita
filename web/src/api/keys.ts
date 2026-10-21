@@ -7,6 +7,7 @@ export const queryKeys = {
   letter: (id: string) => ["letter", id] as const,
   workspace: ["workspace"] as const,
   outline: ["outline"] as const,
+  profile: ["profile"] as const,
   projects: ["projects"] as const,
   resumes: ["resumes"] as const,
   resume: (id: string) => ["resumes", id] as const,

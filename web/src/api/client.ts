@@ -40,8 +40,11 @@ import {
   type OwnershipSuggestion,
   type PackSummary,
   type Prep,
+  type ProfileMutation,
+  type ProfileView,
   type PromoteRequest,
   type PutMarkdownRequest,
+  type PutProfileRequest,
   type PutRelationshipRequest,
   type PutResumeInstructionsRequest,
   type PutRulesRequest,
@@ -274,6 +277,10 @@ export const api = {
   },
   health: (signal?: AbortSignal) => get<HealthView>("/health", signal),
   workspace: (signal?: AbortSignal) => get<WorkspaceView>("/workspace", signal),
+  profile: {
+    get: (signal?: AbortSignal) => get<ProfileView>("/profile", signal),
+    save: (body: PutProfileRequest) => send<ProfileMutation>("/profile", body, "PUT"),
+  },
   outline: {
     get: (signal?: AbortSignal) => get<MarkdownResource>("/outline", signal),
     save: (body: PutMarkdownRequest) => send<MarkdownMutation>("/outline", body, "PUT"),
