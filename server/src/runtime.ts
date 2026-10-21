@@ -629,11 +629,14 @@ export class WorkspaceRuntime {
           resultId = result.id;
         } else {
           const existing = kind === "answers" && id ? await this.application(id) : undefined;
+          // A job still waiting for answers has no resume yet; its chosen base lives in meta.yaml.
+          const savedBase = existing && id ? (await this.metadata("application", id)).baseId : undefined;
           const result = await tailor(
             this.ws,
             {
               jobText: existing?.jobText ?? input.jobText ?? "",
-              baseId: existing?.resume?.parent ?? input.baseId,
+              baseId:
+                existing?.resume?.parent ?? (typeof savedBase === "string" ? savedBase : undefined) ?? input.baseId,
               applicationId: existing ? (id ?? undefined) : undefined,
               slug: existing ? undefined : `job-${ctx.signal.aborted ? "cancelled" : randomUUID().slice(0, 12)}`,
               answers: input.answers,

@@ -118,8 +118,10 @@ export function useRememberOwnership() {
       try {
         await save.mutateAsync({
           slug: item.slug,
-          relationship: item.relationship,
-          ...(item.contribution ? { contribution: item.contribution } : {}),
+          body: {
+            relationship: item.relationship,
+            ...(item.contribution ? { contribution: item.contribution } : {}),
+          },
         });
       } catch (error) {
         toast.error(

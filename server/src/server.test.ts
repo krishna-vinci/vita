@@ -690,7 +690,7 @@ it.each(["answers", "write"])(
       await (
         await server.request(
           "/api/applications",
-          post({ jobText: "UnusualSpecialty role", instructions: "Plain language" }),
+          post({ jobText: "UnusualSpecialty role", instructions: "Plain language", baseId: "master" }),
         )
       ).json(),
     );
@@ -733,5 +733,7 @@ it.each(["answers", "write"])(
     expect(written.resume).not.toBeNull();
     expect(written.answers["req-specialty"]).toBe(action === "write" ? "skip" : "no");
     expect(spy).toHaveBeenCalledTimes(2);
+    // The base picked when the job was created is kept for the draft after answers.
+    expect(spy.mock.calls[1]?.[1]).toMatchObject({ baseId: "master" });
   },
 );
