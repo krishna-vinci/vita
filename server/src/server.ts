@@ -31,6 +31,7 @@ import { metricsRoutes } from "./routes/metrics.js";
 import { onboardingRoutes } from "./routes/onboarding.js";
 import { packRoutes } from "./routes/packs.js";
 import { prepRoutes } from "./routes/prep.js";
+import { profileRoutes } from "./routes/profile.js";
 import { researchRoutes } from "./routes/research.js";
 import { syncRoutes } from "./routes/sync.js";
 import { templateRoutes } from "./routes/templates.js";
@@ -105,6 +106,7 @@ export function createWorkspaceApp(runtime: WorkspaceRuntime, options: { webDist
   app.get("/api/health", (c) => c.json({ ok: true }));
   app.route("/api", texRoutes(runtime));
   app.route("/api", memoryRoutes(runtime));
+  app.route("/api", profileRoutes(runtime));
   app.route("/api", trackerRoutes(runtime));
   app.route("/api", researchRoutes(runtime));
   app.route("/api", packRoutes(runtime));

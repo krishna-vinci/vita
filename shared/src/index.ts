@@ -19,7 +19,7 @@ export * from "./contact";
 export { Claim, Evidence, EvidenceKind, ItemMeta, Metric, Relationship } from "./evidence";
 export { ClaimId, EvidenceId, Slug, slugify } from "./ids";
 export { Pack } from "./pack";
-export { Profile } from "./profile";
+export { Profile, ProfileMutation, ProfileView, PutProfileRequest } from "./profile";
 export {
   Bullet,
   Contact,
