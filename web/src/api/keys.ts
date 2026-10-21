@@ -5,6 +5,8 @@ export const queryKeys = {
   tracker: ["tracker"] as const,
   trackerOf: (id: string) => ["tracker", id] as const,
   letter: (id: string) => ["letter", id] as const,
+  chatThreads: (kind: string, key: string) => ["chats", kind, key] as const,
+  chatThread: (kind: string, key: string, id: string) => ["chats", kind, key, id] as const,
   workspace: ["workspace"] as const,
   outline: ["outline"] as const,
   profile: ["profile"] as const,

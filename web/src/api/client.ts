@@ -8,6 +8,9 @@ import {
   type ApplicationSummary,
   type AuthState,
   type AvailableModelsView,
+  type ChatKind,
+  type ChatThread,
+  type ChatThreadSummary,
   type CreateApplicationRequest,
   type CreateBaseRequest,
   type DeleteResourceResult,
@@ -159,6 +162,12 @@ async function discard(path: string): Promise<void> {
   }
 }
 
+/** Which saved message a proposal came from, so the thread can mark it applied. */
+export interface ChatApplyIds {
+  messageId?: string;
+  threadId?: string;
+}
+
 const archivedQuery = (archived?: "include" | "only") => (archived ? `?archived=${archived}` : "");
 
 export interface TrackerListView {
@@ -192,17 +201,24 @@ export const api = {
       return request<OnboardingProposal>("/onboarding/import", { method: "POST", body: form });
     },
     apply: (proposal: OnboardingProposal) => send<OnboardingMutation>("/onboarding/import/apply", proposal),
-    chat: (message: string) =>
-      send<SourceChatReply & { memoryProposals?: MemoryProposal[] }>("/onboarding/chat", { message }),
-    chatApply: (proposal: SourceProposal) => send<MarkdownMutation>("/onboarding/chat/apply", proposal),
+    chat: (message: string, threadId?: string) =>
+      send<SourceChatReply & { memoryProposals?: MemoryProposal[] }>("/onboarding/chat", {
+        message,
+        ...(threadId ? { threadId } : {}),
+      }),
+    chatApply: (proposal: SourceProposal, ids?: ChatApplyIds) =>
+      send<MarkdownMutation>("/onboarding/chat/apply", { ...proposal, ...ids }),
   },
   letters: {
     get: (id: string, signal?: AbortSignal) => get<LetterResource>(`/applications/${segment(id)}/letter`, signal),
     generate: (id: string, body: GenerateLetterRequest) =>
       send<JobMutation>(`/applications/${segment(id)}/letter`, body),
     ops: (id: string, body: LetterOpsRequest) => send<LetterMutation>(`/applications/${segment(id)}/letter/ops`, body),
-    chat: (id: string, message: string) =>
-      send<LetterChatReply>(`/applications/${segment(id)}/letter/chat`, { message }),
+    chat: (id: string, message: string, threadId?: string) =>
+      send<LetterChatReply>(`/applications/${segment(id)}/letter/chat`, {
+        message,
+        ...(threadId ? { threadId } : {}),
+      }),
     export: (id: string) => send<LetterExportResult>(`/applications/${segment(id)}/letter/export`, {}),
   },
   memory: {
@@ -336,13 +352,28 @@ export const api = {
     cancel: (id: string) => send<JobMutation>(`/jobs/${segment(id)}/cancel`, {}),
   },
   chat: {
-    resume: (scope: "application" | "resume", id: string, message: string) =>
+    resume: (scope: "application" | "resume", id: string, message: string, threadId?: string) =>
       send<ResumeChatReply & { memoryProposals?: MemoryProposal[] }>(`/chat/resume/${scope}/${segment(id)}`, {
         message,
+        ...(threadId ? { threadId } : {}),
       }),
-    source: (message: string) =>
-      send<SourceChatReply & { memoryProposals?: MemoryProposal[] }>("/chat/source", { message }),
-    applySource: (proposal: SourceProposal) => send<MarkdownMutation>("/chat/source/apply", proposal),
+    source: (message: string, threadId?: string) =>
+      send<SourceChatReply & { memoryProposals?: MemoryProposal[] }>("/chat/source", {
+        message,
+        ...(threadId ? { threadId } : {}),
+      }),
+    applySource: (proposal: SourceProposal, ids?: ChatApplyIds) =>
+      send<MarkdownMutation>("/chat/source/apply", { ...proposal, ...ids }),
+  },
+  /** Saved conversations: one list per kind and key (see `ChatKind`). */
+  chats: {
+    list: (kind: ChatKind, key: string, signal?: AbortSignal) =>
+      get<ChatThreadSummary[]>(`/chats/${kind}/${segment(key)}`, signal),
+    get: (kind: ChatKind, key: string, threadId: string, signal?: AbortSignal) =>
+      get<ChatThread>(`/chats/${kind}/${segment(key)}/${segment(threadId)}`, signal),
+    create: (kind: ChatKind, key: string) => send<ChatThread>(`/chats/${kind}/${segment(key)}`, {}),
+    remove: (kind: ChatKind, key: string, threadId: string) =>
+      discard(`/chats/${kind}/${segment(key)}/${segment(threadId)}`),
   },
   prep: {
     start: (id: string) => send<JobMutation>(`/applications/${segment(id)}/prep`, {}),

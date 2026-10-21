@@ -1,129 +1,79 @@
-import type { MemoryProposal, SourceProposal } from "@vita/shared";
 import { SendHorizontal } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
+import { useEffect, useRef } from "react";
 import { useApplySource, useSourceChat } from "@/api/queries";
+import { ChatHeader, ChatSkeleton } from "@/components/ChatHeader";
+import { ChatProposal } from "@/components/ChatProposal";
 import { Markdown } from "@/components/Markdown";
 import { MemoryProposals } from "@/components/MemoryProposals";
-import { Diff } from "@/components/ProposalDiff";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useSavedChat } from "@/lib/use-chat-thread";
 import { useDraft } from "@/lib/use-draft";
-import { cn } from "@/lib/utils";
-
-interface Turn {
-  role: "user" | "assistant" | "error";
-  text: string;
-  proposal?: SourceProposal | null;
-  memoryProposals?: MemoryProposal[];
-  state?: "open" | "accepted" | "discarded";
-}
-
-const fileName = { outline: "your outline", projects: "your projects" } as const;
+import { useScrollMemory } from "@/lib/use-scroll-memory";
+import { Bubble } from "../workspace/ChatPanel";
 
 /** Ask for a change in plain words; edits arrive as a proposal you accept or discard. Nothing is written until then. */
-export function SourceChat({
-  dirty,
-  className,
-  draftKey,
-}: {
-  dirty: boolean;
-  className?: string;
-  /** Names the unsent text in this tab's storage, e.g. `chat:outline`. */
-  draftKey: string;
-}) {
-  const [turns, setTurns] = useState<Turn[]>([]);
-  const [text, setText, clearText] = useDraft(draftKey);
-  const chat = useSourceChat();
+export function SourceChat({ dirty, className }: { dirty: boolean; className?: string }) {
+  const reply = useSourceChat();
   const apply = useApplySource();
-  const update = (index: number, patch: Partial<Turn>) =>
-    setTurns((all) => all.map((turn, at) => (at === index ? { ...turn, ...patch } : turn)));
-  const send = async () => {
+  const chat = useSavedChat("source", "outline-projects", (message, threadId) =>
+    reply.mutateAsync({ message, threadId }),
+  );
+  const [text, setText, clearText] = useDraft(chat.draftKey);
+  const log = useRef<HTMLDivElement>(null);
+  const end = useRef<HTMLDivElement>(null);
+  useScrollMemory(log, chat.draftKey, !chat.loading, true);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll whenever a message arrives.
+  useEffect(() => end.current?.scrollIntoView?.({ block: "end" }), [chat.messages.length, chat.pending]);
+  const send = () => {
     const message = text.trim();
-    if (!message || chat.isPending) return;
+    if (!message || chat.pending || chat.loading) return;
     clearText();
-    setTurns((all) => [...all, { role: "user", text: message }]);
-    try {
-      const reply = await chat.mutateAsync(message);
-      setTurns((all) => [
-        ...all,
-        {
-          role: "assistant",
-          text: reply.reply,
-          proposal: reply.proposal,
-          memoryProposals: reply.memoryProposals,
-          state: reply.proposal ? "open" : undefined,
-        },
-      ]);
-    } catch (error) {
-      setTurns((all) => [
-        ...all,
-        { role: "error", text: error instanceof Error ? error.message : "That didn't work. Please try again." },
-      ]);
-    }
+    void chat.send(message);
   };
+  const last = chat.messages.length - 1;
   return (
-    <section aria-label="Chat" className={cn("flex min-h-0 flex-col gap-3", className)}>
-      <h2 className="font-display text-lg font-medium">Ask for a change</h2>
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1" role="log" aria-live="polite">
-        <Bubble from="assistant">
-          Tell me what to add or fix, like "I moved backups to Restic last year". I'll show you the change first.
-        </Bubble>
-        {turns.map((turn, index) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: append-only list
-          <Bubble key={index} from={turn.role}>
-            {turn.role === "assistant" ? <Markdown text={turn.text} /> : turn.text}
-            <MemoryProposals proposals={turn.memoryProposals} />
-            {turn.proposal && (
-              <div className="mt-3 flex flex-col gap-2">
-                <p className="text-xs font-medium text-muted-foreground">
-                  Proposed change to {fileName[turn.proposal.file]}
-                </p>
-                {turn.proposal.summary && <Markdown text={turn.proposal.summary} className="text-sm" />}
-                <Diff before={turn.proposal.before} after={turn.proposal.after} />
-                {turn.state === "open" ? (
-                  <>
-                    {dirty && <p className="text-xs text-warning">Save your own edits first, then accept.</p>}
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        disabled={dirty || apply.isPending}
-                        onClick={async () => {
-                          if (!turn.proposal) return;
-                          try {
-                            await apply.mutateAsync(turn.proposal);
-                            update(index, { state: "accepted" });
-                            toast.success("Change added.");
-                          } catch (error) {
-                            toast.error(error instanceof Error ? error.message : "Could not apply the change.");
-                          }
-                        }}
-                      >
-                        Accept
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => update(index, { state: "discarded" })}>
-                        Discard
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-xs text-muted-foreground">{turn.state === "accepted" ? "Added." : "Discarded."}</p>
+    <section aria-label="Chat" className={`flex min-h-0 flex-col gap-3 ${className ?? ""}`}>
+      <ChatHeader chat={chat} />
+      <div ref={log} className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1" role="log" aria-live="polite">
+        {chat.loading ? (
+          <ChatSkeleton />
+        ) : (
+          <>
+            <Bubble from="assistant">
+              Tell me what to add or fix, like "I moved backups to Restic last year". I'll show you the change first.
+            </Bubble>
+            {chat.messages.map((message, index) => (
+              <Bubble key={message.id} from={message.role}>
+                {message.role === "assistant" ? <Markdown text={message.text} /> : message.text}
+                <MemoryProposals proposals={message.memoryProposals} />
+                <ChatProposal
+                  message={message}
+                  threadId={chat.threadId}
+                  blocked={dirty}
+                  apply={(proposal, ids) => apply.mutateAsync({ proposal, ids })}
+                />
+                {message.role === "error" && index === last && (
+                  <Button size="sm" variant="outline" className="mt-2" disabled={chat.pending} onClick={chat.retry}>
+                    Retry
+                  </Button>
                 )}
-              </div>
+              </Bubble>
+            ))}
+            {chat.pending && (
+              <p className="text-sm text-muted-foreground" role="status">
+                Working on it…
+              </p>
             )}
-          </Bubble>
-        ))}
-        {chat.isPending && (
-          <p className="text-sm text-muted-foreground" role="status">
-            Working on it…
-          </p>
+          </>
         )}
+        <div ref={end} />
       </div>
       <form
         className="flex items-end gap-2"
         onSubmit={(event) => {
           event.preventDefault();
-          void send();
+          send();
         }}
       >
         <Textarea
@@ -132,7 +82,7 @@ export function SourceChat({
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
-              void send();
+              send();
             }
           }}
           aria-label="Ask for a change"
@@ -144,26 +94,12 @@ export function SourceChat({
           type="submit"
           size="icon"
           className="size-11"
-          disabled={chat.isPending || !text.trim()}
+          disabled={chat.pending || chat.loading || !text.trim()}
           aria-label="Send"
         >
           <SendHorizontal />
         </Button>
       </form>
     </section>
-  );
-}
-
-function Bubble({ from, children }: { from: Turn["role"]; children: React.ReactNode }) {
-  return (
-    <div
-      className={cn(
-        "max-w-[96%] rounded-xl border px-3 py-2 text-sm break-words whitespace-pre-line",
-        from === "user" ? "self-end bg-secondary text-secondary-foreground" : "self-start bg-card",
-        from === "error" && "border-destructive/40 text-destructive",
-      )}
-    >
-      {children}
-    </div>
   );
 }

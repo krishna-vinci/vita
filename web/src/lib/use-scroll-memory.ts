@@ -7,13 +7,14 @@ const prefix = "vita:scroll:";
  * Puts a scrolling element back where it was (stored in this tab, under `key`) and remembers where it goes next.
  * Returns the cleanup. Storage can be blocked, in which case nothing is remembered.
  */
-export function rememberScroll(element: HTMLElement, key: string): () => void {
+export function rememberScroll(element: HTMLElement, key: string, bottomByDefault = false): () => void {
   let frame = 0;
   let restore = 0;
   try {
     const saved = Number(sessionStorage.getItem(prefix + key));
     // Wait a frame so the content has its height before scrolling.
     if (saved > 0) restore = requestAnimationFrame(() => element.scrollTo?.({ top: saved }));
+    else if (bottomByDefault) restore = requestAnimationFrame(() => element.scrollTo?.({ top: element.scrollHeight }));
   } catch {
     /* Not restored. */
   }
@@ -36,12 +37,17 @@ export function rememberScroll(element: HTMLElement, key: string): () => void {
 }
 
 /** The same for a pane that scrolls on its own (not the window), per route. Pass `ready` false until it has content. */
-export function useScrollMemory(ref: RefObject<HTMLElement | null>, name: string, ready = true) {
+export function useScrollMemory(
+  ref: RefObject<HTMLElement | null>,
+  name: string,
+  ready = true,
+  bottomByDefault = false,
+) {
   const { pathname } = useLocation();
   useEffect(() => {
     if (!ref.current || !ready) return;
-    return rememberScroll(ref.current, `${name}:${pathname}`);
-  }, [ref, name, pathname, ready]);
+    return rememberScroll(ref.current, `${name}:${pathname}`, bottomByDefault);
+  }, [ref, name, pathname, ready, bottomByDefault]);
 }
 
 /**

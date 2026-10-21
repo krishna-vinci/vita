@@ -18,7 +18,7 @@ export default function OutlineTab() {
   if (query.isError) return <PageError error={query.error} retry={() => void query.refetch()} />;
   const empty = !query.data.markdown.trim() && !dirty;
   return (
-    <SplitWithChat chat={<SourceChat dirty={dirty} className="h-full" draftKey="chat:outline" />}>
+    <SplitWithChat chat={<SourceChat dirty={dirty} className="h-full" />}>
       {empty && (
         <div className="mb-6 flex flex-col gap-3 rounded-xl border bg-card p-5">
           <h2 className="font-display text-xl font-medium">

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "./client";
+import type { SourceProposal } from "@vita/shared";
+import { api, type ChatApplyIds } from "./client";
 import { queryKeys } from "./keys";
 
 export { queryKeys } from "./keys";
@@ -91,7 +92,8 @@ export function useSaveSettings() {
 export const useResumeChat = (scope: "application" | "resume", id: string) => {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (message: string) => api.chat.resume(scope, id, message),
+    mutationFn: ({ message, threadId }: { message: string; threadId?: string }) =>
+      api.chat.resume(scope, id, message, threadId),
     onSuccess: async () => {
       await client.invalidateQueries({
         queryKey: scope === "resume" ? queryKeys.resume(id) : queryKeys.application(id),
@@ -99,9 +101,15 @@ export const useResumeChat = (scope: "application" | "resume", id: string) => {
     },
   });
 };
-export const useSourceChat = () => useMutation({ mutationFn: api.chat.source });
+export const useSourceChat = () =>
+  useMutation({
+    mutationFn: ({ message, threadId }: { message: string; threadId?: string }) => api.chat.source(message, threadId),
+  });
 export const useApplySource = () =>
-  useApiMutation(api.chat.applySource, [queryKeys.outline, queryKeys.projects, queryKeys.workspace]);
+  useApiMutation(
+    ({ proposal, ids }: { proposal: SourceProposal; ids?: ChatApplyIds }) => api.chat.applySource(proposal, ids),
+    [queryKeys.outline, queryKeys.projects, queryKeys.workspace],
+  );
 
 export const usePrep = (id: string, enabled = true) =>
   useQuery({
