@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const tabs = [
+  { value: "profile", label: "Profile" },
   { value: "outline", label: "Outline" },
   { value: "projects", label: "Projects" },
   { value: "resumes", label: "Base resumes" },
