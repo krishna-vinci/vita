@@ -37,6 +37,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { download } from "@/lib/resume-view";
 import { useDetails } from "@/lib/use-details";
+import { useDraft } from "@/lib/use-draft";
 import { ChatPanel } from "../workspace/ChatPanel";
 import { JobTabs } from "../workspace/JobTabs";
 import type { Message } from "../workspace/useChatThread";
@@ -89,9 +90,11 @@ export default function LetterPage() {
 
 function GenerateForm({ id, failedMessage }: { id: string; failedMessage?: string }) {
   const client = useQueryClient();
-  const [tone, setTone] = useState<NonNullable<GenerateLetterRequest["tone"]>>("plain");
-  const [length, setLength] = useState<NonNullable<GenerateLetterRequest["length"]>>("standard");
-  const [notes, setNotes] = useState("");
+  const [toneText, setTone, clearTone] = useDraft(`letter:${id}:tone`, "plain");
+  const [lengthText, setLength, clearLength] = useDraft(`letter:${id}:length`, "standard");
+  const [notes, setNotes, clearNotes] = useDraft(`letter:${id}:notes`);
+  const tone = toneText as NonNullable<GenerateLetterRequest["tone"]>;
+  const length = lengthText as NonNullable<GenerateLetterRequest["length"]>;
   const [busy, setBusy] = useState(false);
   return (
     <section aria-labelledby="gen" className="flex max-w-xl flex-col gap-4 rounded-xl border bg-card p-6">
@@ -145,6 +148,9 @@ function GenerateForm({ id, failedMessage }: { id: string; failedMessage?: strin
           setBusy(true);
           try {
             await api.letters.generate(id, { tone, length, ...(notes.trim() ? { notes: notes.trim() } : {}) });
+            clearTone();
+            clearLength();
+            clearNotes();
             await client.invalidateQueries({ queryKey: queryKeys.jobs });
           } catch (error) {
             toast.error(error instanceof Error ? error.message : "Could not start.");
@@ -266,6 +272,7 @@ function LetterView({ id, resource }: { id: string; resource: NonNullable<Return
           intro="Here's your cover letter. Click a paragraph to edit it, or ask me for a change."
           suggestions={["Make it shorter", "Open with something warmer"]}
           className="h-full"
+          draftKey={`chat:letter:${id}`}
         />
       }
     >

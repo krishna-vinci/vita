@@ -2,6 +2,7 @@ import type { MarkdownMutation, MarkdownResource, PutMarkdownRequest } from "@vi
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ApiError } from "@/api/client";
+import { RestoredNote } from "@/components/LeaveGuard";
 import { Markdown } from "@/components/Markdown";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { restoreAnchors, stripAnchors } from "@/lib/outline-anchors";
+import { readDraft, writeDraft } from "@/lib/use-draft";
+import { useUrlFlag } from "@/lib/use-url-state";
 import { cn } from "@/lib/utils";
 
 const remember = {
@@ -28,6 +31,20 @@ const remember = {
   },
 };
 
+/** Unsaved text from before a reload, when it differs from what is saved. */
+function storedDraft(key: string, shown: string): { text: string; hash: string } | null {
+  const raw = readDraft(key);
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw) as { text?: unknown; hash?: unknown };
+    return typeof value.text === "string" && typeof value.hash === "string" && value.text !== shown
+      ? { text: value.text, hash: value.hash }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function viewOf(markdown: string, hide: boolean) {
   return hide ? stripAnchors(markdown) : { display: markdown, table: new Map<string, string[]>() };
 }
@@ -39,6 +56,7 @@ export function MarkdownEditor({
   save,
   fetchLatest,
   onDirty,
+  draftKey,
   placeholder,
   className,
   hideAnchors = false,
@@ -49,6 +67,8 @@ export function MarkdownEditor({
   save: (body: PutMarkdownRequest) => Promise<MarkdownMutation>;
   fetchLatest: () => Promise<MarkdownResource>;
   onDirty?: (dirty: boolean) => void;
+  /** Keeps unsaved text for this tab, e.g. `editor:outline`. */
+  draftKey: string;
   placeholder?: string;
   className?: string;
   /** Show text without `<!-- c:… -->` markers; they are put back on matching lines when saving. */
@@ -58,10 +78,12 @@ export function MarkdownEditor({
 }) {
   const view = (markdown: string) => viewOf(markdown, hideAnchors);
   const shown = view(resource.markdown).display;
-  const [draft, setDraft] = useState(shown);
-  const [baseHash, setBaseHash] = useState(resource.hash);
+  const [restored, setRestored] = useState(() => storedDraft(draftKey, shown) !== null);
+  const [draft, setDraft] = useState(() => storedDraft(draftKey, shown)?.text ?? shown);
+  // A restored draft is saved against the version it was written from, so a clash is caught as usual.
+  const [baseHash, setBaseHash] = useState(() => storedDraft(draftKey, shown)?.hash ?? resource.hash);
   const [conflict, setConflict] = useState(false);
-  const [preview, setPreview] = useState(false);
+  const [preview, setPreview] = useUrlFlag("preview");
   const [saving, setSaving] = useState(false);
   const [mono, setMono] = useState(remember.get);
   const dirty = draft !== shown;
@@ -77,6 +99,10 @@ export function MarkdownEditor({
     }
   }, [resource, draft, hideAnchors]);
   useEffect(() => onDirty?.(dirty), [dirty, onDirty]);
+  useEffect(
+    () => writeDraft(draftKey, dirty ? JSON.stringify({ text: draft, hash: baseHash }) : null),
+    [draftKey, dirty, draft, baseHash],
+  );
 
   const submit = async (hash: string | null) => {
     setSaving(true);
@@ -186,7 +212,14 @@ export function MarkdownEditor({
           {saving ? "Saving…" : "Save"}
         </Button>
         {dirty && (
-          <Button variant="ghost" className="h-11" onClick={() => setDraft(shown)}>
+          <Button
+            variant="ghost"
+            className="h-11"
+            onClick={() => {
+              setDraft(shown);
+              setBaseHash(resource.hash);
+            }}
+          >
             Discard changes
           </Button>
         )}
@@ -194,6 +227,15 @@ export function MarkdownEditor({
           {dirty ? "You have unsaved changes." : "All changes saved."}
         </span>
       </div>
+      {restored && dirty && (
+        <RestoredNote
+          onDiscard={() => {
+            setDraft(shown);
+            setBaseHash(resource.hash);
+            setRestored(false);
+          }}
+        />
+      )}
     </div>
   );
 }

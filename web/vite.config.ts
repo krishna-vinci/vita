@@ -28,5 +28,5 @@ export default defineConfig({
       "/api": { target: "http://127.0.0.1:4317" },
     },
   },
-  test: { environment: "jsdom", restoreMocks: true },
+  test: { environment: "jsdom", restoreMocks: true, setupFiles: ["./src/test-setup.ts"] },
 });

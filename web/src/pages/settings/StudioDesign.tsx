@@ -1,11 +1,11 @@
 import type { TemplateDesignResult } from "@vita/shared";
 import { Loader2, Sparkles } from "lucide-react";
-import { useState } from "react";
 import { DiffView } from "@/components/DiffView";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useDraft } from "@/lib/use-draft";
 
 const examples = [
   "Add icons to the header",
@@ -31,6 +31,7 @@ export function StudioDesign({
   onSend,
   onApply,
   onDiscard,
+  draftKey,
 }: {
   /** Why the request is blocked ("Save first"), or null. */
   disabledReason: string | null;
@@ -44,8 +45,10 @@ export function StudioDesign({
   onSend: (message: string) => void;
   onApply: () => void;
   onDiscard: () => void;
+  /** Keeps the unsent message for this tab, e.g. `studio-design:my-copy`. */
+  draftKey: string;
 }) {
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useDraft(draftKey);
   const blocked = !!disabledReason;
   return (
     <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto p-1">

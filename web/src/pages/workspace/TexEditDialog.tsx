@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { ApiError, api } from "@/api/client";
 import { useResumeTex, useSaveResumeTex } from "@/api/queries";
 import { DiffView } from "@/components/DiffView";
+import { LeaveGuard, RestoredNote } from "@/components/LeaveGuard";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -21,6 +22,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { errorMessages, texLinesOf } from "@/lib/template-errors";
+import { readDraft, writeDraft } from "@/lib/use-draft";
+import { useUrlParam } from "@/lib/use-url-state";
 import { cn } from "@/lib/utils";
 
 const TexEditor = lazy(() => import("@/components/TexEditor"));
@@ -63,17 +66,42 @@ function problemOf(error: unknown): Problem {
   };
 }
 
+/** Unsaved LaTeX from before a reload, when it differs from what is saved. */
+function storedTex(key: string, saved: string): { text: string; hash: string } | null {
+  const raw = readDraft(key);
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw) as { text?: unknown; hash?: unknown };
+    return typeof value.text === "string" && typeof value.hash === "string" && value.text !== saved
+      ? { text: value.text, hash: value.hash }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function Body({ scope, id, initial, onClose }: { scope: Scope; id: string; initial: TexView; onClose: () => void }) {
   const { save, reset } = useSaveResumeTex(scope, id);
-  const [base, setBase] = useState<TexView>(initial);
-  const [draft, setDraft] = useState(initial.patched);
+  // Unsaved text survives a reload, based on the version it was written from.
+  const draftKey = `tex:${scope}:${id}`;
+  const [kept] = useState(() => storedTex(draftKey, initial.patched));
+  const [base, setBase] = useState<TexView>(kept ? { ...initial, hash: kept.hash } : initial);
+  const [draft, setDraft] = useState(kept?.text ?? initial.patched);
+  const [restored, setRestored] = useState(!!kept);
   const [problem, setProblem] = useState<Problem | null>(null);
-  const [tab, setTab] = useState<"code" | "changes">(initial.conflict ? "changes" : "code");
+  const [tab, setTab] = useUrlParam<"code" | "changes">("latex-tab", initial.conflict ? "changes" : "code", [
+    "code",
+    "changes",
+  ]);
   const [panel, setPanel] = useState(!!initial.conflict);
   const [confirmReset, setConfirmReset] = useState(false);
   const problemPanel = useRef<HTMLDivElement>(null);
   const dirty = draft !== base.patched;
   const busy = save.isPending || reset.isPending;
+  useEffect(
+    () => writeDraft(draftKey, dirty ? JSON.stringify({ text: draft, hash: base.hash }) : null),
+    [draftKey, dirty, draft, base.hash],
+  );
 
   useEffect(() => {
     // The editor scrolls to the error line in its own frame; wait for that, then show the panel.
@@ -123,6 +151,7 @@ function Body({ scope, id, initial, onClose }: { scope: Scope; id: string; initi
   const showPanel = panel || !!base.conflict;
   return (
     <>
+      <LeaveGuard when={dirty} what="LaTeX edits" />
       <div
         role="tablist"
         aria-label="LaTeX sections"
@@ -157,6 +186,7 @@ function Body({ scope, id, initial, onClose }: { scope: Scope; id: string; initi
                 errorLines={problem?.kind === "invalid" ? problem.lines : []}
                 onSave={() => void doSave()}
                 ariaLabel="LaTeX of this resume"
+                scrollKey={`latex:${scope}:${id}`}
                 height="100%"
               />
             </Suspense>
@@ -244,6 +274,14 @@ function Body({ scope, id, initial, onClose }: { scope: Scope; id: string; initi
               ? "Unsaved changes"
               : "Your edits are kept and reapplied after every regenerate."}
         </p>
+        {restored && dirty && (
+          <RestoredNote
+            onDiscard={() => {
+              setRestored(false);
+              void reload();
+            }}
+          />
+        )}
         <div className="hidden items-center gap-2 lg:flex">
           <Switch id="show-changes" checked={showPanel} disabled={!!base.conflict} onCheckedChange={setPanel} />
           <Label htmlFor="show-changes" className="cursor-pointer text-muted-foreground">

@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { ApiError, api } from "@/api/client";
 import WorkspacePage from "./WorkspacePage";
@@ -92,12 +92,15 @@ function mount(scope: "resume" | "application", path = "/me/resumes/ai") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[path]}>
-        <Routes>
-          <Route path="/me/resumes/:id" element={<WorkspacePage scope={scope} />} />
-          <Route path="/jobs/:id" element={<WorkspacePage scope={scope} />} />
-        </Routes>
-      </MemoryRouter>
+      <RouterProvider
+        router={createMemoryRouter(
+          [
+            { path: "/me/resumes/:id", element: <WorkspacePage scope={scope} /> },
+            { path: "/jobs/:id", element: <WorkspacePage scope={scope} /> },
+          ],
+          { initialEntries: [path] },
+        )}
+      />
     </QueryClientProvider>,
   );
 }

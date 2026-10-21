@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { download, flagsFor, parseClaims, resumeToMarkdown } from "@/lib/resume-view";
+import { useUrlFlag } from "@/lib/use-url-state";
 import { JobProgress } from "../jobs/JobProgress";
 import { SyncBanner } from "../me/SyncBanner";
 import { ChangeTemplateDialog } from "./ChangeTemplateDialog";
@@ -143,7 +144,7 @@ function Loaded({
   const navigate = useNavigate();
   const [details, setDetails] = useState(() => store.get("vita:details") === "1");
   const [changed, setChanged] = useState<ReadonlySet<string>>(new Set());
-  const [chatOpen, setChatOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useUrlFlag("chat");
   // Skipped questions are remembered for this tab only. Answers live on the server (`app.answers`).
   const skipKey = `vita:skipped:${id}`;
   const [skipped, setSkipped] = useState<string[]>(() => {
@@ -179,7 +180,8 @@ function Loaded({
   const promoter = usePromote();
   const [fit, setFit] = useState<FitState | null>(null);
   const [templates, setTemplates] = useState(false);
-  const [texOpen, setTexOpen] = useState(false);
+  // The LaTeX sheet and the phone chat sheet are in the URL, so a reload keeps them open (and any unsaved text).
+  const [texOpen, setTexOpen] = useUrlFlag("latex");
   const [styling, setStyling] = useState(false);
   const [instructionsOpen, setInstructionsOpen] = useState(false);
   const startFit = async (pages: number) => {
@@ -262,15 +264,17 @@ function Loaded({
           gaps={gaps}
           pending={answers.isPending}
           onRemember={remember}
+          draftKey={`questions:${id}`}
           onSkipAll={() => rememberSkipped([...skipped, ...gaps.map((gap) => gap.id)])}
           onSubmit={async (given) => {
-            if (!Object.keys(given).length) return rememberSkipped([...skipped, ...gaps.map((gap) => gap.id)]);
+            if (!Object.keys(given).length) return void rememberSkipped([...skipped, ...gaps.map((gap) => gap.id)]);
             try {
               await answers.mutateAsync({ answers: given });
               // Anything left unanswered stays skipped for now, so only new questions come back.
               rememberSkipped([...skipped, ...gaps.filter((gap) => !(gap.id in given)).map((gap) => gap.id)]);
             } catch (error) {
               toast.error(error instanceof Error ? error.message : "Your answers could not be sent.");
+              return false;
             }
           }}
         />
@@ -324,6 +328,7 @@ function Loaded({
       intro="Here's your resume. Ask me for any change, or click a line to edit it yourself."
       suggestions={["Put the strongest work first", "Make the summary shorter"]}
       className="h-full"
+      draftKey={`chat:${scope}:${id}`}
     />
   );
   return (

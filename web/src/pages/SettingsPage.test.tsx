@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { SettingsView } from "@vita/shared";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ApiError, api } from "@/api/client";
 import SettingsPage from "./SettingsPage";
@@ -33,12 +34,14 @@ afterEach(() => {
   for (const client of clients) client.clear();
   clients.length = 0;
 });
-function mount() {
+function mount(path = "/settings") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   clients.push(client);
   render(
     <QueryClientProvider client={client}>
-      <SettingsPage />
+      <MemoryRouter initialEntries={[path]}>
+        <SettingsPage />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -92,4 +95,12 @@ it("shows a setup card with copyable commands when no model has credentials, and
   mount();
   await screen.findByRole("combobox", { name: "Default model" });
   expect(screen.queryByText("Connect a model provider")).toBeNull();
+});
+
+it("opens models for each step from the URL and keeps the choice in the URL", async () => {
+  mount("/settings?steps=1");
+  const toggle = await screen.findByRole("switch", { name: "Advanced: models for each step" });
+  expect(toggle.getAttribute("aria-checked")).toBe("true");
+  fireEvent.click(toggle);
+  expect(toggle.getAttribute("aria-checked")).toBe("false");
 });

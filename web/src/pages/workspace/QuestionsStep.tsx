@@ -24,13 +24,15 @@ export function QuestionsStep({
   const write = useWriteApplication(id);
   const remember = useRememberOwnership();
   const [last, setLast] = useState<Call | null>(null);
-  const run = async (call: Call) => {
+  const run = async (call: Call): Promise<boolean> => {
     setLast(call);
     try {
       if (call.kind === "answers") await answers.mutateAsync({ answers: call.answers });
       else await write.mutateAsync();
+      return true;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "That could not be sent. Please try again.");
+      return false;
     }
   };
   const title = [app.analysis.title, app.analysis.company].filter(Boolean).join(" at ");
@@ -49,7 +51,8 @@ export function QuestionsStep({
       skipLabel="Skip and write now"
       stickyActions
       onRemember={remember}
-      onSubmit={(given) => void run({ kind: "answers", answers: given })}
+      draftKey={`questions:${id}`}
+      onSubmit={(given) => run({ kind: "answers", answers: given })}
       onSkipAll={() => void run({ kind: "skip" })}
       notice={
         failure && (

@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { type ProjectCard, parseProjects, plural } from "@/lib/projects-view";
+import { useUrlFlag } from "@/lib/use-url-state";
 import { ImportDialog } from "./ImportDialog";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { MetricCard } from "./MetricCard";
@@ -22,19 +23,20 @@ import { SourceChat } from "./SourceChat";
 export default function ProjectsTab() {
   const query = useProjects();
   const save = useSaveProjects();
-  const [editing, setEditing] = useState(false);
+  // "Edit as text" is in the URL, so a reload stays in the editor. It adds no Back step.
+  const [editing, setEditing] = useUrlFlag("edit");
   const [dirty, setDirty] = useState(false);
   const cards = useMemo(() => parseProjects(query.data?.markdown ?? ""), [query.data?.markdown]);
   if (query.isPending) return <PageLoading />;
   if (query.isError) return <PageError error={query.error} retry={() => void query.refetch()} />;
   const toggle = (
-    <Button variant="outline" className="h-11" onClick={() => setEditing((on) => !on)}>
+    <Button variant="outline" className="h-11" onClick={() => setEditing(!editing)}>
       <PencilLine /> {editing ? "Back to the list" : "Edit as text"}
     </Button>
   );
   if (editing)
     return (
-      <SplitWithChat chat={<SourceChat dirty={dirty} className="h-full" />}>
+      <SplitWithChat chat={<SourceChat dirty={dirty} className="h-full" draftKey="chat:projects" />}>
         <div className="mb-4">{toggle}</div>
         <MarkdownEditor
           resource={query.data}
@@ -42,6 +44,7 @@ export default function ProjectsTab() {
           save={save.mutateAsync}
           fetchLatest={() => api.projects.get()}
           onDirty={setDirty}
+          draftKey="editor:projects"
         />
       </SplitWithChat>
     );
