@@ -58,10 +58,11 @@ export const Resume = z
     kind: z.enum(["master", "base", "job"]),
     parent: z.string().nullable(),
     template: Slug,
-    layout: z.record(z.string(), z.union([z.number(), z.string()])).default({}),
+    layout: z.record(z.string(), z.union([z.number(), z.string(), z.boolean()])).default({}),
     header: z.object({
       name: z.string(),
       headline: z.string().optional(),
+      location: z.string().optional(),
       contact: z.array(Contact).default([]),
     }),
     sections: z.array(Section),

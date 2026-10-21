@@ -30,15 +30,29 @@ export async function loadTemplate(dirs: string[], id: string): Promise<LoadedTe
   throw new Error(`Template not found: ${id}`);
 }
 
-export function resolveLayout(meta: TemplateMeta, layout: Resume["layout"]): Record<string, number> {
-  const resolved: Record<string, number> = {};
+export function resolveLayout(meta: TemplateMeta, layout: Resume["layout"]): Resume["layout"] {
+  const resolved: Resume["layout"] = {};
   for (const [key, knob] of Object.entries(meta.knobs)) {
     const value = layout[key];
-    const number = typeof value === "string" && value.trim() ? Number(value) : value;
-    resolved[key] =
-      typeof number === "number" && Number.isFinite(number)
-        ? Math.min(knob.max, Math.max(knob.min, number))
-        : knob.default;
+    if (knob.type === "enum") {
+      if (value !== undefined && (typeof value !== "string" || !knob.options.includes(value)))
+        throw new Error(`Invalid layout option: ${key}`);
+      resolved[key] = value ?? knob.default;
+    } else if (knob.type === "color") {
+      const color = value ?? knob.default;
+      if (typeof color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(color))
+        throw new Error(`Invalid layout colour: ${key}; expected #RRGGBB`);
+      resolved[key] = color;
+    } else if (knob.type === "bool") {
+      if (value !== undefined && typeof value !== "boolean") throw new Error(`Invalid layout boolean: ${key}`);
+      resolved[key] = value ?? knob.default;
+    } else {
+      const number = typeof value === "string" && value.trim() ? Number(value) : value;
+      resolved[key] =
+        typeof number === "number" && Number.isFinite(number)
+          ? Math.min(knob.max, Math.max(knob.min, number))
+          : knob.default;
+    }
   }
   return resolved;
 }

@@ -2,9 +2,13 @@
 % https://github.com/subidit/rover-resume; source: templates/obsolete rover/obsolete-rover.tex
 % Modified for Vita contract, safe layout knobs and XeTeX; see NOTICE.
 \documentclass[11pt]{article}
+\usepackage[dvipsnames]{xcolor}
+\definecolor{accent}{HTML}{((( layout.accent )))}
 \usepackage[margin=((( layout.margin_in )))in, a4paper]{geometry}
 \usepackage[T1]{fontenc}
+((* if layout.font == "native" *))
 \usepackage[defaultfam,light,semibold,lining]{montserrat}
+((* endif *))
 
 \newcommand{\uthree}[4]{
     {\large
@@ -55,7 +59,7 @@
 \fancyhf{}
 \cfoot{\small\color{gray} ((( header.name ))) -- Page \thepage}
 
-\usepackage{xcolor}
+
 
 \usepackage[bookmarks=false]{hyperref}
 \hypersetup{
@@ -76,14 +80,41 @@
 \titlespacing{\subsubsection}{0pt}{0pt}{0pt}
 \linespread{((( layout.line_spread )))}
 
+((* if layout.font == "fira-sans" *))
+\renewcommand{\familydefault}{\rmdefault}
+\renewcommand{\seriesdefault}{m}
+\usepackage[sfdefault,semibold,lf]{FiraSans}
+((* elif layout.font == "pagella" *))
+\usepackage{tgpagella}
+\renewcommand{\familydefault}{\rmdefault}
+\renewcommand{\sfdefault}{\rmdefault}
+\renewcommand{\seriesdefault}{m}
+((* endif *))
+((* if layout.icons or layout.link_style == "label+icon" *))
+\usepackage{fontawesome5}
+((* endif *))
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\AtBeginDocument{
+((* if layout.footer == "none" *))
+\pagestyle{empty}
+((* else *))
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[C]{\small\color{gray} ((* if layout.footer == "name+page" *))((( header.name ))) -- ((* endif *))Page \thepage\ of \pageref*{LastPage}}
+((* endif *))
+}
+
 \begin{document}
 \fontsize{((( layout.font_pt )))}{((( layout.font_pt * 1.2 )))}\selectfont
+((* if layout.header_align == "native" *))
 \begin{center}
 ((* if header.contact.length *))
 \begin{minipage}[c]{0.28\textwidth}\raggedright\small
 ((* for contact in header.contact *))
 ((* if loop.index % 2 == 1 *))
-((* if contact.href *))\href{((( contact.href | url )))}{((( contact.display )))}((* else *))((( contact.display )))((* endif *))\par
+((* if layout.icons *))\faIcon{((( contact.icon )))}\,((* endif *))((* if contact.href *))\href{((( contact.href | url )))}{((* if layout.link_style == "url" *))((( contact.href )))((* else *))((( contact.display )))((* endif *))((* if layout.link_style == "label+icon" *))\,\faIcon{external-link-alt}((* endif *))}((* else *))((( contact.display )))((* endif *))\par
 ((* endif *))
 ((* endfor *))
 \end{minipage}\hfill
@@ -98,18 +129,37 @@
 \hfill\begin{minipage}[c]{0.28\textwidth}\raggedleft\small
 ((* for contact in header.contact *))
 ((* if loop.index % 2 == 0 *))
-((* if contact.href *))\href{((( contact.href | url )))}{((( contact.display )))}((* else *))((( contact.display )))((* endif *))\par
+((* if layout.icons *))\faIcon{((( contact.icon )))}\,((* endif *))((* if contact.href *))\href{((( contact.href | url )))}{((* if layout.link_style == "url" *))((( contact.href )))((* else *))((( contact.display )))((* endif *))((* if layout.link_style == "label+icon" *))\,\faIcon{external-link-alt}((* endif *))}((* else *))((( contact.display )))((* endif *))\par
 ((* endif *))
 ((* endfor *))
 \end{minipage}
 ((* endif *))
+((* if header.location *))
+\par\medskip ((( header.location )))\par
+((* endif *))
 \end{center}
+((* else *))
+\begingroup
+((* if layout.header_align == "left" *))\raggedright
+((* elif layout.header_align == "right" *))\raggedleft
+((* else *))\centering
+((* endif *))
+{\Huge\bfseries\color{accent} ((( header.name )))}\par
+((* if header.headline *))((( header.headline )))\par((* endif *))
+((* if header.location *))
+\par\medskip ((( header.location )))\par
+((* endif *))
+((* for contact in header.contact *))
+((* if layout.icons *))\faIcon{((( contact.icon )))}\,((* endif *))((* if contact.href *))\href{((( contact.href | url )))}{((* if layout.link_style == "url" *))((( contact.href )))((* else *))((( contact.display )))((* endif *))((* if layout.link_style == "label+icon" *))\,\faIcon{external-link-alt}((* endif *))}((* else *))((( contact.display )))((* endif *))\quad
+((* endfor *))
+\par\endgroup
+((* endif *))
 
 ((* for section in sections *))
 \section{((( section.title )))}
 ((* if section.kind == "entries" *))
 ((* for item in section.items *))
-\subsection{((( item.title )))((* if item.links.length *)) {\small ((* for link in item.links *))\href{((( link.url | url )))}{((( link.label )))}((* if not loop.last *))\enspace|\enspace{}((* endif *))((* endfor *))}((* endif *))((* if item.period *)) \hfill ((( item.period )))((* endif *))}
+\subsection{((( item.title )))((* if item.links.length *)) {\small ((* for link in item.links *))\href{((( link.url | url )))}{((* if layout.link_style == "url" *))((( link.url )))((* else *))((( link.label )))((* endif *))((* if layout.link_style == "label+icon" *))\,\faIcon{external-link-alt}((* endif *))}((* if not loop.last *))\enspace|\enspace{}((* endif *))((* endfor *))}((* endif *))((* if item.period *)) \hfill ((( item.period )))((* endif *))}
 ((* if item.subtitle or item.location *))
 \subsubsection{((* if item.subtitle *))((( item.subtitle )))((* endif *))((* if item.location *)) \hfill ((( item.location )))((* endif *))}
 ((* endif *))

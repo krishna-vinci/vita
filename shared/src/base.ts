@@ -14,6 +14,7 @@ export const BaseConfig = z.object({
     .object({ max_pages: z.number().int().min(1).max(4).optional() })
     .passthrough()
     .default({}),
+  layout: z.record(z.string(), z.union([z.number(), z.string(), z.boolean()])).optional(),
   template: Slug.default("rover-base"),
 });
 export type BaseConfig = z.infer<typeof BaseConfig>;

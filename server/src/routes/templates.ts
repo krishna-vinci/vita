@@ -1,35 +1,66 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import {
   approveTemplate,
   artifacts,
+  commitPaths,
   compileOriginal,
   discardTemplate,
+  editableTemplate,
   fileHash,
+  forkTemplate,
   loadModelsConfig,
   loadTemplate,
   loadUpload,
+  previewResume,
+  previewTemplate,
   proposeAdoption,
+  proposeTemplateDesign,
   readArtifact,
   readBundledTemplatePreview,
   receiveTemplateUpload,
   savedProposal,
+  saveTemplateSource,
   TemplateError,
+  templateContract,
   templatePath,
   UPLOAD_LIMIT,
   writeFileAtomic,
 } from "@vita/core";
-import { AdoptionProposal, EmptyRequest, Slug, type TemplateSummary } from "@vita/shared";
-import { Hono } from "hono";
+import {
+  AdoptionProposal,
+  DesignTemplateRequest,
+  EmptyRequest,
+  ForkTemplateRequest,
+  PutTemplateSourceRequest,
+  Slug,
+  TemplatePreviewRequest,
+  type TemplateSummary,
+} from "@vita/shared";
+import { type Context, Hono } from "hono";
+import { parse } from "yaml";
 import { ApiFailure } from "../errors.js";
 import type { WorkspaceRuntime } from "../runtime.js";
 
 export function templateRoutes(runtime: WorkspaceRuntime): Hono {
   const app = new Hono();
+  const json = async (c: Context) => {
+    try {
+      return JSON.parse((await c.req.text()) || "{}");
+    } catch {
+      throw new ApiFailure(400, "invalid-json", "Request body must be valid JSON");
+    }
+  };
   app.onError((error) => {
     if (error instanceof TemplateError)
       throw new ApiFailure(
-        ["template-exists", "stale-proposal", "stale-upload"].includes(error.code) ? 409 : 422,
+        ["template-exists", "stale-proposal", "stale-upload", "stale-source"].includes(error.code)
+          ? 409
+          : error.code === "read-only"
+            ? 403
+            : ["template-not-found", "resume-not-found"].includes(error.code)
+              ? 404
+              : 422,
         error.code,
         error.message,
       );
@@ -63,6 +94,49 @@ export function templateRoutes(runtime: WorkspaceRuntime): Hono {
       renderCheck: saved?.renderCheck ?? null,
     };
   };
+  app.get("/contract", (c) => c.json(templateContract));
+  app.post("/:id/fork", async (c) => {
+    const input = ForkTemplateRequest.parse(await json(c));
+    return runtime.exclusive(async () => {
+      const result = await forkTemplate(runtime.ws, Slug.parse(c.req.param("id")), input.name);
+      runtime.hub.publish({ type: "resource.changed", scope: "template", id: result.id, sha: result.sha });
+      return c.json(result, 201);
+    });
+  });
+  app.get("/:id/source", async (c) => {
+    const { dir: _dir, ...view } = await editableTemplate(runtime.ws, Slug.parse(c.req.param("id")));
+    return c.json(view);
+  });
+  for (const method of ["put", "post"] as const)
+    app[method]("/:id/source", async (c) => {
+      const input = PutTemplateSourceRequest.parse(await json(c));
+      return runtime.exclusive(async () => {
+        const result = await saveTemplateSource(
+          runtime.ws,
+          Slug.parse(c.req.param("id")),
+          input.source,
+          input.baseHash,
+        );
+        runtime.hub.publish({ type: "resource.changed", scope: "template", id: result.id, sha: result.sha });
+        return c.json(result);
+      });
+    });
+  app.post("/:id/preview", async (c) => {
+    const input = TemplatePreviewRequest.parse(await json(c));
+    return c.json(
+      await previewTemplate(runtime.ws, Slug.parse(c.req.param("id")), await previewResume(runtime.ws, input.resumeId)),
+    );
+  });
+  app.post("/:id/design", async (c) => {
+    const input = DesignTemplateRequest.parse(await json(c));
+    return c.json(
+      await proposeTemplateDesign(runtime.ws, Slug.parse(c.req.param("id")), input.message, {
+        runtime: runtime.options.runtime,
+        models: runtime.options.models ?? (await loadModelsConfig(runtime.ws.root)),
+        retry: runtime.options.retry,
+      }),
+    );
+  });
   app.post("/upload", async (c) => {
     let form: FormData;
     try {
@@ -188,7 +262,34 @@ export function templateRoutes(runtime: WorkspaceRuntime): Hono {
     const id = Slug.parse(c.req.param("uploadId"));
     return runtime.exclusive(async () => {
       ensureIdle(id);
-      await discardTemplate(runtime.ws.root, id);
+      if ((await runtime.optional(`templates/${id}/template.yaml`)) === undefined) {
+        // Keep the existing upload discard route, but protect bundled templates.
+        try {
+          const template = await editableTemplate(runtime.ws, id);
+          if (!template.editable) throw new ApiFailure(403, "read-only", "Bundled templates cannot be deleted");
+        } catch (error) {
+          if (!(error instanceof TemplateError) || error.code !== "template-not-found") throw error;
+        }
+        await discardTemplate(runtime.ws.root, id);
+      } else {
+        await editableTemplate(runtime.ws, id);
+        const resumes: string[] = [];
+        for (const directory of ["resumes", "applications"]) {
+          for (const resourceId of await runtime.ids(directory)) {
+            for (const filename of ["resume.json", "base.yaml"]) {
+              const text = await runtime.optional(`${directory}/${resourceId}/${filename}`);
+              if (text && (filename.endsWith("json") ? JSON.parse(text) : parse(text))?.template === id) {
+                resumes.push(`${directory}/${resourceId}`);
+                break;
+              }
+            }
+          }
+        }
+        if (resumes.length) throw new ApiFailure(409, "template-in-use", "Template is used by resumes", { resumes });
+        await rm(await templatePath(runtime.ws.root, `templates/${id}`), { recursive: true });
+        const sha = await commitPaths(runtime.ws.root, [`templates/${id}`], `Delete template ${id}`, "user");
+        runtime.hub.publish({ type: "resource.changed", scope: "template", id, sha });
+      }
       return c.body(null, 204);
     });
   });

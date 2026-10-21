@@ -213,7 +213,12 @@ export function applyOps(
       }
       case "layout.set": {
         if (!Object.hasOwn(ctx.template.knobs, op.key)) throw new OpError("invalid", `Unknown layout key: ${op.key}`);
-        const value = resolveLayout(ctx.template, { [op.key]: op.value })[op.key];
+        let value: number | string | boolean | undefined;
+        try {
+          value = resolveLayout(ctx.template, { [op.key]: op.value })[op.key];
+        } catch (error) {
+          throw new OpError("invalid", error instanceof Error ? error.message : String(error));
+        }
         if (value === undefined) throw new OpError("invalid", `Unresolved layout key: ${op.key}`);
         draft.layout = { ...draft.layout, [op.key]: value };
         break;

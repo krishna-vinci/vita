@@ -16,6 +16,7 @@ export function validateProposal(proposal: AdoptionProposal, original: string): 
   // Validate the parsed language, not substring matches: quoted delimiters cannot hide executable nodes.
   interface Node {
     typename: string;
+    lineno?: number;
     value?: unknown;
     val?: Node;
     name?: Node;
@@ -76,18 +77,31 @@ export function validateProposal(proposal: AdoptionProposal, original: string): 
     if (!value || typeof value !== "object") return;
     const node = value as Node;
     if (!allowed.has(node.typename) || ++nodes > 20_000)
-      throw new TemplateError("invalid-proposal", "Unsupported template operation");
+      throw new TemplateError(
+        "invalid-proposal",
+        `main.tex.njk:${(node.lineno ?? 0) + 1}: Unsupported template operation`,
+      );
     if (node.typename === "For") loops++;
-    if (loops > 4) throw new TemplateError("invalid-proposal", "Too many nested template loops");
+    if (loops > 4)
+      throw new TemplateError(
+        "invalid-proposal",
+        `main.tex.njk:${(node.lineno ?? 0) + 1}: Too many nested template loops`,
+      );
     if (node.typename === "Symbol" && unsafe(node.value))
-      throw new TemplateError("invalid-proposal", "Unsafe template name");
+      throw new TemplateError("invalid-proposal", `main.tex.njk:${(node.lineno ?? 0) + 1}: Unsafe template name`);
     if (node.typename === "LookupVal" && (node.val?.typename !== "Literal" || unsafe(node.val.value)))
-      throw new TemplateError("invalid-proposal", "Unsafe or dynamic template property");
+      throw new TemplateError(
+        "invalid-proposal",
+        `main.tex.njk:${(node.lineno ?? 0) + 1}: Unsafe or dynamic template property`,
+      );
     if (
       node.typename === "Filter" &&
       !["join", "default", "length", "latex", "escape", "url"].includes(String(node.name?.value))
     )
-      throw new TemplateError("invalid-proposal", "Unsupported template filter");
+      throw new TemplateError(
+        "invalid-proposal",
+        `main.tex.njk:${(node.lineno ?? 0) + 1}: Unsupported template filter`,
+      );
     for (const child of Object.values(node)) visit(child, loops);
   };
   visit(tree, 0);

@@ -274,3 +274,16 @@ it("renders source-derived entry links through the CLI without modifying the sav
   expect(await readFile(join(out, "resume.md"), "utf8")).toContain("[Website](<https://example.test/entry>)");
   expect(JSON.parse(await core.readText(root, "resumes/master/resume.json"))).toEqual(resume);
 });
+
+it("applies a saved LaTeX patch through CLI render and checks the patched output", async () => {
+  const root = await copyProfile("developer");
+  const resume = Resume.parse(JSON.parse(await core.readText(root, "resumes/master/resume.json")));
+  const tpl = await core.loadTemplate([bundledTemplatesDir], resume.template);
+  const generated = core.renderTex(resume, tpl, await core.loadRenderSources(root));
+  const edited = generated.replace("\\end{document}", "\\vspace{1pt}\n\\end{document}");
+  await core.writeTextAtomic(root, "resumes/master/tex.patch", core.createTexPatch(generated, edited));
+  const compile = vi.spyOn(core, "compileTex").mockResolvedValue({ pdf: Buffer.from("patched"), log: "" });
+  vi.spyOn(core, "pdfText").mockResolvedValue({ text: core.renderMarkdown(resume), pages: 1 });
+  expect((await renderCommand(root)).ok).toBe(true);
+  expect(compile).toHaveBeenCalledWith(expect.objectContaining({ tex: edited }));
+});

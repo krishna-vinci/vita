@@ -6,7 +6,15 @@ source:
   licence: CC-BY-4.0
   url: https://github.com/subidit/rover-resume
 page: a4
+reservedKnobs: [section_order]
 knobs:
+  accent: { type: color, default: "#FF0000" }
+  font: { type: enum, options: [native, fira-sans, pagella], default: native }
+  icons: { type: bool, default: false }
+  link_style: { type: enum, options: [label, label+icon, url], default: label }
+  footer: { type: enum, options: [none, page, name+page], default: none }
+  date_format: { type: enum, options: [original, year, month-year], default: original }
+  header_align: { type: enum, options: [native, left, center, right], default: native }
   font_pt: { min: 10, max: 11.5, default: 10.5 }
   line_spread: { min: 0.92, max: 1.1, default: 1.0 }
   margin_in: { min: 0.5, max: 1.5, default: 1.0 }

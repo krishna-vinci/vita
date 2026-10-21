@@ -24,7 +24,7 @@ export const ResumeOpSchema = z.discriminatedUnion("op", [
   z.strictObject({ op: z.literal("section.rename"), id, title: z.string() }),
   z.strictObject({ op: z.literal("item.hide"), id, hidden: z.boolean() }),
   z.strictObject({ op: z.literal("section.hide"), id, hidden: z.boolean() }),
-  z.strictObject({ op: z.literal("layout.set"), key: id, value: z.union([z.number(), z.string()]) }),
+  z.strictObject({ op: z.literal("layout.set"), key: id, value: z.union([z.number(), z.string(), z.boolean()]) }),
   z.strictObject({ op: z.literal("variant.swap"), bulletId: id, variantId: id }),
   z.strictObject({
     op: z.literal("bullet.override"),

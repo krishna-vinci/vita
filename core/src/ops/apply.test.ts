@@ -355,3 +355,23 @@ it("adds missing section and item containers through ops and rejects duplicate i
     applyOps(sampleResume(), [{ op: "section.add", id: "experience", title: "Duplicate", kind: "entries" }], context()),
   ).toThrow("Duplicate id");
 });
+
+it("applies typed style knobs with canonical colours and rejects invalid enum values", () => {
+  const ctx = context();
+  ctx.template.knobs.icons = { type: "bool", default: false };
+  ctx.template.knobs.accent = { type: "color", default: "#141E61" };
+  ctx.template.knobs.font_family = { type: "enum", options: ["native", "fira-sans"], default: "native" };
+  const result = applyOps(
+    sampleResume(),
+    [
+      { op: "layout.set", key: "icons", value: true },
+      { op: "layout.set", key: "accent", value: "#AABBCC" },
+      { op: "layout.set", key: "font_family", value: "fira-sans" },
+    ],
+    ctx,
+  );
+  expect(result.resume.layout).toMatchObject({ icons: true, accent: "#AABBCC", font_family: "fira-sans" });
+  expect(() => applyOps(sampleResume(), [{ op: "layout.set", key: "font_family", value: "unknown" }], ctx)).toThrow(
+    /Invalid layout option/,
+  );
+});

@@ -58,7 +58,7 @@ export const ApiResumeOp = z.discriminatedUnion("op", [
   z.strictObject({ op: z.literal("section.rename"), id, title: z.string() }),
   z.strictObject({ op: z.literal("item.hide"), id, hidden: z.boolean() }),
   z.strictObject({ op: z.literal("section.hide"), id, hidden: z.boolean() }),
-  z.strictObject({ op: z.literal("layout.set"), key: id, value: z.union([z.number(), z.string()]) }),
+  z.strictObject({ op: z.literal("layout.set"), key: id, value: z.union([z.number(), z.string(), z.boolean()]) }),
   z.strictObject({ op: z.literal("variant.swap"), bulletId: id, variantId: id }),
   z.strictObject({
     op: z.literal("bullet.override"),
@@ -136,6 +136,7 @@ export const ApplicationSummary = z.object({
 export type ApplicationSummary = z.infer<typeof ApplicationSummary>;
 export const ResumeResource = z.object({
   ...ResourceMetadata.shape,
+  patchConflict: z.boolean().optional(),
   resume: Resume,
   review: Review.nullable(),
   pdfUrl: z.string().nullable(),
@@ -181,6 +182,7 @@ export const ApiModelsConfig = z.strictObject({
       "source-editor": model.optional(),
       researcher: model.optional(),
       interviewer: model.optional(),
+      "template-designer": model.optional(),
       "template-adopter": model.optional(),
       onboarder: model.optional(),
     })

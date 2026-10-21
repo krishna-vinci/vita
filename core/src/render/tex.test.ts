@@ -81,3 +81,11 @@ it("renders bullets placed in summary and list sections", async () => {
   expect(tex).toContain("\\textbf{Tools}: Spreadsheets, Rostering\\par");
   expect(tex).toContain("First aid\\par");
 });
+
+it("formats dates without inventing months and keeps optional header location in the context", async () => {
+  const { formatPeriod } = await import("./tex");
+  expect(formatPeriod("2023-01 – 2026-10", "month-year")).toBe("Jan 2023 – Oct 2026");
+  expect(formatPeriod("Jan 2023 – Present", "year")).toBe("2023 – Present");
+  expect(formatPeriod("2023 – Present", "month-year")).toBe("2023 – Present");
+  expect(formatPeriod("2023-01 – Present", "original")).toBe("2023-01 – Present");
+});

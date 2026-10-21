@@ -26,13 +26,13 @@ import { atsReviewerRole, checkerRole, writerRole } from "../agent/roles.js";
 import { enforcePageLimit } from "../instructions/rules.js";
 import { lintResume } from "../lint/index.js";
 import {
-  checkRender,
+  checkPatchedRender,
   compileTex,
   loadTemplate,
   pdfText,
   type RenderSources,
   renderMarkdown,
-  renderTex,
+  renderStoredTex,
 } from "../render/index.js";
 import type { Selection } from "../search/index.js";
 import { resolveInWorkspace } from "../workspace/index.js";
@@ -333,9 +333,19 @@ export async function generate(
             [resolveInWorkspace(ctx.ws.root, "templates"), join(ctx.ws.bundledDir, "templates")],
             current.template,
           );
-          tex = renderTex(current, template, renderSources);
+          const patched = await renderStoredTex(ctx.ws.root, current, template, renderSources);
+          const generated = patched.generated;
+          tex = patched.patched;
           const compiled = await compileTex({ tex, assetsDir: template.dir });
-          const result = checkRender(current, await pdfText(compiled.pdf), input.maxPages);
+          const result = checkPatchedRender(current, await pdfText(compiled.pdf), input.maxPages, generated, tex);
+          if (patched.conflict) {
+            result.patchConflict = true;
+            lint.push({
+              rule: "tex-patch-conflict",
+              severity: "warn",
+              message: "LaTeX patch conflicts; generated LaTeX was rendered. See tex.conflict.json.",
+            });
+          }
           pdf = compiled.pdf;
           return result;
         } catch (error) {

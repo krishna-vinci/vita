@@ -1,14 +1,14 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
-  checkRender,
+  checkPatchedRender,
   compileTex,
   loadRenderSources,
   loadTemplate,
   pdfText,
   readText,
   renderMarkdown,
-  renderTex,
+  renderStoredTex,
   resolveInWorkspace,
   writeTextAtomic,
 } from "@vita/core";
@@ -22,9 +22,12 @@ export async function renderCommand(dir: string, opts: { resume?: string; out?: 
   const resume = Resume.parse(JSON.parse(await readText(root, `resumes/${id}/resume.json`)));
   const tpl = await loadTemplate([resolveInWorkspace(root, "templates"), bundledTemplatesDir], resume.template);
   const sources = await loadRenderSources(root);
-  const tex = renderTex(resume, tpl, sources);
+  const patched = await renderStoredTex(root, resume, tpl, sources);
+  const generated = patched.generated;
+  const tex = patched.patched;
   const { pdf } = await compileTex({ tex, assetsDir: tpl.dir });
-  const check = checkRender(resume, await pdfText(pdf), await pageLimit(root, id, resume));
+  const check = checkPatchedRender(resume, await pdfText(pdf), await pageLimit(root, id, resume), generated, tex);
+  if (patched.conflict) check.patchConflict = true;
   const outputRoot = opts.out ? resolve(opts.out) : root;
   const prefix = opts.out ? "" : `resumes/${id}/`;
   await mkdir(outputRoot, { recursive: true });

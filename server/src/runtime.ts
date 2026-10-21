@@ -7,7 +7,7 @@ import {
   buildSystemPrompt,
   checkerContext,
   checkerRole,
-  checkRender,
+  checkPatchedRender,
   commitPaths,
   compileTex,
   createGenerationRuntime,
@@ -36,7 +36,7 @@ import {
   recordExportedVersion,
   relFromRoot,
   renderMarkdown,
-  renderTex,
+  renderStoredTex,
   resolveInWorkspace,
   resolveRoleModel,
   runRole,
@@ -203,6 +203,7 @@ export class WorkspaceRuntime {
       archived: typeof metadata.archived === "string" ? metadata.archived : undefined,
       instructions: String((scope === "application" ? metadata.notes : metadata.instructions) ?? ""),
       resume,
+      patchConflict: (await this.optional(`${prefix}/tex.conflict.json`)) !== undefined,
       links,
       review: reviewText ? Review.parse(JSON.parse(reviewText)) : null,
       hash: hash ?? "",
@@ -674,9 +675,12 @@ export class WorkspaceRuntime {
       if (!preliminary.done) throw new ApiFailure(409, "review-blocked", preliminary.blocking.join("; "));
       const template = await this.template(resource.resume.template);
       const sources = await loadRenderSources(this.ws.root);
-      const tex = renderTex(resource.resume, template, sources);
+      const patched = await renderStoredTex(this.ws.root, resource.resume, template, sources);
+      const generated = patched.generated;
+      const tex = patched.patched;
       const compiled = await compileTex({ tex, assetsDir: template.dir });
-      const render = checkRender(resource.resume, await pdfText(compiled.pdf), maxPages);
+      const render = checkPatchedRender(resource.resume, await pdfText(compiled.pdf), maxPages, generated, tex);
+      if (patched.conflict) render.patchConflict = true;
       const done = evaluateDone({ ...certification, render });
       if (!done.done) throw new ApiFailure(409, "review-blocked", done.blocking.join("; "));
       const prefix = this.prefix("application", id);
