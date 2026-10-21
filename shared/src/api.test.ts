@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 import {
   AnswersRequest,
   AvailableModelsView,
+  ChatReplyIds,
   ChatRequest,
+  ChatThread,
   CreateApplicationRequest,
   ImportLegacyRequest,
   PutMarkdownRequest,
   PutSettingsRequest,
   ResumeOpsRequest,
+  SourceApplyRequest,
   SourceProposal,
   UndoRequest,
 } from "./api";
@@ -115,4 +118,39 @@ it("exports per-resume instruction, archive and link contracts with strict limit
       links: Array(5).fill({ label: "Site", url: "https://example.test" }),
     }).success,
   ).toBe(false);
+});
+
+it("accepts saved chat IDs and validates thread message and text caps", () => {
+  expect(ChatRequest.parse({ message: " Continue ", threadId: "thread-1" })).toEqual({
+    message: "Continue",
+    threadId: "thread-1",
+  });
+  expect(ChatRequest.safeParse({ message: "Continue", threadId: "../escape" }).success).toBe(false);
+  const message = { id: "message-1", role: "assistant", text: "Saved answer", at: "2026-10-21T00:00:00.000Z" };
+  const thread = {
+    id: "thread-1",
+    kind: "source",
+    key: "outline-projects",
+    title: "Question",
+    createdAt: message.at,
+    updatedAt: message.at,
+    messages: Array.from({ length: 200 }, () => message),
+  };
+  expect(ChatThread.safeParse(thread).success).toBe(true);
+  expect(ChatThread.safeParse({ ...thread, messages: [...thread.messages, message] }).success).toBe(false);
+  expect(ChatThread.safeParse({ ...thread, messages: [{ ...message, text: "x".repeat(20_001) }] }).success).toBe(false);
+  expect(ChatReplyIds.parse({ threadId: "thread-1", messageId: "message-1" })).toEqual({
+    threadId: "thread-1",
+    messageId: "message-1",
+  });
+  expect(
+    SourceApplyRequest.safeParse({
+      file: "outline",
+      before: "Before",
+      after: "After",
+      summary: "Update",
+      baseHash: "a".repeat(64),
+      messageId: "message-1",
+    }).success,
+  ).toBe(true);
 });

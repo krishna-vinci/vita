@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as core from "@vita/core";
-import { MarkdownMutation, ResumeChatReply, SourceChatReply } from "@vita/shared";
+import { ChatReplyIds, ChatThread, MarkdownMutation, ResumeChatReply, SourceChatReply } from "@vita/shared";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { WorkspaceRuntime } from "../runtime.js";
 import { createWorkspaceApp as createServer } from "../server.js";
@@ -71,7 +71,14 @@ it("applies resume chat immediately, publishes a change, and supports scoped und
     post({ message: "Add the existing supported line." }),
   );
   expect(response.status).toBe(200);
-  const result = ResumeChatReply.parse(await response.json());
+  const json = await response.json();
+  const result = ResumeChatReply.parse(json);
+  const ids = ChatReplyIds.parse(json);
+  const saved = ChatThread.parse(await (await server.request(`/api/chats/resume/master/${ids.threadId}`)).json());
+  expect(saved.messages[1]).toMatchObject({ id: ids.messageId, changes: result.changes });
+  expect(saved.messages[1]?.changes).toEqual([
+    { id: result.changedBullets[0], before: "", after: expect.any(String), hidden: false },
+  ]);
   expect(result).toMatchObject({
     applied: true,
     sha: expect.stringMatching(/^[a-f0-9]{40}$/),
@@ -111,12 +118,21 @@ it("writes source only through explicit apply and returns the new source and edi
   const publish = vi.spyOn(runtime.hub, "publish");
   const response = await server.request("/api/chat/source", post({ message: "Clarify my service work." }));
   expect(response.status).toBe(200);
-  const proposed = SourceChatReply.parse(await response.json());
+  const json = await response.json();
+  const proposed = SourceChatReply.parse(json);
+  const ids = ChatReplyIds.parse(json);
+  const path = `/api/chats/source/outline-projects/${ids.threadId}`;
+  const saved = ChatThread.parse(await (await server.request(path)).json());
+  expect(saved.messages[1]).toMatchObject({ id: ids.messageId, proposal: proposed.proposal });
   expect(await core.readText(root, "outline.md")).toBe(before);
   expect(publish).not.toHaveBeenCalled();
-  const applied = await server.request("/api/chat/source/apply", post(proposed.proposal));
+  const applied = await server.request(
+    "/api/chat/source/apply",
+    post({ ...proposed.proposal, messageId: ids.messageId }),
+  );
   expect(applied.status).toBe(200);
   const mutation = MarkdownMutation.parse(await applied.json());
+  expect(ChatThread.parse(await (await server.request(path)).json()).messages[1]?.applied).toBe(true);
   expect(mutation.markdown).toBe(before.replace(edit.before, edit.after));
   expect(mutation.hash).not.toBe(proposed.proposal?.baseHash);
   expect(mutation.sha).toMatch(/^[a-f0-9]{40}$/);
@@ -139,7 +155,7 @@ it.each(["stale-hash", "non-unique-before"])("returns 409 for a source %s confli
   expect(await core.readText(root, "projects.md")).toBe(before);
 });
 
-it("keeps the last ten turns per resource and source scope in server memory", async () => {
+it("keeps the last ten saved turns per thread and isolates new threads and scopes", async () => {
   const server = await app();
   const resumeChat = vi.spyOn(core, "chatResume").mockResolvedValue({
     reply: "Answer",
@@ -150,10 +166,17 @@ it("keeps the last ten turns per resource and source scope in server memory", as
     metadata: { lint: [], blocking: [] },
   });
   const sourceChat = vi.spyOn(core, "proposeSourceEdit").mockResolvedValue({ reply: "Source answer", proposal: null });
-  for (let n = 0; n < 7; n++)
-    expect((await server.request("/api/chat/resume/resume/master", post({ message: `Message ${n}` }))).status).toBe(
-      200,
+  let threadId: string | undefined;
+  for (let n = 0; n < 7; n++) {
+    const response = await server.request(
+      "/api/chat/resume/resume/master",
+      post({ message: `Message ${n}`, threadId }),
     );
+    expect(response.status).toBe(200);
+    const ids = ChatReplyIds.parse(await response.json());
+    if (threadId) expect(ids.threadId).toBe(threadId);
+    threadId = ids.threadId;
+  }
   expect(resumeChat.mock.calls[6]?.[1].history).toHaveLength(10);
   expect(resumeChat.mock.calls[6]?.[1].history[0]).toEqual({ role: "user", text: "Message 1" });
   await core.writeTextAtomic(
@@ -165,16 +188,20 @@ it("keeps the last ten turns per resource and source scope in server memory", as
     (await server.request("/api/chat/resume/application/example", post({ message: "Different scope" }))).status,
   ).toBe(200);
   expect(resumeChat.mock.calls[7]?.[1].history).toEqual([]);
-  expect((await server.request("/api/chat/source", post({ message: "Source request" }))).status).toBe(200);
+  const source = await server.request("/api/chat/source", post({ message: "Source request" }));
+  expect(source.status).toBe(200);
+  const sourceIds = ChatReplyIds.parse(await source.json());
   expect(sourceChat.mock.calls[0]?.[1].history).toEqual([]);
-  await server.request("/api/chat/source", post({ message: "Source follow-up" }));
+  await server.request("/api/chat/source", post({ message: "Source follow-up", threadId: sourceIds.threadId }));
   expect(sourceChat.mock.calls[1]?.[1].history).toEqual([
     { role: "user", text: "Source request" },
     { role: "assistant", text: "Source answer" },
   ]);
-  const restarted = createServer(runtime);
-  await restarted.request("/api/chat/resume/resume/master", post({ message: "After restart" }));
+  await server.request("/api/chat/resume/resume/master", post({ message: "A new conversation" }));
   expect(resumeChat.mock.calls[8]?.[1].history).toEqual([]);
+  const saved = ChatThread.parse(await (await server.request(`/api/chats/resume/master/${threadId}`)).json());
+  expect(saved.messages).toHaveLength(14);
+  expect(saved.title).toBe("Message 0");
 });
 
 it("validates chat bodies, scope and ids before any model call", async () => {
@@ -188,4 +215,59 @@ it("validates chat bodies, scope and ids before any model call", async () => {
     (await server.request("/api/chat/source/apply", post({ ...edit, before: "", baseHash: "a".repeat(64) }))).status,
   ).toBe(400);
   expect(chat).not.toHaveBeenCalled();
+});
+
+it("passes persisted context to the faux provider after recreating the WorkspaceRuntime", async () => {
+  const server = await app([
+    { tool: "propose_edit", arguments: { reply: "Saved answer before restart", proposal: null } },
+  ]);
+  const first = await server.request("/api/chat/source", post({ message: "Remember my earlier question" }));
+  expect(first.status).toBe(200);
+  const { threadId } = ChatReplyIds.parse(await first.json());
+  await runtime.close();
+  await closeFaux?.();
+  const restarted = await app([
+    { tool: "propose_edit", arguments: { reply: "Continued after restart", proposal: null } },
+  ]);
+  const prompts: string[] = [];
+  const original = runtime.options.runtime.streamSimple.bind(runtime.options.runtime);
+  runtime.options.runtime.streamSimple = (model, context, options) => {
+    prompts.push(JSON.stringify(context));
+    return original(model, context, options);
+  };
+  const second = await restarted.request("/api/chat/source", post({ message: "Continue that thought", threadId }));
+  expect(second.status).toBe(200);
+  const ids = ChatReplyIds.parse(await second.json());
+  expect(ids.threadId).toBe(threadId);
+  expect(prompts.length).toBeGreaterThan(0);
+  expect(
+    prompts.every(
+      (prompt) => prompt.includes("Remember my earlier question") && prompt.includes("Saved answer before restart"),
+    ),
+  ).toBe(true);
+  const saved = ChatThread.parse(
+    await (await restarted.request(`/api/chats/source/outline-projects/${threadId}`)).json(),
+  );
+  expect(saved.messages.map((message) => message.role)).toEqual(["user", "assistant", "user", "assistant"]);
+  expect(saved.messages[3]?.id).toBe(ids.messageId);
+});
+
+it("rejects mismatched saved proposals and leaves failed applies unmarked", async () => {
+  const server = await app([{ tool: "propose_edit", arguments: { proposal: edit, reply: "Review this diff." } }]);
+  const response = await server.request("/api/chat/source", post({ message: "Clarify service work" }));
+  const json = await response.json();
+  const { threadId, messageId } = ChatReplyIds.parse(json);
+  const { proposal } = SourceChatReply.parse(json);
+  const before = await core.readText(root, "outline.md");
+  expect(
+    (await server.request("/api/chat/source/apply", post({ ...proposal, messageId, after: "Different edit" }))).status,
+  ).toBe(409);
+  expect((await server.request("/api/chat/source/apply", post({ ...proposal, messageId: "missing" }))).status).toBe(
+    404,
+  );
+  expect(await core.readText(root, "outline.md")).toBe(before);
+  await core.writeTextAtomic(root, "outline.md", `${before}\nExternal edit\n`);
+  expect((await server.request("/api/chat/source/apply", post({ ...proposal, messageId, threadId }))).status).toBe(409);
+  const saved = ChatThread.parse(await (await server.request(`/api/chats/source/outline-projects/${threadId}`)).json());
+  expect(saved.messages[1]?.applied).not.toBe(true);
 });

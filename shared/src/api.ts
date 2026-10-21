@@ -280,7 +280,10 @@ export type HealthView = z.infer<typeof HealthView>;
 
 export const ChatTurn = z.strictObject({ role: z.enum(["user", "assistant"]), text: z.string() });
 export type ChatTurn = z.infer<typeof ChatTurn>;
-export const ChatRequest = z.strictObject({ message: z.string().trim().min(1).max(20_000) });
+export const ChatRequest = z.strictObject({
+  message: z.string().trim().min(1).max(20_000),
+  threadId: Slug.optional(),
+});
 export type ChatRequest = z.infer<typeof ChatRequest>;
 export const ChatScope = z.enum(["application", "resume"]);
 export const SourceEdit = z.strictObject({
@@ -291,13 +294,56 @@ export const SourceEdit = z.strictObject({
 });
 export const SourceProposal = SourceEdit.extend({ baseHash: z.string().regex(/^[a-f0-9]{64}$/) });
 export type SourceProposal = z.infer<typeof SourceProposal>;
+export const SourceApplyRequest = SourceProposal.extend({ messageId: Slug.optional(), threadId: Slug.optional() });
+export type SourceApplyRequest = z.infer<typeof SourceApplyRequest>;
+export const ChatKind = z.enum(["resume", "application", "source", "letter", "onboarding"]);
+export type ChatKind = z.infer<typeof ChatKind>;
+export const ChatChange = z.object({
+  id: z.string(),
+  before: z.string().max(2_000_000),
+  after: z.string().max(2_000_000),
+  hidden: z.boolean(),
+});
+export type ChatChange = z.infer<typeof ChatChange>;
+export const ChatMessage = z.object({
+  id: Slug,
+  role: z.enum(["user", "assistant", "error"]),
+  text: z.string().max(20_000),
+  at: z.iso.datetime(),
+  changedBullets: z.array(z.string()).optional(),
+  changes: z.array(ChatChange).optional(),
+  proposal: SourceProposal.nullable().optional(),
+  memoryProposals: z.array(MemoryProposal).optional(),
+  applied: z.boolean().optional(),
+});
+export type ChatMessage = z.infer<typeof ChatMessage>;
+export const ChatThread = z.object({
+  id: Slug,
+  kind: ChatKind,
+  key: Slug,
+  title: z.string().max(60),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+  messages: z.array(ChatMessage).max(200),
+});
+export type ChatThread = z.infer<typeof ChatThread>;
+export const ChatThreadSummary = ChatThread.pick({ id: true, title: true, updatedAt: true }).extend({
+  messageCount: z.number().int().min(0).max(200),
+});
+export type ChatThreadSummary = z.infer<typeof ChatThreadSummary>;
+// Core replies also serve headless callers; HTTP chat replies always include both IDs.
+export const ChatReplyIds = z.object({ threadId: Slug, messageId: Slug });
+export type ChatReplyIds = z.infer<typeof ChatReplyIds>;
 export const SourceChatReply = z.object({
+  ...ChatReplyIds.partial().shape,
   memoryProposals: z.array(MemoryProposal).optional(),
   reply: z.string(),
   proposal: SourceProposal.nullable(),
 });
 export type SourceChatReply = z.infer<typeof SourceChatReply>;
 export const ResumeChatReply = z.object({
+  ...ChatReplyIds.partial().shape,
+  changes: z.array(ChatChange).optional(),
   memoryProposals: z.array(MemoryProposal).optional(),
   reply: z.string(),
   ops: z.array(ApiResumeOp),

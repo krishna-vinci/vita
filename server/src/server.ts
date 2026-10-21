@@ -22,6 +22,7 @@ import { bodyLimit } from "hono/body-limit";
 import { ZodError, type z } from "zod";
 import { ApiFailure } from "./errors.js";
 import { chatRoutes } from "./routes/chat.js";
+import { chatsRoutes } from "./routes/chats.js";
 import { eventsRoutes } from "./routes/events.js";
 import { fitRoutes } from "./routes/fit.js";
 import { instructionsRoutes } from "./routes/instructions.js";
@@ -236,6 +237,7 @@ export function createWorkspaceApp(runtime: WorkspaceRuntime, options: { webDist
     return c.json(await runtime.undo(input.scope, input.id));
   });
   app.route("/api/events", eventsRoutes(runtime.hub));
+  app.route("/api/chats", chatsRoutes(runtime));
   app.route("/api/chat", chatRoutes(runtime));
   app.route("/api/onboarding", onboardingRoutes(runtime));
   app.route("/api/metrics", metricsRoutes(runtime));

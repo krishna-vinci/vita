@@ -541,11 +541,15 @@ it("protects master, requires archive and references to be removed, and commits 
   for (const [plural, id] of [
     ["applications", "example"],
     ["resumes", "direction"],
-  ]) {
+  ] as const) {
+    const kind = plural === "resumes" ? "resume" : "application";
+    const thread = await runtime.chats.create(kind, id);
     const response = await server.request(`/api/${plural}/${id}`, { method: "DELETE" });
     expect(response.status, await response.clone().text()).toBe(200);
     expect(await response.json()).toMatchObject({ deleted: true, sha: expect.stringMatching(/^[a-f0-9]{40}$/) });
     await expect(readdir(join(runtime.ws.root, `${plural}/${id}`))).rejects.toMatchObject({ code: "ENOENT" });
+    expect((await server.request(`/api/chats/${kind}/${id}/${thread.id}`)).status).toBe(404);
+    await expect(readdir(join(runtime.ws.root, `.vita/chats/${kind}/${id}`))).rejects.toMatchObject({ code: "ENOENT" });
     await expect(core.readText(runtime.ws.root, `${plural}/${id}/resume.json`)).rejects.toMatchObject({
       code: "ENOENT",
     });
