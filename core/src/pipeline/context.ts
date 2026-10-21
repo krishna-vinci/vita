@@ -1,7 +1,7 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import type { Rules } from "@vita/shared";
-import { BaseConfig, JobAnalysis, type Pack, Resume, Slug, slugify } from "@vita/shared";
+import { BaseConfig, JobAnalysis, type Pack, Relationship, Resume, Slug, slugify } from "@vita/shared";
 import { parse as parseYaml } from "yaml";
 import { buildClaimIndex, type ClaimIndex } from "../claims/index.js";
 import { loadRules } from "../instructions/rules.js";
@@ -52,6 +52,19 @@ export async function loadContext(
   const outline = parseOutline(assignOutlineAnchors(outlineText).markdown);
   const index = buildClaimIndex(parseProjects(projectsText).doc, outline);
   await addAnswerClaims(ws, index, opts.answers);
+  // A profile-wide default ("all my projects are mine") stands in for an unset relationship on
+  // repository-backed items, the same items that would otherwise get an ownership question.
+  const profileText = await optionalText(ws.root, "profile.yaml");
+  const fallback = profileText
+    ? Relationship.safeParse(parseYaml(profileText)?.default_relationship)
+    : undefined;
+  if (fallback?.success)
+    for (const item of index.items.values())
+      if (
+        !item.meta.relationship &&
+        item.meta.links.some((link) => /^(?:https?:\/\/)?(?:www\.)?github\.com\/[^/]+\/[^/]+/i.test(link))
+      )
+        item.meta.relationship = fallback.data;
   const bases: Base[] = [];
   let dirs: string[] = [];
   try {

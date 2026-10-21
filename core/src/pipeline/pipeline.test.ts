@@ -757,6 +757,37 @@ it("stops before drafting for missing or weak must-haves, then answers or skips 
   }
 });
 
+it("uses the profile's default relationship instead of asking about each repository", async () => {
+  const { ws, resume } = await profile();
+  const projects = await readText(ws.root, "projects.md");
+  await writeTextAtomic(
+    ws.root,
+    "projects.md",
+    projects.replace("links: []", "links: [https://github.com/example/archive]"),
+  );
+  const profileText = await readText(ws.root, "profile.yaml");
+  await writeTextAtomic(ws.root, "profile.yaml", `${profileText.trimEnd()}\ndefault_relationship: sole\n`);
+  vi.spyOn(render, "compileTex").mockResolvedValue({ pdf: Buffer.from("stub-pdf"), log: "" });
+  vi.spyOn(render, "pdfText").mockResolvedValue({
+    text: visibleBullets(resume)
+      .map((bullet) => bullet.text)
+      .join("\n"),
+    pages: 1,
+    fill: 1,
+  });
+  const selectedAnalysis = {
+    ...analysis,
+    requirements: [{ id: "r", text: "Catalogue", importance: "must", keywords: [["catalogue", "catalog"]] }],
+  };
+  const result = await tailorJob(
+    ws,
+    { jobText: "Catalogue role" },
+    await deps([{ tool: "submit_analysis", arguments: selectedAnalysis }, ...draft(resume)]),
+  );
+  expect(result.review.gaps.filter((gap) => gap.startsWith("ownership."))).toEqual([]);
+  expect(result.status).not.toBe("needs-answers");
+});
+
 it("asks unknown repository ownership before drafting and uses a confirmed answer without guessing", async () => {
   const { ws, resume } = await profile();
   const projects = await readText(ws.root, "projects.md");
