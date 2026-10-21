@@ -128,6 +128,36 @@ export const useApproveTemplate = () =>
       api.templates.approve(input.id, input.proposal),
     [queryKeys.templates, queryKeys.settings],
   );
+export const useTemplateContract = () =>
+  useQuery({
+    queryKey: queryKeys.templateContract,
+    queryFn: ({ signal }) => api.templates.contract(signal),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+export const useTemplateSource = (id: string) =>
+  useQuery({
+    queryKey: queryKeys.templateSource(id),
+    queryFn: ({ signal }) => api.templates.source(id, signal),
+    enabled: !!id,
+    retry: false,
+    // The editor holds its own copy; a refetch must never replace what is being typed.
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+export const useForkTemplate = () =>
+  useApiMutation(
+    (input: { id: string; name: string }) => api.templates.fork(input.id, input.name),
+    [queryKeys.templates],
+  );
+export const useSaveTemplateSource = (id: string) =>
+  useApiMutation(
+    (input: { source: string; baseHash: string }) => api.templates.saveSource(id, input),
+    [queryKeys.templates],
+  );
+export const usePreviewTemplate = (id: string) =>
+  useMutation({ mutationFn: (resumeId?: string) => api.templates.preview(id, resumeId) });
+export const useDesignTemplate = (id: string) =>
+  useMutation({ mutationFn: (message: string) => api.templates.design(id, message) });
 export const useDiscardTemplate = () => useApiMutation(api.templates.discard, [queryKeys.templates]);
 export const useSyncSuggestions = () =>
   useQuery({ queryKey: queryKeys.sync, queryFn: ({ signal }) => api.sync.suggestions(signal), retry: false });

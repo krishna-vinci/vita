@@ -66,6 +66,11 @@ import {
   type SyncMutation,
   type SyncSuggestion,
   type TemplateApproval,
+  type TemplateContract,
+  type TemplateDesignResult,
+  type TemplatePreviewResult,
+  type TemplateSourceMutation,
+  type TemplateSourceView,
   type TemplateSummary,
   type TemplateUploadView,
   type Tracker,
@@ -142,6 +147,8 @@ async function discard(path: string): Promise<void> {
       response.status,
       parsed.success ? parsed.data.error.code : "request-failed",
       parsed.success ? parsed.data.error.message : `The request failed (${response.status}). Please try again.`,
+      undefined,
+      parsed.success ? parsed.data.error.details : undefined,
     );
   }
 }
@@ -347,6 +354,15 @@ export const api = {
     approve: (id: string, proposal: AdoptionProposal) =>
       send<TemplateApproval>(`/templates/${segment(id)}/approve`, proposal),
     discard: (id: string) => discard(`/templates/${segment(id)}`),
+    contract: (signal?: AbortSignal) => get<TemplateContract>("/templates/contract", signal),
+    fork: (id: string, name: string) => send<TemplateSourceMutation>(`/templates/${segment(id)}/fork`, { name }),
+    source: (id: string, signal?: AbortSignal) => get<TemplateSourceView>(`/templates/${segment(id)}/source`, signal),
+    saveSource: (id: string, body: { source: string; baseHash: string }) =>
+      send<TemplateSourceMutation>(`/templates/${segment(id)}/source`, body, "PUT"),
+    preview: (id: string, resumeId?: string) =>
+      send<TemplatePreviewResult>(`/templates/${segment(id)}/preview`, resumeId ? { resumeId } : {}),
+    design: (id: string, message: string) =>
+      send<TemplateDesignResult>(`/templates/${segment(id)}/design`, { message }),
   },
   sync: {
     suggestions: (signal?: AbortSignal) => get<SyncSuggestion[]>("/sync/suggestions", signal),
