@@ -49,3 +49,29 @@ it("rejects traversal ids and metadata symlinks escaping a search root", async (
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+it("resolves enum, hex colour and bool knobs, rejecting unsafe or mistyped values", () => {
+  const meta = TemplateMeta.parse({
+    id: "typed",
+    name: "Typed",
+    knobs: {
+      font: { type: "enum", options: ["native", "fira-sans"], default: "native" },
+      accent: { type: "color", default: "#141E61" },
+      icons: { type: "bool", default: false },
+    },
+  });
+  expect(resolveLayout(meta, { font: "fira-sans", accent: "#AABBcc", icons: true })).toEqual({
+    font: "fira-sans",
+    accent: "#AABBcc",
+    icons: true,
+  });
+  expect(resolveLayout(meta, {})).toEqual({ font: "native", accent: "#141E61", icons: false });
+  const invalid: Record<string, string | number | boolean>[] = [
+    { font: "\\input{evil}" },
+    { accent: "#FFF" },
+    { accent: "red" },
+    { icons: "true" },
+    { icons: 1 },
+  ];
+  for (const layout of invalid) expect(() => resolveLayout(meta, layout)).toThrow(/Invalid layout/);
+});

@@ -34,6 +34,7 @@ import { prepRoutes } from "./routes/prep.js";
 import { researchRoutes } from "./routes/research.js";
 import { syncRoutes } from "./routes/sync.js";
 import { templateRoutes } from "./routes/templates.js";
+import { texRoutes } from "./routes/tex.js";
 import { trackerRoutes } from "./routes/tracker.js";
 import type { WorkspaceRuntime } from "./runtime.js";
 
@@ -102,6 +103,7 @@ export function createWorkspaceApp(runtime: WorkspaceRuntime, options: { webDist
   });
   app.notFound((c) => c.json({ error: { code: "not-found", message: "Route not found" } }, 404));
   app.get("/api/health", (c) => c.json({ ok: true }));
+  app.route("/api", texRoutes(runtime));
   app.route("/api", memoryRoutes(runtime));
   app.route("/api", trackerRoutes(runtime));
   app.route("/api", researchRoutes(runtime));

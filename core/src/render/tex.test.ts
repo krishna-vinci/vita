@@ -162,3 +162,11 @@ it("compiles location exactly once in each bundled resume header", async (test) 
     expect(text.split("Pune & Remote").length - 1, id).toBe(1);
   }
 }, 60_000);
+
+it("formats dates without inventing months and keeps optional header location in the context", async () => {
+  const { formatPeriod } = await import("./tex");
+  expect(formatPeriod("2023-01 – 2026-10", "month-year")).toBe("Jan 2023 – Oct 2026");
+  expect(formatPeriod("Jan 2023 – Present", "year")).toBe("2023 – Present");
+  expect(formatPeriod("2023 – Present", "month-year")).toBe("2023 – Present");
+  expect(formatPeriod("2023-01 – Present", "original")).toBe("2023-01 – Present");
+});

@@ -809,3 +809,37 @@ it("asks unknown repository ownership before drafting and uses a confirmed answe
   );
   expect(await readText(ws.root, "projects.md")).not.toContain("relationship:");
 });
+
+it("reapplies saved TeX touches during generation and exposes failed hunks in review while compiling generated fallback", async () => {
+  const { ws, resume } = await profile();
+  const template = await render.loadTemplate([join(bundledDir, "templates")], resume.template);
+  const original = render.renderTex(resume, template, await render.loadRenderSources(ws.root));
+  const touched = original.replace("\\end{document}", "\\vspace{1pt}\n\\end{document}");
+  await writeTextAtomic(ws.root, "resumes/master/tex.patch", render.createTexPatch(original, touched));
+  const compile = vi.spyOn(render, "compileTex").mockResolvedValue({ pdf: Buffer.from("patched-pdf"), log: "" });
+  vi.spyOn(render, "pdfText").mockResolvedValue({
+    text: visibleBullets(resume)
+      .map((bullet) => bullet.text)
+      .join("\n"),
+    pages: 1,
+  });
+  const first = await generateMaster(ws, await deps(draft(resume, undefined, false)));
+  expect(first.review.render?.ok).toBe(true);
+  expect(compile).toHaveBeenLastCalledWith(expect.objectContaining({ tex: touched }));
+  // Put a patch on the person's name, then update the source profile before regenerating.
+  await writeTextAtomic(
+    ws.root,
+    "resumes/master/tex.patch",
+    render.createTexPatch(original, original.replace(resume.header.name, "Other Name")),
+  );
+  const profileText = await readText(ws.root, "profile.yaml");
+  const profileData = parseYaml(profileText);
+  const { stringify } = await import("yaml");
+  await writeTextAtomic(ws.root, "profile.yaml", stringify({ ...profileData, name: "A changed profile name" }));
+  const second = await generateMaster(ws, await deps(draft(resume, undefined, false)));
+  expect(second.review.render).toMatchObject({ ok: true, patchConflict: true });
+  expect(second.review.lint).toContainEqual(expect.objectContaining({ rule: "tex-patch-conflict" }));
+  expect(await readText(ws.root, "resumes/master/tex.conflict.json")).toContain("failedHunks");
+  expect(compile.mock.calls.at(-1)?.[0].tex).toContain("A changed profile name");
+  expect(compile.mock.calls.at(-1)?.[0].tex).not.toContain("Other Name");
+});

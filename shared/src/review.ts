@@ -15,6 +15,8 @@ export const RenderCheck = z.object({
   maxPages: z.number().int().optional(),
   missingBullets: z.array(z.string()),
   outOfOrder: z.array(z.string()),
+  patchConflict: z.boolean().optional(),
+  unexpectedItems: z.array(z.string()).optional(),
   ok: z.boolean(),
 });
 export type RenderCheck = z.infer<typeof RenderCheck>;

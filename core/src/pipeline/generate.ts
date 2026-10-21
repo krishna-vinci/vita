@@ -26,13 +26,13 @@ import { atsReviewerRole, checkerRole, writerRole } from "../agent/roles.js";
 import { enforcePageLimit } from "../instructions/rules.js";
 import { lintResume } from "../lint/index.js";
 import {
-  checkRender,
+  checkPatchedRender,
   compileTex,
   loadTemplate,
   pdfText,
   type RenderSources,
   renderMarkdown,
-  renderTex,
+  renderStoredTex,
   resolveLayout,
 } from "../render/index.js";
 import type { Selection } from "../search/index.js";
@@ -363,11 +363,21 @@ export async function generate(
             [resolveInWorkspace(ctx.ws.root, "templates"), join(ctx.ws.bundledDir, "templates")],
             current.template,
           );
-          tex = renderTex(current, template, renderSources);
+          const patched = await renderStoredTex(ctx.ws.root, current, template, renderSources);
+          const generated = patched.generated;
+          tex = patched.patched;
           const compiled = await compileTex({ tex, assetsDir: template.dir });
           const margin = resolveLayout(template.meta, current.layout).margin_in;
           const extracted = await pdfText(compiled.pdf, typeof margin === "number" ? margin : 0.75);
-          const result = checkRender(current, extracted, input.maxPages);
+          const result = checkPatchedRender(current, extracted, input.maxPages, generated, tex);
+          if (patched.conflict) {
+            result.patchConflict = true;
+            lint.push({
+              rule: "tex-patch-conflict",
+              severity: "warn",
+              message: "LaTeX patch conflicts; generated LaTeX was rendered. See tex.conflict.json.",
+            });
+          }
           pdf = compiled.pdf;
           return result;
         } catch (error) {

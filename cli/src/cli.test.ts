@@ -159,7 +159,7 @@ for (const profile of profiles) {
     const root = await copyProfile(profile);
     const out = profile === "nurse" ? join(dir, "export") : undefined;
     const result = await renderCommand(root, { out });
-    expect(result).toEqual({ ok: true, pages: 1, maxPages: 2, missingBullets: [], outOfOrder: [] });
+    expect(result).toMatchObject({ ok: true, pages: 1, maxPages: 2, missingBullets: [], outOfOrder: [] });
     const output = out ?? join(root, "resumes/master");
     expect((await readFile(join(output, "resume.pdf"))).subarray(0, 5).toString()).toBe("%PDF-");
     expect(await readFile(join(output, "resume.md"), "utf8")).toMatch(/^# /);
@@ -242,6 +242,7 @@ it("prints plain-language gap questions with their requirement ids", () => {
     ats: [],
     render: null,
     overrides: [],
+    suggestions: [],
     gaps: [
       "req-short: Have you used Example skill?",
       "req-long: Do you have experience with leading a team across multiple locations?",
@@ -273,4 +274,17 @@ it("renders source-derived entry links through the CLI without modifying the sav
   expect(await readFile(join(out, "resume.tex"), "utf8")).toContain("\\href{https://example.test/entry}{Website}");
   expect(await readFile(join(out, "resume.md"), "utf8")).toContain("[Website](<https://example.test/entry>)");
   expect(JSON.parse(await core.readText(root, "resumes/master/resume.json"))).toEqual(resume);
+});
+
+it("applies a saved LaTeX patch through CLI render and checks the patched output", async () => {
+  const root = await copyProfile("developer");
+  const resume = Resume.parse(JSON.parse(await core.readText(root, "resumes/master/resume.json")));
+  const tpl = await core.loadTemplate([bundledTemplatesDir], resume.template);
+  const generated = core.renderTex(resume, tpl, await core.loadRenderSources(root));
+  const edited = generated.replace("\\end{document}", "\\vspace{1pt}\n\\end{document}");
+  await core.writeTextAtomic(root, "resumes/master/tex.patch", core.createTexPatch(generated, edited));
+  const compile = vi.spyOn(core, "compileTex").mockResolvedValue({ pdf: Buffer.from("patched"), log: "" });
+  vi.spyOn(core, "pdfText").mockResolvedValue({ text: core.renderMarkdown(resume), pages: 1 });
+  expect((await renderCommand(root)).ok).toBe(true);
+  expect(compile).toHaveBeenCalledWith(expect.objectContaining({ tex: edited }));
 });

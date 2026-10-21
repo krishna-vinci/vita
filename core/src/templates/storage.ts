@@ -34,14 +34,15 @@ export async function templatePath(root: string, rel: string): Promise<string> {
   }
   return resolveInWorkspace(root, rel);
 }
-export async function scanFiles(dir: string, prefix = ""): Promise<string[]> {
+export async function scanFiles(dir: string, prefix = "", contract = false): Promise<string[]> {
   if (!(await lstat(dir)).isDirectory())
     throw new TemplateError("invalid-entry", "Template must be a directory without symlinks");
   const files: string[] = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const name = `${prefix}${entry.name}`;
-    if (entry.isDirectory()) files.push(...(await scanFiles(join(dir, entry.name), `${name}/`)));
-    else if (entry.isFile()) files.push(safeFilename(name));
+    if (entry.isDirectory()) files.push(...(await scanFiles(join(dir, entry.name), `${name}/`, contract)));
+    else if (entry.isFile())
+      files.push(contract && ["main.tex.njk", "template.yaml"].includes(name) ? name : safeFilename(name));
     else throw new TemplateError("invalid-entry", "Template assets must be regular files without symlinks");
   }
   if (files.length > 200) throw new TemplateError("invalid-entry", "Template has more than 200 files");

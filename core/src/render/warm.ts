@@ -27,6 +27,7 @@ async function copyTrustedAssets(source: string, target: string): Promise<void> 
 
 // Only bundled, trusted templates may use this network-enabled cache warm-up.
 export async function warmTemplateCache(templatesDir: string): Promise<void> {
+  let stylesWarmed = false;
   for (const entry of await readdir(templatesDir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
     const tpl = await loadTemplate([templatesDir], entry.name);
@@ -87,19 +88,53 @@ export async function warmTemplateCache(templatesDir: string): Promise<void> {
             },
           ],
         },
-        { id: "notes", title: "Notes", kind: "text", text: "Available for local assignments." },
+        {
+          id: "notes",
+          title: "Notes",
+          kind: "text",
+          text: "Available for local assignments. Checked & % $ # _ { } ~ ^ and \\ symbols.",
+        },
       ],
     });
     const dir = await mkdtemp(join(tmpdir(), "vita-warm-"));
     try {
       await copyTrustedAssets(tpl.dir, dir);
       await rm(join(dir, "main.pdf"), { force: true });
-      await writeFile(join(dir, "main.tex"), renderTex(resume, tpl));
-      await execute("tectonic", ["-X", "compile", "main.tex"], {
-        cwd: dir,
-        timeout: 300_000,
-        maxBuffer: 20 * 1024 * 1024,
-      });
+      const layouts: Resume["layout"][] = [{}];
+      if (!stylesWarmed && tpl.meta.knobs.font) {
+        layouts.push(
+          { font: "fira-sans", icons: true, link_style: "label+icon", footer: "name+page" },
+          { font: "pagella" },
+        );
+        stylesWarmed = true;
+      }
+      for (const layout of layouts) {
+        let tex = renderTex({ ...resume, layout }, tpl);
+        const fontSize = tpl.meta.knobs.font_pt;
+        if (fontSize && (!fontSize.type || fontSize.type === "number")) {
+          for (const font_pt of [fontSize.min, fontSize.max]) {
+            const variant = renderTex({ ...resume, layout: { ...layout, font_pt } }, tpl);
+            const body = variant.slice(
+              variant.indexOf("\\begin{document}") + "\\begin{document}".length,
+              variant.lastIndexOf("\\end{document}"),
+            );
+            tex = tex.replace("\\end{document}", `\\clearpage\n${body}\n\\end{document}`);
+          }
+        }
+        if (layout.font) {
+          tex = tex.replace("\\begin{document}", "\\usepackage{multicol}\n\\begin{document}");
+          tex = tex.replace(
+            "\\end{document}",
+            "{\\itshape Italic sample.} {\\bfseries Bold sample.} {\\sffamily Sans sample.} {\\bfseries\\itshape Bold italic sample.} {\\scshape Small caps \\oldstylenums{0123456789}.} {\\bfseries\\scshape Bold small caps \\oldstylenums{0123456789}.}\\end{document}",
+          );
+        }
+        await writeFile(join(dir, "main.tex"), tex);
+        await execute("tectonic", ["-X", "compile", "main.tex"], {
+          cwd: dir,
+          timeout: 300_000,
+          maxBuffer: 20 * 1024 * 1024,
+        });
+      }
       if (!(await lstat(join(dir, "main.pdf"))).isFile()) throw new Error("Cache warm-up did not produce a PDF");
     } finally {
       await rm(dir, { recursive: true, force: true });
