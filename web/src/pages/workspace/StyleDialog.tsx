@@ -31,9 +31,11 @@ const LABELS: Record<string, string> = {
 const OPTION_LABELS: Record<string, Record<string, string>> = {
   link_style: { label: "Label", "label+icon": "Label with ↗", url: "Full URL" },
   footer: { none: "None", page: "Page numbers", "name+page": "Name and page numbers" },
-  header_align: { native: "Native", left: "Left", center: "Centre", right: "Right" },
+  header_align: { native: "Template default", left: "Left", center: "Centre", right: "Right" },
+  font: { native: "Template default", "fira-sans": "Fira Sans", pagella: "TeX Gyre Pagella" },
+  date_format: { original: "As written", year: "Year only (2023)", "month-year": "Month and year (Jan 2023)" },
 };
-const AS_IS = new Set(["font", "date_format"]);
+const AS_IS = new Set<string>();
 
 const titleCase = (text: string) => text.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 const labelOf = (key: string) => LABELS[key] ?? titleCase(key);

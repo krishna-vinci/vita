@@ -1,4 +1,4 @@
-import { cp, mkdtemp, readdir, rm, symlink } from "node:fs/promises";
+import { cp, mkdtemp, readdir, readFile, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -737,3 +737,27 @@ it.each(["answers", "write"])(
     expect(spy.mock.calls[1]?.[1]).toMatchObject({ baseId: "master" });
   },
 );
+
+it("re-renders a base or master resume to PDF on export, so layout edits reach the PDF", async () => {
+  const server = await app(draft());
+  stubRender();
+  expect((await server.request("/api/resumes/master/export", post())).status).toBe(409);
+  const generated = JobMutation.parse(await (await server.request("/api/master/generate", post())).json());
+  await runtime.jobs.idle();
+  expect(runtime.jobs.get(generated.job.id)?.status).toBe("done");
+  const edited = await server.request(
+    "/api/resumes/master/ops",
+    post({ ops: [{ op: "layout.set", key: "font_pt", value: 11 }] }),
+  );
+  expect(edited.status, await edited.clone().text()).toBe(200);
+  const compile = vi.mocked(core.compileTex);
+  compile.mockClear();
+  const response = await server.request("/api/resumes/master/export", post());
+  expect(response.status, await response.clone().text()).toBe(200);
+  const body = await response.json();
+  expect(body.pdfUrl).toBe("/api/files/resumes/master/resume.pdf");
+  expect(body.resource.resume.layout.font_pt).toBe(11);
+  expect(compile).toHaveBeenCalledTimes(1);
+  const root = join(dir, "workspace");
+  expect((await readFile(join(root, "resumes/master/resume.pdf"))).toString()).toBe("%PDF-stub");
+});

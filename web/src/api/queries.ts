@@ -66,6 +66,8 @@ export const useApplicationOps = (id: string) =>
   );
 export const useExportApplication = (id: string) =>
   useApiMutation(() => api.applications.export(id), [queryKeys.application(id), queryKeys.workspace]);
+export const useExportResume = (id: string) =>
+  useApiMutation(() => api.resumes.export(id), [queryKeys.resume(id), queryKeys.workspace]);
 export const useCancelJob = () => useApiMutation(api.jobs.cancel, [queryKeys.jobs]);
 export const useUndo = () =>
   useApiMutation(api.undo, [

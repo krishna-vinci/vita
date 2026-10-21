@@ -52,7 +52,8 @@ export function checkRender(
   // Compare without whitespace: PDF extraction can split words where microtype or kerning
   // widens a gap (e.g. "Trained" extracted as "T rained").
   // List-marker glyphs can land inside the first word ("A•utomated"); drop them too.
-  const compact = (value: string) => normalizeForMatch(value).replace(/[\s•◦▪‣∙·]+/g, "");
+  // Hyphens go as well: a line break at a real hyphen ("self-⏎hosted") is extracted without it.
+  const compact = (value: string) => normalizeForMatch(value).replace(/[\s•◦▪‣∙·-]+/g, "");
   const text = compact(extracted.text);
   const missingBullets: string[] = [];
   const outOfOrder: string[] = [];

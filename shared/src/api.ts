@@ -260,6 +260,8 @@ export const VitaEvent = z.discriminatedUnion("type", [
 export type VitaEvent = z.infer<typeof VitaEvent>;
 export const ExportResult = z.object({ resource: ApplicationResource, sha: CommitSha, pdfUrl: z.string() });
 export type ExportResult = z.infer<typeof ExportResult>;
+export const ResumeExportResult = z.object({ resource: ResumeResource, sha: CommitSha, pdfUrl: z.string() });
+export type ResumeExportResult = z.infer<typeof ResumeExportResult>;
 export type UndoResult = {
   resource: MarkdownResource | ResumeResource | ApplicationResource | null;
   sha: string | null;

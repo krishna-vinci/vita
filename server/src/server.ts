@@ -211,6 +211,10 @@ export function createWorkspaceApp(runtime: WorkspaceRuntime, options: { webDist
     await body(c, EmptyRequest, true);
     return c.json(await runtime.exportApplication(id(c)));
   });
+  app.post("/api/resumes/:id/export", async (c) => {
+    await body(c, EmptyRequest, true);
+    return c.json(await runtime.exportResource("resume", id(c)));
+  });
   app.get("/api/files/*", async (c) => {
     let rel: string;
     try {

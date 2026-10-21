@@ -10,6 +10,7 @@ import {
   useCancelJob,
   useCreateApplication,
   useExportApplication,
+  useExportResume,
   useFit,
   useJobs,
   useOutline,
@@ -165,7 +166,8 @@ function Loaded({
   const ops = isJob ? appOps : baseOps;
   const answers = useApplicationAnswers(id);
   const remember = useRememberOwnership();
-  const exporter = useExportApplication(id);
+  const jobExporter = useExportApplication(id);
+  const resumeExporter = useExportResume(id);
   const undo = useUndo();
   const create = useCreateApplication();
   const bases = useResumes();
@@ -286,9 +288,18 @@ function Loaded({
     link.click();
   };
   const onPdf = async () => {
-    if (!isJob) return pdfUrl && saveUrl(pdfUrl);
+    // Always render fresh, so style and wording edits reach the PDF.
+    if (!isJob) {
+      try {
+        saveUrl((await resumeExporter.mutateAsync()).pdfUrl);
+      } catch (error) {
+        if (pdfUrl) saveUrl(pdfUrl);
+        toast.error(error instanceof Error ? error.message : "Could not render the PDF.");
+      }
+      return;
+    }
     try {
-      const result = await exporter.mutateAsync();
+      const result = await jobExporter.mutateAsync();
       saveUrl(result.pdfUrl);
       toast.success("Your PDF is ready.", {
         action: { label: "Prepare for the interview", onClick: () => navigate(`/jobs/${encodeURIComponent(id)}/prep`) },
@@ -414,7 +425,7 @@ function Loaded({
         }
         onPdf={() => void onPdf()}
         onMarkdown={() => download(`${id}.md`, "text/markdown", resumeToMarkdown(data.resume))}
-        exporting={exporter.isPending}
+        exporting={jobExporter.isPending || resumeExporter.isPending}
         canPdf={isJob || !!pdfUrl}
         overBy={
           data.review?.render?.maxPages && data.review.render.pages > data.review.render.maxPages

@@ -8,6 +8,11 @@ export interface LintContext {
   index: ClaimIndex;
   pack: Pack;
   rules: Partial<Rules>;
+  /**
+   * Action voice is a writing-style rule: it blocks AI drafts, but only warns when re-rendering or
+   * editing a resume the person already approved, and on bullets the person wrote.
+   */
+  voice?: "block" | "warn";
 }
 
 function supportedNumbers(claims: IndexedClaim[]): Set<string> {
@@ -74,7 +79,7 @@ export function lintResume(resume: Resume, ctx: LintContext): Finding[] {
       findings.push({ rule, severity, message, bulletId: bullet.id });
     };
     const voice = actionVoiceProblem(bullet.text, titles);
-    if (voice) add("action-voice", "block", voice);
+    if (voice) add("action-voice", bullet.origin === "user" || ctx.voice === "warn" ? "warn" : "block", voice);
     if (bullet.origin === "ai" && bullet.claims.length === 0) {
       add("missing-claims", "block", "AI-written bullet has no claim IDs.");
     }

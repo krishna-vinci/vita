@@ -69,6 +69,13 @@ it("matches bullets when the list glyph lands inside the first word", () => {
   expect(checkRender(data, { text: "A\n•utomated API validation", pages: 1 }, 1).ok).toBe(true);
 });
 
+it("matches a bullet whose real hyphen falls at a line break", () => {
+  const data = resume(["Built self-hosted platforms from design through maintenance."]);
+  expect(
+    checkRender(data, { text: "Built self-\nhosted platforms from design through maintenance.", pages: 1 }, 1).ok,
+  ).toBe(true);
+});
+
 it("matches equivalent PDF hyphen glyphs while still detecting missing words and reordered bullets", () => {
   const data = resume(["Prepared month-end reconciliations.", "Documented follow-up needs."]);
   expect(

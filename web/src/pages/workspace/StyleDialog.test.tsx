@@ -75,7 +75,7 @@ it("renders one control for each knob type, with readable labels", async () => {
   expect((screen.getByLabelText("Accent colour picker") as HTMLInputElement).type).toBe("color");
   expect((screen.getByLabelText("Accent colour hex") as HTMLInputElement).value).toBe("#1f4e79");
   expect(screen.getByRole("switch", { name: "Icons" })).toBeTruthy();
-  expect(screen.getByRole("combobox", { name: "Font" }).textContent).toContain("native");
+  expect(screen.getByRole("combobox", { name: "Font" }).textContent).toContain("Template default");
   expect(screen.getByText("Between 10 and 11.5")).toBeTruthy();
 });
 
@@ -96,7 +96,7 @@ it("sends one ops request with the changed values, typed for each knob", async (
 it("sends the chosen enum option", async () => {
   const onApply = await mount();
   fireEvent.keyDown(screen.getByRole("combobox", { name: "Font" }), { key: "Enter" });
-  fireEvent.click(await screen.findByRole("option", { name: "pagella" }));
+  fireEvent.click(await screen.findByRole("option", { name: "TeX Gyre Pagella" }));
   fireEvent.click(screen.getByRole("button", { name: "Apply" }));
   expect(onApply).toHaveBeenCalledWith([{ op: "layout.set", key: "font", value: "pagella" }]);
 });

@@ -42,9 +42,19 @@ it("blocks writer descriptions across profession fixtures and warns only for a l
     const item = original.sections.flatMap((section) => section.items).find((item) => item.bullets.length);
     if (!item?.bullets[0]) throw new Error("Missing fixture bullet");
     item.bullets[0].text = `${item.title} provides a service.`;
+    item.bullets[0].origin = "ai";
     const findings = lintResume(original, { index, pack: Pack.parse({ id: "general", name: "General" }), rules: {} });
     expect(findings).toContainEqual(
       expect.objectContaining({ rule: "action-voice", severity: "block", bulletId: item.bullets[0].id }),
+    );
+    // Re-rendering an approved resume, or a bullet the person wrote, only warns.
+    const pack = Pack.parse({ id: "general", name: "General" });
+    expect(lintResume(original, { index, pack, rules: {}, voice: "warn" })).toContainEqual(
+      expect.objectContaining({ rule: "action-voice", severity: "warn", bulletId: item.bullets[0].id }),
+    );
+    item.bullets[0].origin = "user";
+    expect(lintResume(original, { index, pack, rules: {} })).toContainEqual(
+      expect.objectContaining({ rule: "action-voice", severity: "warn", bulletId: item.bullets[0].id }),
     );
   }
   const resume = Resume.parse({

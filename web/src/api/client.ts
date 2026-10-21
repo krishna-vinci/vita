@@ -51,6 +51,7 @@ import {
   type ResearchRequest,
   type ResourceMetadataMutation,
   type ResumeChatReply,
+  type ResumeExportResult,
   type ResumeMutation,
   type ResumeOpsRequest,
   type ResumeResource,
@@ -298,6 +299,7 @@ export const api = {
     create: (body: CreateBaseRequest) => send<JobMutation>("/resumes", body),
     generateMaster: () => send<JobMutation>("/master/generate", {}),
     ops: (id: string, body: ResumeOpsRequest) => send<ResumeMutation>(`/resumes/${segment(id)}/ops`, body),
+    export: (id: string) => send<ResumeExportResult>(`/resumes/${segment(id)}/export`, {}),
   },
   applications: {
     list: (signal?: AbortSignal, archived?: "include" | "only") =>

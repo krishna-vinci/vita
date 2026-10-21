@@ -472,7 +472,7 @@ export class WorkspaceRuntime {
         now: () => new Date().toISOString(),
       });
       const changed = new Set(result.changedBullets);
-      const lint = lintResume(result.resume, { index, rules, pack });
+      const lint = lintResume(result.resume, { index, rules, pack, voice: "warn" });
       const previous =
         resource.review ??
         Review.parse({
@@ -654,14 +654,25 @@ export class WorkspaceRuntime {
     );
   }
   async exportApplication(id: string) {
+    return this.exportResource("application", id);
+  }
+  /** Re-render a checked resume (job, base or master) to PDF, e.g. after style or wording edits. */
+  async exportResource(scope: "resume" | "application", id: string) {
     return this.exclusive(async () => {
-      if (this.jobs.hasActive("application", id))
+      if (this.jobs.hasActive(scope, id))
         throw new ApiFailure(409, "resource-busy", "Generation is still running for this resource");
-      const resource = await this.application(id);
+      const resource =
+        scope === "application"
+          ? await this.application(id)
+          : {
+              ...(await this.resource("resume", id)),
+              analysis: JobAnalysis.parse({ title: id, requirements: [], baseScores: [] }),
+              gaps: [] as string[],
+            };
       if (!resource.resume || !resource.review)
         throw new ApiFailure(409, "review-required", "A checked resume is required before export");
       const { index, rules, pack, maxPages } = await loadReviewContext(this.ws, resource.resume);
-      const lint = lintResume(resource.resume, { index, rules, pack });
+      const lint = lintResume(resource.resume, { index, rules, pack, voice: "warn" });
       const overrides = resource.resume.sections.flatMap((section) =>
         section.items.flatMap((item) =>
           item.bullets.flatMap((bullet) =>
@@ -712,22 +723,30 @@ export class WorkspaceRuntime {
       if (patched.conflict) render.patchConflict = true;
       const done = evaluateDone({ ...certification, render });
       if (!done.done) throw new ApiFailure(409, "review-blocked", done.blocking.join("; "));
-      const prefix = this.prefix("application", id);
+      const prefix = this.prefix(scope, id);
+      // Job resumes keep their output under out/; base and master resumes keep it beside resume.json.
+      const out = scope === "application" ? `${prefix}/out` : prefix;
       const review = Review.parse({ ...resource.review, lint, render, overrides, ...done });
       // Do not replace the last good PDF until compile and extraction both pass.
-      await writeFileAtomic(this.ws.root, `${prefix}/out/resume.pdf`, compiled.pdf);
-      await writeTextAtomic(this.ws.root, `${prefix}/out/resume.tex`, tex);
-      await writeTextAtomic(this.ws.root, `${prefix}/out/resume.md`, renderMarkdown(resource.resume, sources));
+      await writeFileAtomic(this.ws.root, `${out}/resume.pdf`, compiled.pdf);
+      await writeTextAtomic(this.ws.root, `${out}/resume.tex`, tex);
+      await writeTextAtomic(this.ws.root, `${out}/resume.md`, renderMarkdown(resource.resume, sources));
       await writeTextAtomic(this.ws.root, `${prefix}/review.json`, `${JSON.stringify(review, null, 2)}\n`);
       const sha = await commitPaths(
         this.ws.root,
-        [`${prefix}/out`, `${prefix}/review.json`],
-        "Export application resume",
+        scope === "application"
+          ? [out, `${prefix}/review.json`]
+          : [`${out}/resume.pdf`, `${out}/resume.tex`, `${out}/resume.md`, `${prefix}/review.json`],
+        scope === "application" ? "Export application resume" : `Export resume: ${id}`,
         "user",
       );
-      await recordExportedVersion(this.ws, id);
-      this.changed("application", sha, id);
-      return { resource: await this.application(id), sha, pdfUrl: `/api/files/${prefix}/out/resume.pdf` };
+      if (scope === "application") await recordExportedVersion(this.ws, id);
+      this.changed(scope, sha, id);
+      return {
+        resource: scope === "application" ? await this.application(id) : await this.resource("resume", id),
+        sha,
+        pdfUrl: `/api/files/${out}/resume.pdf`,
+      };
     });
   }
   async undo(scope: "resume" | "application" | "outline" | "projects", id?: string) {
