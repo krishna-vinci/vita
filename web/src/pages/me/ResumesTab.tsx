@@ -15,6 +15,7 @@ import {
 } from "@/api/queries";
 import { DeleteDialog } from "@/components/DeleteDialog";
 import { PageError, PageLoading } from "@/components/PageState";
+import { StaleBanner } from "@/components/StaleBanner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -59,6 +60,7 @@ export default function ResumesTab() {
         Your master resume holds your best of everything. Base resumes lead with one kind of work, ready to start a job
         resume from.
       </p>
+      <StaleBanner />
       <SyncBanner />
       {!workspace.data?.hasOutline && (
         <Alert>

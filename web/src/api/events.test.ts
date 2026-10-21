@@ -73,6 +73,7 @@ describe("shared SSE", () => {
           ? [queryKeys.instructions, queryKeys.rules, queryKeys.mcp, queryKeys.metrics, queryKeys.memory]
           : []),
         ...(scope === "projects" ? [queryKeys.metrics] : []),
+        queryKeys.syncStatus,
         queryKeys.workspace,
       ]);
     }
@@ -92,6 +93,7 @@ describe("shared SSE", () => {
         expect(spy.mock.calls.map(([filter]) => filter?.queryKey)).toEqual([
           queryKeys.jobs,
           kind === "master" || kind === "base" ? queryKeys.resumes : queryKeys.applications,
+          queryKeys.syncStatus,
           queryKeys.workspace,
         ]);
       }
