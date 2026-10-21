@@ -761,3 +761,15 @@ it("re-renders a base or master resume to PDF on export, so layout edits reach t
   const root = join(dir, "workspace");
   expect((await readFile(join(root, "resumes/master/resume.pdf"))).toString()).toBe("%PDF-stub");
 });
+
+it("makes browsers recheck the app page and cache hashed assets for a year", async () => {
+  const webDist = join(dir, "web");
+  await core.writeTextAtomic(dir, "web/index.html", "<!doctype html><title>Vita</title>");
+  await core.writeTextAtomic(dir, "web/assets/app-abc123.js", "console.log(1)");
+  const server = await app([], { webDist });
+  expect((await server.request("/")).headers.get("Cache-Control")).toBe("no-cache");
+  expect((await server.request("/jobs/new")).headers.get("Cache-Control")).toBe("no-cache");
+  expect((await server.request("/assets/app-abc123.js")).headers.get("Cache-Control")).toBe(
+    "public, max-age=31536000, immutable",
+  );
+});

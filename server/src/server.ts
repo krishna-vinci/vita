@@ -38,6 +38,7 @@ import { templateRoutes } from "./routes/templates.js";
 import { texRoutes } from "./routes/tex.js";
 import { trackerRoutes } from "./routes/tracker.js";
 import type { WorkspaceRuntime } from "./runtime.js";
+import { staticCache } from "./static-cache.js";
 
 export { createAccountServer as createServer } from "./accounts/server.js";
 
@@ -260,6 +261,7 @@ export function createWorkspaceApp(runtime: WorkspaceRuntime, options: { webDist
     return c.json({ job, sha: null });
   });
   if (options.webDist) {
+    app.use("*", staticCache);
     app.get("*", serveStatic({ root: options.webDist }));
     app.get("*", (c, next) =>
       c.req.path.startsWith("/api/") ? next() : serveStatic({ path: `${options.webDist}/index.html` })(c, next),

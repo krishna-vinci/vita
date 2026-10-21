@@ -13,6 +13,7 @@ import { type AuthOptions, authRoutes, jsonBody } from "../auth/routes.js";
 import { SecretStore } from "../db/secret.js";
 import { ApiFailure } from "../errors.js";
 import { githubRoutes } from "../routes/github.js";
+import { staticCache } from "../static-cache.js";
 import type { WorkspaceManager } from "../workspaces/manager.js";
 import { isLoopback } from "./bootstrap.js";
 import { resolveSession } from "./sessions.js";
@@ -114,6 +115,7 @@ export function createAccountServer(options: ServerOptions): Hono {
   app.all("/api/auth/*", (c) => c.json({ error: { code: "not-found", message: "Route not found" } }, 404));
   app.all("/api/*", (c) => workspaces.fetch(c.get("user"), c.req.raw));
   if (options.webDist) {
+    app.use("*", staticCache);
     app.get("*", serveStatic({ root: options.webDist }));
     app.get("*", serveStatic({ path: path.join(options.webDist, "index.html") }));
   }
