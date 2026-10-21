@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { ChatTurn, CommitSha, RoleUsage } from "./api";
-import { ClaimId } from "./ids";
+import { ChatReplyIds, ChatTurn, CommitSha, RoleUsage } from "./api";
+import { ClaimId, Slug } from "./ids";
 import { Review } from "./review";
 
 export const LetterParagraph = z.strictObject({
@@ -49,6 +49,7 @@ export const LetterOpsRequest = z.strictObject({
 });
 export type LetterOpsRequest = z.infer<typeof LetterOpsRequest>;
 export const LetterChatRequest = z.strictObject({
+  threadId: Slug.optional(),
   message: z.string().trim().min(1).max(20_000),
   history: z.array(ChatTurn).max(10).default([]),
   baseHash: z.string().optional(),
@@ -75,6 +76,7 @@ export const LetterMutation = LetterResource.extend({
 });
 export type LetterMutation = z.infer<typeof LetterMutation>;
 export const LetterChatReply = z.object({
+  ...ChatReplyIds.partial().shape,
   reply: z.string(),
   ops: z.array(LetterOp),
   applied: z.boolean(),

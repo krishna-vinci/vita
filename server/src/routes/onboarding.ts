@@ -9,7 +9,7 @@ import {
   onboardingStatus,
   RESUME_UPLOAD_LIMIT,
 } from "@vita/core";
-import { ChatRequest, type ChatTurn, OnboardingProposal, SourceProposal } from "@vita/shared";
+import { ChatRequest, OnboardingProposal, SourceApplyRequest } from "@vita/shared";
 import { type Context, Hono } from "hono";
 import type { z } from "zod";
 import { ApiFailure } from "../errors.js";
@@ -27,7 +27,6 @@ async function body<T>(c: Context, schema: z.ZodType<T>): Promise<T> {
 
 export function onboardingRoutes(runtime: WorkspaceRuntime): Hono {
   const app = new Hono();
-  let history: ChatTurn[] = [];
   app.onError((error) => {
     if (error instanceof ChatConflictError) throw new ApiFailure(409, error.code, error.message);
     if (error instanceof OnboardingError) throw new ApiFailure(422, error.code, error.message);
@@ -74,17 +73,19 @@ export function onboardingRoutes(runtime: WorkspaceRuntime): Hono {
   app.post("/chat", async (c) => {
     const input = await body(c, ChatRequest);
     return runtime.exclusive(async () => {
-      const result = await chatOnboarding(runtime.ws, { ...input, history }, await deps());
-      history = [...history, { role: "user", text: input.message }, { role: "assistant", text: result.reply }].slice(
-        -10,
-      ) as ChatTurn[];
+      const result = await runtime.chats.turn("onboarding", "interview", input, async (history) =>
+        chatOnboarding(runtime.ws, { ...input, history }, await deps()),
+      );
       return c.json(result);
     });
   });
   app.post("/chat/apply", async (c) => {
-    const proposal = await body(c, SourceProposal);
+    const input = await body(c, SourceApplyRequest);
+    const { messageId, threadId, ...proposal } = input;
     return runtime.exclusive(async () => {
-      const result = await applySourceEdit(runtime.ws, proposal);
+      const result = await runtime.chats.apply("onboarding", "interview", input, () =>
+        applySourceEdit(runtime.ws, proposal),
+      );
       runtime.changed(proposal.file, result.sha);
       return c.json({ ...result, ...(await runtime.markdown(`${proposal.file}.md`)) });
     });

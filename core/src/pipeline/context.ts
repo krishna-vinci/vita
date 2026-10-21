@@ -55,9 +55,7 @@ export async function loadContext(
   // A profile-wide default ("all my projects are mine") stands in for an unset relationship on
   // repository-backed items, the same items that would otherwise get an ownership question.
   const profileText = await optionalText(ws.root, "profile.yaml");
-  const fallback = profileText
-    ? Relationship.safeParse(parseYaml(profileText)?.default_relationship)
-    : undefined;
+  const fallback = profileText ? Relationship.safeParse(parseYaml(profileText)?.default_relationship) : undefined;
   if (fallback?.success)
     for (const item of index.items.values())
       if (

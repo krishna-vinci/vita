@@ -3,7 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as core from "@vita/core";
-import { OnboardingMutation, OnboardingProposal, OnboardingStatus, SourceChatReply } from "@vita/shared";
+import {
+  ChatReplyIds,
+  ChatThread,
+  OnboardingMutation,
+  OnboardingProposal,
+  OnboardingStatus,
+  SourceChatReply,
+} from "@vita/shared";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { WorkspaceRuntime } from "../runtime.js";
 import { createWorkspaceApp as createServer } from "../server.js";
@@ -108,7 +115,7 @@ it("imports an uploaded resume as three diffs, applies only on approval, and rej
   expect(await stale.json()).toMatchObject({ error: { code: "stale-hash" } });
 });
 
-it("keeps interview turns in memory, proposes a source diff after an answer, and reuses source apply", async () => {
+it("saves interview turns, proposes a source diff after an answer, and reuses source apply", async () => {
   const beforeText = "<!-- List your roles and the facts about your work. -->";
   const edit = {
     file: "outline",
@@ -123,25 +130,34 @@ it("keeps interview turns in memory, proposes a source diff after an answer, and
   const spy = vi.spyOn(core, "chatOnboarding");
   const before = await core.readText(root, "outline.md");
   const first = await server.request("/api/onboarding/chat", post({ message: "Help me get started" }));
-  expect(SourceChatReply.parse(await first.json())).toMatchObject({ reply: "What work do you do?", proposal: null });
-  const second = await server.request("/api/onboarding/chat", post({ message: "I coordinated weekly workshops." }));
+  const firstJson = await first.json();
+  const { threadId } = ChatReplyIds.parse(firstJson);
+  expect(SourceChatReply.parse(firstJson)).toMatchObject({ reply: "What work do you do?", proposal: null });
+  const second = await server.request(
+    "/api/onboarding/chat",
+    post({ message: "I coordinated weekly workshops.", threadId }),
+  );
   expect(second.status).toBe(200);
-  const result = SourceChatReply.parse(await second.json());
+  const secondJson = await second.json();
+  const { messageId } = ChatReplyIds.parse(secondJson);
+  const result = SourceChatReply.parse(secondJson);
   expect(result.proposal).toMatchObject(edit);
   expect(spy.mock.calls[1]?.[1].history).toEqual([
     { role: "user", text: "Help me get started" },
     { role: "assistant", text: "What work do you do?" },
   ]);
   expect(await core.readText(root, "outline.md")).toBe(before);
-  const applied = await server.request("/api/onboarding/chat/apply", post(result.proposal));
+  const applied = await server.request("/api/onboarding/chat/apply", post({ ...result.proposal, messageId }));
+  const saved = ChatThread.parse(await (await server.request(`/api/chats/onboarding/interview/${threadId}`)).json());
+  expect(saved.messages[3]).toMatchObject({ id: messageId, applied: true, proposal: result.proposal });
   expect(applied.status).toBe(200);
   expect(await core.readText(root, "outline.md")).toContain(edit.after);
   expect((await server.request("/api/onboarding/chat/apply", post(result.proposal))).status).toBe(409);
   spy.mockResolvedValue({ reply: "What next?", proposal: null });
-  for (let n = 0; n < 6; n++) await server.request("/api/onboarding/chat", post({ message: `Answer ${n}` }));
+  for (let n = 0; n < 6; n++) await server.request("/api/onboarding/chat", post({ message: `Answer ${n}`, threadId }));
   expect(spy.mock.calls.at(-1)?.[1].history).toHaveLength(10);
-  await createServer(runtime).request("/api/onboarding/chat", post({ message: "New session" }));
-  expect(spy.mock.calls.at(-1)?.[1].history).toEqual([]);
+  await createServer(runtime).request("/api/onboarding/chat", post({ message: "Same conversation", threadId }));
+  expect(spy.mock.calls.at(-1)?.[1].history).toHaveLength(10);
 });
 
 it("enforces the 5 MB file limit and validates uploads and chat before calling a model", async () => {

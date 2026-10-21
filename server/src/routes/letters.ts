@@ -74,7 +74,11 @@ export function letterRoutes(runtime: WorkspaceRuntime): Hono {
   app.post("/:id/letter/chat", async (c) => {
     const id = Slug.parse(c.req.param("id"));
     const input = await body(c, LetterChatRequest);
-    const result = await mutation(id, () => immediateDeps().then((deps) => chatLetter(runtime.ws, id, input, deps)));
+    const result = await mutation(id, () =>
+      runtime.chats.turn("letter", id, input, (history) =>
+        immediateDeps().then((deps) => chatLetter(runtime.ws, id, { ...input, history }, deps)),
+      ),
+    );
     if (result.applied) runtime.changed("application", result.sha, id);
     return c.json(result);
   });

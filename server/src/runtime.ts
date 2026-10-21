@@ -69,6 +69,7 @@ import {
   visibleBullets,
 } from "@vita/shared";
 import { parse as parseYaml, stringify } from "yaml";
+import { ChatThreads } from "./chat-threads.js";
 import { ApiFailure } from "./errors.js";
 import { EventHub } from "./events.js";
 import { type JobContext, JobRunner } from "./jobs/runner.js";
@@ -87,12 +88,14 @@ export class WorkspaceRuntime {
   readonly locks = new FileLocks();
   readonly jobs: JobRunner;
   readonly ws: WorkspaceHandle;
+  readonly chats: ChatThreads;
   private readonly closeModel: () => Promise<void>;
   private constructor(
     readonly options: RuntimeOptions & { runtime: PipelineDeps["runtime"] },
     close: () => Promise<void>,
   ) {
     this.ws = { root: path.resolve(options.root), bundledDir: path.resolve(options.bundledDir) };
+    this.chats = new ChatThreads(this.ws.root);
     this.closeModel = close;
     this.jobs = new JobRunner(this.hub, (job) =>
       writeTextAtomic(this.ws.root, `.vita/jobs/${job.id}.json`, `${JSON.stringify(job)}\n`),
@@ -397,6 +400,8 @@ export class WorkspaceRuntime {
         if (stat.isDirectory()) for (const name of await readdir(absolute)) await validate(`${rel}/${name}`);
       };
       await validate(prefix);
+      await this.chats.deleteKey(scope, id);
+      if (scope === "application") await this.chats.deleteKey("letter", id);
       await rm(resolveInWorkspace(this.ws.root, prefix), { recursive: true });
       const sha = await commitPaths(this.ws.root, [prefix], `Permanently delete ${scope}: ${id}`, "user");
       this.changed(scope, sha, id);
