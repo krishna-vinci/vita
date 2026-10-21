@@ -16,6 +16,8 @@ export const queryKeys = {
   application: (id: string) => ["applications", id] as const,
   templates: ["templates"] as const,
   template: (id: string) => ["templates", id] as const,
+  templateSource: (id: string) => ["template-source", id] as const,
+  templateContract: ["template-contract"] as const,
   prep: (id: string) => ["prep", id] as const,
   metrics: ["metrics"] as const,
   instructions: ["instructions"] as const,

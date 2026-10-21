@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
 import { useTemplates } from "@/api/queries";
+import { TemplateMenu } from "@/components/TemplateMenu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -59,6 +60,7 @@ export function TemplateGallery({
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="font-display text-base font-medium break-words">{template.meta.name}</h3>
                 <Badge variant="outline">{template.bundled ? "Built in" : "Yours"}</Badge>
+                <TemplateMenu template={template} />
               </div>
               {template.meta.description && (
                 <p className="text-sm text-muted-foreground">{template.meta.description}</p>

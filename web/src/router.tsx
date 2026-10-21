@@ -47,6 +47,7 @@ export const routes = [
           { path: "/jobs/:id/letter", ...page(() => import("@/pages/letter/LetterPage")) },
           { path: "/jobs/:id/prep", ...page(() => import("@/pages/prep/PrepPage")) },
           { path: "/settings", ...page(() => import("@/pages/SettingsPage")) },
+          { path: "/settings/templates/:id", ...page(() => import("@/pages/settings/TemplateStudioPage")) },
           { path: "*", ...page(() => import("@/pages/NotFoundPage")) },
         ],
       },
