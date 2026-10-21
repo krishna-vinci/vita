@@ -104,6 +104,10 @@ it("drops the oldest messages at 200 while retaining the original title and the 
   expect(saved.messages[0]?.text).toBe("Text 2");
   expect(saved.messages.at(-1)?.text).toBe("Latest answer");
   expect(chat.mock.calls[0]?.[1].history).toEqual(messages.slice(-10).map(({ role, text }) => ({ role, text })));
+  expect(chat.mock.calls[0]?.[1].statementMessages).toEqual(
+    messages.filter((message) => message.role === "user").map((message) => message.text),
+  );
+  expect(chat.mock.calls[0]?.[1].threadId).toBe(thread.id);
 });
 
 it("evicts threads by updatedAt at 50 and leaves other keys intact", async () => {
@@ -259,4 +263,23 @@ it("caps assistant text at the request limit in both the saved message and reply
   expect(json.reply).toHaveLength(20_000);
   const saved = ChatThread.parse(await (await server.request(`${path}/${threadId}`)).json());
   expect(saved.messages[1]?.text).toBe(json.reply);
+});
+
+it("persists field changes from immediate source tools in the saved assistant message", async () => {
+  const server = createWorkspaceApp(runtime);
+  const changes = [{ kind: "field" as const, id: "profile", field: "headline", before: "Writer", after: "Editor" }];
+  vi.spyOn(core, "proposeSourceEdit").mockResolvedValue({
+    reply: "Updated your headline.",
+    proposal: null,
+    changes,
+    applied: true,
+    sha: null,
+  });
+  const response = await server.request("/api/chat/source", post({ message: "Use Editor as my headline." }));
+  expect(response.status).toBe(200);
+  const ids = ChatReplyIds.parse(await response.json());
+  expect((await runtime.chats.get("source", "outline-projects", ids.threadId)).messages.at(-1)).toMatchObject({
+    changes,
+    applied: true,
+  });
 });

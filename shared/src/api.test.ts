@@ -154,3 +154,19 @@ it("accepts saved chat IDs and validates thread message and text caps", () => {
     }).success,
   ).toBe(true);
 });
+
+it("validates entry/header metadata operations including clearing links and rejects non-web URLs", () => {
+  expect(
+    ResumeOpsRequest.parse({
+      ops: [
+        { op: "item.set", id: "entry", title: "Workshop", links: null },
+        { op: "header.set", headline: "Editor", location: "Remote" },
+      ],
+    }).ops,
+  ).toHaveLength(2);
+  for (const url of ["javascript:alert(1)", "file:///private", "ftp://example.com"])
+    expect(
+      ResumeOpsRequest.safeParse({ ops: [{ op: "item.set", id: "entry", links: [{ label: "Website", url }] }] })
+        .success,
+    ).toBe(false);
+});

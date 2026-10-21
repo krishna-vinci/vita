@@ -1,4 +1,4 @@
-import { SectionKind, type TemplateMeta } from "@vita/shared";
+import { ItemLink, SectionKind, type TemplateMeta } from "@vita/shared";
 import { z } from "zod";
 import type { ClaimIndex } from "../claims/index.js";
 
@@ -22,6 +22,16 @@ export const ResumeOpSchema = z.discriminatedUnion("op", [
   z.strictObject({ op: z.literal("bullet.lock"), id, locked: z.boolean() }),
   z.strictObject({ op: z.literal("move"), id, toParent: id, index }),
   z.strictObject({ op: z.literal("section.rename"), id, title: z.string() }),
+  z.strictObject({
+    op: z.literal("item.set"),
+    id,
+    title: z.string().optional(),
+    subtitle: z.string().optional(),
+    period: z.string().optional(),
+    location: z.string().optional(),
+    links: z.array(ItemLink).max(4).nullable().optional(),
+  }),
+  z.strictObject({ op: z.literal("header.set"), headline: z.string().optional(), location: z.string().optional() }),
   z.strictObject({ op: z.literal("item.hide"), id, hidden: z.boolean() }),
   z.strictObject({ op: z.literal("section.hide"), id, hidden: z.boolean() }),
   z.strictObject({

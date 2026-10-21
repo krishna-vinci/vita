@@ -194,6 +194,20 @@ export function applyOps(
         }
         break;
       }
+      case "item.set": {
+        const item = itemAt(draft, op.id);
+        protect(item.bullets, ctx);
+        for (const key of ["title", "subtitle", "period", "location"] as const)
+          if (op[key] !== undefined) item[key] = op[key];
+        if (op.links === null) delete item.links;
+        else if (op.links !== undefined) item.links = op.links;
+        for (const bullet of item.bullets) changed.add(bullet.id);
+        break;
+      }
+      case "header.set":
+        if (op.headline !== undefined) draft.header.headline = op.headline;
+        if (op.location !== undefined) draft.header.location = op.location;
+        break;
       case "section.rename":
         sectionAt(draft, op.id).title = op.title;
         break;

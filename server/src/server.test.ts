@@ -12,6 +12,7 @@ import {
   MarkdownMutation,
   Resume,
   ResumeMutation,
+  Review,
   SettingsMutation,
   SettingsView,
   type VitaEvent,
@@ -241,7 +242,7 @@ describe("workspace API", () => {
     );
     const edited = ResumeMutation.parse(await response.json());
     expect(edited.review?.checks).toEqual([
-      { bulletId: bullet.id, verdict: "supported", reason: "Changed text matches claim" },
+      { bulletId: bullet.id, verdict: "supported", reason: "Changed text matches claim", basis: "statement" },
     ]);
     expect(edited.usage[0]).toMatchObject({ role: "checker", model: "faux/checker" });
     const input = spy.mock.calls[0]?.[0];
@@ -776,4 +777,42 @@ it("makes browsers recheck the app page and cache hashed assets for a year", asy
   expect((await server.request("/assets/app-abc123.js")).headers.get("Cache-Control")).toBe(
     "public, max-age=31536000, immutable",
   );
+});
+
+it("exports support findings as warnings in trust mode while strict keeps them blocking", async () => {
+  const server = await app();
+  stubRender();
+  const root = join(dir, "workspace");
+  const bullet = visibleBullets(resume)[0];
+  if (!bullet) throw new Error("Missing fixture bullet");
+  bullet.text = "Built 999 systems.";
+  bullet.origin = "ai";
+  const reason = "Number exceeds the statement";
+  const lint = [{ rule: "unsourced-number", severity: "block", bulletId: bullet.id, message: "No receipt for 999" }];
+  await core.writeTextAtomic(root, "resumes/master/resume.json", JSON.stringify(resume));
+  await core.writeTextAtomic(
+    root,
+    "resumes/master/review.json",
+    JSON.stringify({
+      round: 1,
+      lint,
+      checks: [{ bulletId: bullet.id, verdict: "unsupported", reason }],
+      ats: [],
+      render: null,
+      gaps: [],
+      overrides: [],
+      done: false,
+      blocking: [`unsupported: ${bullet.id}: ${reason}`, "unsourced-number: No receipt for 999"],
+    }),
+  );
+  await core.writeTextAtomic(root, "config/rules.yaml", "honesty: strict\n");
+  expect((await server.request("/api/resumes/master/export", post())).status).toBe(409);
+  await core.writeTextAtomic(root, "config/rules.yaml", "honesty: trust\n");
+  const response = await server.request("/api/resumes/master/export", post());
+  expect(response.status, await response.clone().text()).toBe(200);
+  const result = await response.json();
+  const review = Review.parse(result.resource.review);
+  expect(review).toMatchObject({ done: true, blocking: [] });
+  expect(review.checks[0]).toMatchObject({ verdict: "unsupported", severity: "warn" });
+  expect(review.lint).toContainEqual(expect.objectContaining({ rule: "unsourced-number", severity: "warn" }));
 });

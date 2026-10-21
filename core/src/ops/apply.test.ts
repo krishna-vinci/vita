@@ -389,3 +389,59 @@ it("applies typed style knobs with canonical colours and rejects invalid enum va
     /Invalid layout option/,
   );
 });
+
+it("sets entry/header metadata without receipts, renders overrides and clears links back to derivation", async () => {
+  const original = sampleResume();
+  const result = applyOps(
+    original,
+    [
+      {
+        op: "item.set",
+        id: "first",
+        title: "Workshop",
+        subtitle: "Editor",
+        period: "2026",
+        location: "Remote",
+        links: [{ label: "Website", url: "https://workshop.example" }],
+      },
+      { op: "header.set", headline: "Writer", location: "Pune" },
+    ],
+    context("ai"),
+  );
+  expect(result.resume.header).toMatchObject({ headline: "Writer", location: "Pune" });
+  expect(result.resume.sections[0]?.items[0]).toMatchObject({
+    title: "Workshop",
+    subtitle: "Editor",
+    period: "2026",
+    location: "Remote",
+  });
+  const { renderMarkdown } = await import("../render/markdown.js");
+  const rendered = renderMarkdown(result.resume);
+  for (const text of [
+    "Writer",
+    "Pune",
+    "Workshop",
+    "Editor",
+    "Remote",
+    "2026",
+    "[Website](<https://workshop.example>)",
+  ])
+    expect(rendered).toContain(text);
+  const cleared = applyOps(result.resume, [{ op: "item.set", id: "first", links: null }], context());
+  expect(cleared.resume.sections[0]?.items[0]?.links).toBeUndefined();
+  expect(original.sections[0]?.items[0]?.title).toBe("Example Cooperative");
+});
+
+it("protects locked item metadata from AI and rejects unsafe link schemes atomically", () => {
+  const resume = sampleResume();
+  bullet(resume).locked = true;
+  expect(() => applyOps(resume, [{ op: "item.set", id: "first", title: "Changed" }], context("ai"))).toThrow(/locked/);
+  expect(
+    applyOps(resume, [{ op: "item.set", id: "first", title: "User edit" }], context()).resume.sections[0]?.items[0]
+      ?.title,
+  ).toBe("User edit");
+  for (const url of ["javascript:alert(1)", "file:///etc/passwd", "ftp://example.com", "not-a-url"])
+    expect(() =>
+      applyOps(resume, [{ op: "item.set", id: "first", links: [{ label: "Website", url }] }], context()),
+    ).toThrow(/http|Invalid/);
+});

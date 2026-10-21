@@ -19,10 +19,12 @@ export function evaluateDone(input: {
   gaps: string[];
   render: RenderCheck | null;
   overrides: Review["overrides"];
+  honesty?: "strict" | "balanced" | "trust";
 }): { done: boolean; blocking: string[]; suggestions: string[] } {
   const suggestions: string[] = [];
+  const supportRules = new Set(["missing-claims", "unknown-claim", "unsourced-number", "limit-breach"]);
   const blocking = input.lint
-    .filter((note) => note.severity === "block")
+    .filter((note) => note.severity === "block" && !(input.honesty === "trust" && supportRules.has(note.rule)))
     .map((note) => `${note.rule}: ${note.message}`);
   const bullets = visibleBullets(input.resume);
   // Must-haves can be met anywhere a reader sees them: bullets, skills lists, titles, summaries.
@@ -45,11 +47,11 @@ export function evaluateDone(input: {
   for (const bullet of bullets) {
     if (overridden.has(bullet.id)) continue;
     const notes = input.checks.filter((note) => note.bulletId === bullet.id);
-    if (notes.length === 0) blocking.push(`Unchecked bullet: ${bullet.id}`);
+    if (notes.length === 0) (input.honesty === "trust" ? suggestions : blocking).push(`Unchecked bullet: ${bullet.id}`);
   }
   for (const note of input.checks) {
     if (ids.has(note.bulletId) && !overridden.has(note.bulletId) && note.verdict !== "supported") {
-      blocking.push(`${note.verdict}: ${note.bulletId}: ${note.reason}`);
+      (input.honesty === "trust" ? suggestions : blocking).push(`${note.verdict}: ${note.bulletId}: ${note.reason}`);
     }
   }
   for (const requirement of input.analysis.requirements) {

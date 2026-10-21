@@ -124,3 +124,16 @@ it("counts a must-have covered when it appears in a skills list item", () => {
   });
   expect(result.blocking.some((b) => b.startsWith("Uncovered must-have"))).toBe(false);
 });
+
+it("trust makes support failures warnings while balanced and strict still block; render failures always block", () => {
+  const unsupported = {
+    ...input,
+    checks: [{ bulletId: "b", verdict: "unsupported" as const, reason: "No receipt" }],
+    lint: [{ rule: "unsourced-number", severity: "block" as const, message: "Missing support" }],
+  };
+  expect(evaluateDone({ ...unsupported, honesty: "trust" })).toMatchObject({ done: true, blocking: [] });
+  expect(evaluateDone({ ...unsupported, honesty: "trust" }).suggestions).toContain("unsupported: b: No receipt");
+  for (const honesty of ["balanced", "strict"] as const)
+    expect(evaluateDone({ ...unsupported, honesty }).done).toBe(false);
+  expect(evaluateDone({ ...unsupported, honesty: "trust", render: null }).done).toBe(false);
+});

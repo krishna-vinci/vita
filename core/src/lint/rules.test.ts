@@ -44,7 +44,7 @@ function context(): LintContext {
       parseOutline("## Experience\n- Supported 12 volunteers. <!-- c:outline-volunteers -->"),
     ),
     pack: Pack.parse({ id: "general", name: "General", banned_phrases: ["team player"] }),
-    rules: {},
+    rules: { honesty: "strict" },
   };
 }
 
@@ -290,4 +290,30 @@ describe("visibility and overrides", () => {
     expect(ctx).toEqual(beforeContext);
     expect(findings("Organised materials.")).toEqual([]);
   });
+});
+
+it("balanced warns on statement-only estimates but still blocks invented numbers; trust warns on unsupported text", () => {
+  const ctx = context();
+  ctx.rules.honesty = "balanced";
+  expect(findings("Saved $1.2M.", ["workshop-money"], {}, ctx)).toEqual([
+    expect.objectContaining({ rule: "statement-estimate", severity: "warn", message: "Your estimate: $1.2M" }),
+  ]);
+  expect(ruleFindings("unsourced-number", "Saved $9M.", ["workshop-money"], {}, ctx)).toEqual([
+    expect.objectContaining({ severity: "block" }),
+  ]);
+  ctx.rules.honesty = "trust";
+  const notes = findings("Saved $9M.", [], {}, ctx);
+  expect(notes.filter((note) => ["unsourced-number", "missing-claims"].includes(note.rule))).toHaveLength(2);
+  expect(notes.every((note) => note.severity === "warn")).toBe(true);
+});
+
+it("keeps mixed-receipt numbers as estimates until an independent receipt also contains the value", () => {
+  const ctx = context();
+  ctx.rules.honesty = "balanced";
+  const claim = ctx.index.claims.get("workshop-money");
+  if (!claim) throw new Error("Missing fixture claim");
+  claim.evidence.push({ id: "ev-code", kind: "code", ref: "https://example.test/source" });
+  expect(ruleFindings("statement-estimate", "Saved $1.2M.", [claim.id], {}, ctx)).toHaveLength(1);
+  claim.evidence.push({ id: "ev-doc", kind: "doc", text: "Saved $1.2M.", ref: "https://example.test/report" });
+  expect(ruleFindings("statement-estimate", "Saved $1.2M.", [claim.id], {}, ctx)).toEqual([]);
 });

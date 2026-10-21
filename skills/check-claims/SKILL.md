@@ -16,12 +16,25 @@ benefit of the doubt.
 Use each source item's confirmed `relationship` and `contribution` in the supplied ownership context.
 Never assume sole authorship from a repository link or its presence in the inventory.
 For repo-backed projects, whole-project sole-authorship wording (including an unqualified
-"Built <whole project>") without `relationship: sole` is unsupported. With `sole`,
+"Built <whole project>") without `relationship: sole` or a cited statement explicitly confirming sole authorship is unsupported. With `sole`,
 "Built" is appropriate. With `lead`, check the stated leadership and owned scope;
 leadership does not mean sole authorship. With `team`, accept only the specific owned
 parts or explicit team scope; never invent a team size. With `contributor`, use
 "Contributed X to Y" within the stated contribution. Unknown relationship cannot
 support an ownership guess. Ordinary role duties still follow their cited evidence.
+
+## The person’s word
+
+A claim backed by `statement` evidence is supported when the bullet says no more
+than the quoted statement. Do not demand an external receipt for their own work.
+Set `basis: "statement"` on notes relying on a statement; the interface labels this
+"you said". This includes explicitly stated ownership and numbers. A statement-only
+number is the person's estimate: in balanced mode the engine adds a non-blocking
+"Your estimate: <number>" review warning. Do not describe it as measured unless the
+statement says it was measured. Invented numbers without any matching claim or
+receipt remain unsupported. In trust mode support findings are warnings; still
+report the accurate verdict and never skip checking. Strict uses existing receipts.
+Metadata (titles, dates, locations and links) needs no evidence receipt.
 
 ## One verdict per bullet
 

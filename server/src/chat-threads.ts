@@ -140,7 +140,7 @@ export class ChatThreads {
     kind: ChatKind,
     key: string,
     input: { threadId?: string; message: string },
-    action: (history: ChatTurn[]) => Promise<T>,
+    action: (history: ChatTurn[], conversation: { threadId: string; statementMessages: string[] }) => Promise<T>,
   ): Promise<T & { threadId: string; messageId: string }> {
     const thread = input.threadId ? await this.get(kind, key, input.threadId) : await this.create(kind, key);
     const history = thread.messages
@@ -156,7 +156,10 @@ export class ChatThreads {
     const messageId = randomUUID();
     let result: T;
     try {
-      result = await action(history);
+      result = await action(history, {
+        threadId: thread.id,
+        statementMessages: thread.messages.filter((m) => m.role === "user").map((m) => m.text),
+      });
     } catch (error) {
       await this.append(kind, key, thread.id, {
         id: messageId,
