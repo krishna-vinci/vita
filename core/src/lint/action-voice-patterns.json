@@ -1,0 +1,17 @@
+{
+  "subjectOpeners": ["^The\\s+(?:repository|project|application)\\b", "^Its\\b"],
+  "titleVerbs": [
+    "provides",
+    "implements",
+    "is",
+    "offers",
+    "supports",
+    "uses",
+    "contains",
+    "includes",
+    "features",
+    "enables",
+    "has",
+    "was"
+  ]
+}

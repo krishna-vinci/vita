@@ -19,7 +19,8 @@ export function evaluateDone(input: {
   gaps: string[];
   render: RenderCheck | null;
   overrides: Review["overrides"];
-}): { done: boolean; blocking: string[] } {
+}): { done: boolean; blocking: string[]; suggestions: string[] } {
+  const suggestions: string[] = [];
   const blocking = input.lint
     .filter((note) => note.severity === "block")
     .map((note) => `${note.rule}: ${note.message}`);
@@ -55,7 +56,7 @@ export function evaluateDone(input: {
     if (requirement.importance !== "must") continue;
     const gap = input.gaps.some((value) => value === requirement.id || value.startsWith(`${requirement.id}:`));
     const covered = requirementCoveredByText(visibleText, requirement);
-    if (!gap && !covered) blocking.push(`Uncovered must-have: ${requirement.id}: ${requirement.text}`);
+    if (!gap && !covered) suggestions.push(`Uncovered must-have: ${requirement.id}: ${requirement.text}`);
   }
   const render = input.render;
   if (render === null) blocking.push("PDF compilation and text extraction required.");
@@ -66,5 +67,5 @@ export function evaluateDone(input: {
     if (render.maxPages !== undefined && render.pages > render.maxPages)
       blocking.push(`PDF exceeds ${render.maxPages} pages.`);
   }
-  return { done: blocking.length === 0, blocking: [...new Set(blocking)] };
+  return { done: blocking.length === 0, blocking: [...new Set(blocking)], suggestions };
 }

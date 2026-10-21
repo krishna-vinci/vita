@@ -79,6 +79,7 @@
 \begin{document}
 \fontsize{((( layout.font_pt )))}{((( layout.font_pt * 1.2 )))}\selectfont
 \begin{center}
+((* if header.location *))((( header.location )))\par((* endif *))
 ((* if header.contact.length *))
 \begin{minipage}[c]{0.28\textwidth}\raggedright\small
 ((* for contact in header.contact *))

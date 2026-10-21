@@ -15,3 +15,4 @@ export {
   parseProjects,
   serializeProjects,
 } from "./projects";
+export { relationshipProposal } from "./relationship.js";

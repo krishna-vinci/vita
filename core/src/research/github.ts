@@ -93,7 +93,10 @@ export class GitHubClient {
             reader.releaseLock();
           }
         }
-        return { data: JSON.parse(Buffer.concat(chunks).toString("utf8")) as T, headers: response.headers };
+        return {
+          data: (response.status === 204 ? null : JSON.parse(Buffer.concat(chunks).toString("utf8"))) as T,
+          headers: response.headers,
+        };
       }
       throw new GitHubError(502, "Too many GitHub redirects.");
     } catch (error) {

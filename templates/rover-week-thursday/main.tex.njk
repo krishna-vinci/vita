@@ -72,8 +72,9 @@
 ((* if header.name and header.headline *))
   \medskip ((( header.headline )))\par
 ((* endif *))
-((* if header.contact.length *))
+((* if header.contact.length or header.location *))
   \medskip
+((* if header.location *))((( header.location )))((* if header.contact.length *)) \quad ((* endif *))((* endif *))
 ((* for contact in header.contact *))
   ((* if contact.href *))\href{((( contact.href | url )))}{((( contact.display )))}((* else *))((( contact.display )))((* endif *))((* if not loop.last *)) \quad ((* endif *))
 ((* endfor *))

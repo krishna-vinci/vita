@@ -5,7 +5,10 @@ import type { WorkspaceHandle } from "../pipeline/types.js";
 import { optionalInstructionText } from "./load.js";
 
 // Zod 4 applies inner defaults even under optional; omission must preserve the host value.
-const partialRules = Rules.partial().extend({ max_pages: Rules.shape.max_pages.removeDefault().optional() });
+const partialRules = Rules.partial().extend({
+  max_pages: Rules.shape.max_pages.removeDefault().optional(),
+  min_fill: Rules.shape.min_fill.removeDefault().optional(),
+});
 const instanceRules = partialRules.extend({ locked: z.boolean().default(false) });
 
 function union(a: string[] = [], b: string[] = []): string[] {
@@ -28,6 +31,7 @@ export function mergeRules(instance: z.infer<typeof instanceRules>, user: z.infe
     for (const key of ["banned_phrases", "required_sections"] as const) {
       if (host[key] !== undefined) merged[key] = union(host[key], user[key]);
     }
+    if (host.min_fill !== undefined) merged.min_fill = Math.max(host.min_fill, user.min_fill ?? host.min_fill);
     // These categorical constraints have no tighter ordering: the locked host value wins.
     for (const key of ["section_order", "date_format", "locale"] as const) {
       if (host[key] !== undefined) Object.assign(merged, { [key]: host[key] });

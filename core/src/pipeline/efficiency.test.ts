@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { BaseConfig, type CheckNote, type Resume, visibleBullets } from "@vita/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as agent from "../agent/index.js";
+import { createGenerationRuntime } from "../agent/roles.js";
 import * as rendering from "../render/index.js";
 import { type Context, effectivePack, loadContext } from "./context.js";
 import { baseSummaries, checkerContext, VerdictCache, writerEvidence } from "./efficient-context.js";
@@ -293,4 +294,117 @@ it("drains concurrent render and ATS work before surfacing a checker failure", a
   expect(settled).toBe(false);
   release();
   expect(await pending).toMatchObject({ message: "Checker unavailable" });
+});
+
+it("deepens once below the fill floor only when unused relevant claims remain, metering the extra pass", async () => {
+  const { loadProfile } = await import("./profile.js");
+  const { selectEvidence } = await import("../search/index.js");
+  const selection = selectEvidence(ctx.search, ctx.index, {
+    keywords: [["catalogue", "catalog"]],
+    lead: [],
+    locked: [],
+    maxClaims: 40,
+  });
+  const candidate = selection.items[0];
+  if (!candidate) throw new Error("Missing relevant fixture item");
+  const unused = "unused-relevant";
+  const claim = required(ctx.index.claims.get(required(candidate.claimIds[0])));
+  ctx.index.claims.set(unused, { ...claim, id: unused, text: "Added catalogue filters." });
+  candidate.claimIds.push(unused);
+  selection.claimIds.push(unused);
+  selection.claimScores = { ...selection.claimScores, [unused]: 1 };
+  candidate.relevance = 1;
+  input.selection = selection;
+  input.depthSelection = selection;
+  vi.spyOn(rendering, "compileTex").mockResolvedValue({ pdf: Buffer.from("stub"), log: "" });
+  vi.spyOn(rendering, "pdfText").mockResolvedValue({
+    text: visibleBullets(resume)
+      .map((bullet) => bullet.text)
+      .join("\n"),
+    pages: 1,
+    fill: 0.5,
+  });
+  const deeper = structuredClone(resume);
+  const target = deeper.sections
+    .flatMap((section) => section.items)
+    .find((item) => item.bullets.some((bullet) => bullet.claims.includes(claim.id)));
+  if (!target) throw new Error("Missing matching item");
+  target.bullets.push({
+    id: "added-depth",
+    text: "Added catalogue filters.",
+    claims: [unused],
+    origin: "ai",
+    locked: false,
+  });
+  vi.mocked(rendering.pdfText)
+    .mockResolvedValueOnce({
+      text: visibleBullets(resume)
+        .map((bullet) => bullet.text)
+        .join("\n"),
+      pages: 1,
+      fill: 0.5,
+    })
+    .mockResolvedValue({
+      text: visibleBullets(deeper)
+        .map((bullet) => bullet.text)
+        .join("\n"),
+      pages: 1,
+      fill: 0.5,
+    });
+  const faux = await createGenerationRuntime([
+    { tool: "submit_resume", arguments: resume },
+    { tool: "submit_checks", arguments: { checks: notes(resume) } },
+    { tool: "submit_ats", arguments: { ats: [] } },
+    { tool: "submit_resume", arguments: deeper },
+    {
+      tool: "submit_checks",
+      arguments: { checks: [{ bulletId: "added-depth", verdict: "supported", reason: "Unused relevant claim" }] },
+    },
+    { tool: "submit_ats", arguments: { ats: [] } },
+  ]);
+  try {
+    if (!faux.models) throw new Error("Missing models");
+    const spy = vi.spyOn(agent, "runRole");
+    const usage: import("./types.js").RoleUsage[] = [];
+    const result = await generate(
+      ctx,
+      input,
+      { runtime: faux.runtime, models: faux.models, retry: { enabled: false } },
+      usage,
+      await loadProfile(root),
+    );
+    expect(result.review.done).toBe(true);
+    const writers = spy.mock.calls.filter(([opts]) => opts.role.name === "writer");
+    expect(writers).toHaveLength(2);
+    expect(writers[1]?.[0].task).toContain("Deepen this resume once");
+    expect(writers[1]?.[0].task).toContain(unused);
+    expect(usage.filter((entry) => entry.role === "writer")).toHaveLength(2);
+    expect(usage.every((entry) => entry.input > 0 && entry.costUsd >= 0)).toBe(true);
+    expect(result.review.round).toBe(2);
+    expect(visibleBullets(result.resume).some((bullet) => bullet.claims.includes(unused))).toBe(true);
+    spy.mockClear();
+    // Every remaining claim is already used: no extra writer call despite low fill.
+    candidate.claimIds = visibleBullets(resume).flatMap((bullet) => bullet.claims);
+    const second = await createGenerationRuntime([
+      { tool: "submit_resume", arguments: resume },
+      { tool: "submit_checks", arguments: { checks: notes(resume) } },
+      { tool: "submit_ats", arguments: { ats: [] } },
+    ]);
+    try {
+      if (!second.models) throw new Error("Missing models");
+      const shorter = await generate(
+        ctx,
+        input,
+        { runtime: second.runtime, models: second.models, retry: { enabled: false } },
+        [],
+        await loadProfile(root),
+      );
+      expect(shorter.review.done).toBe(true);
+      expect(spy.mock.calls.filter(([opts]) => opts.role.name === "writer")).toHaveLength(1);
+    } finally {
+      await second.close();
+    }
+  } finally {
+    await faux.close();
+  }
 });

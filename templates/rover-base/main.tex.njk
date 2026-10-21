@@ -28,10 +28,11 @@
     ((( header.headline )))
 ((* endif *))
   \end{minipage}
-((* if header.contact.length *))
+((* if header.contact.length or header.location *))
   \hfill
   \begin{minipage}{0.4\textwidth}
     \raggedleft
+((* if header.location *))((( header.location )))((* if header.contact.length *)) \\((* endif *))((* endif *))
 ((* for contact in header.contact *))
     ((* if contact.href *))\href{((( contact.href | url )))}{((( contact.display )))}((* else *))((( contact.display )))((* endif *))((* if not loop.last *)) \\((* endif *))
 ((* endfor *))

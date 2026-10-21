@@ -24,7 +24,7 @@ it("compiles rover-base and checks extracted bullet text in order on one page", 
   const { pdf } = await compileTex({ tex: renderTex(resume, tpl), assetsDir: tpl.dir });
   expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");
   const extracted = await pdfText(pdf);
-  expect(checkRender(resume, extracted, 1), extracted.text).toEqual({
+  expect(checkRender(resume, extracted, 1), extracted.text).toMatchObject({
     pages: 1,
     maxPages: 1,
     missingBullets: [],

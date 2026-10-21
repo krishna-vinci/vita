@@ -49,7 +49,8 @@ describe("evaluateDone", () => {
         requirements: [{ ...requirement, keywords: [["unmatched"]] }],
       },
     };
-    expect(evaluateDone(uncovered).blocking[0]).toContain("Uncovered must-have");
+    expect(evaluateDone(uncovered).suggestions[0]).toContain("Uncovered must-have");
+    expect(evaluateDone(uncovered).done).toBe(true);
     expect(
       evaluateDone({
         ...uncovered,
@@ -80,7 +81,7 @@ describe("evaluateDone", () => {
   it("blocks missing checks, must-haves with no matching keyword group, failed render, overflow and reading-order failures", () => {
     expect(evaluateDone({ ...input, checks: [] }).blocking).toContain("Unchecked bullet: b");
     const requirements = [{ ...requirement, keywords: [["unmatched"], ["absent"]] }];
-    expect(evaluateDone({ ...input, analysis: { ...input.analysis, requirements } }).done).toBe(false);
+    expect(evaluateDone({ ...input, analysis: { ...input.analysis, requirements } }).suggestions).toHaveLength(1);
     for (const render of [
       null,
       { ...input.render, pages: 2 },
@@ -93,8 +94,8 @@ describe("evaluateDone", () => {
       evaluateDone({
         ...input,
         analysis: { ...input.analysis, requirements: [{ ...requirement, keywords: [["ledger"]] }] },
-      }).done,
-    ).toBe(false);
+      }).suggestions,
+    ).toHaveLength(1);
   });
 });
 

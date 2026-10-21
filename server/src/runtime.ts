@@ -186,10 +186,19 @@ export class WorkspaceRuntime {
   async resource(scope: "resume" | "application", id: string): Promise<ResumeResource> {
     const prefix = this.prefix(scope, id);
     const [text, reviewText, hash] = await Promise.all([
-      readText(this.ws.root, `${prefix}/resume.json`),
+      this.optional(`${prefix}/resume.json`),
       this.optional(`${prefix}/review.json`),
       fileHash(this.ws.root, `${prefix}/resume.json`),
     ]);
+    if (text === undefined) {
+      if (scope === "application" && (await this.optional(`${prefix}/analysis.json`)) !== undefined)
+        throw new ApiFailure(
+          409,
+          "resume-required",
+          "Answer the application questions or skip and write now before editing a resume",
+        );
+      throw new ApiFailure(404, "not-found", "Resume not found");
+    }
     const pdf = `${prefix}/${scope === "application" ? "out/" : ""}resume.pdf`;
     const metadata = await this.metadata(scope, id);
     const resume = Resume.parse(JSON.parse(text));
@@ -211,9 +220,22 @@ export class WorkspaceRuntime {
   }
   async application(id: string): Promise<ApplicationResource> {
     const prefix = this.prefix("application", id);
-    const resource = await this.resource("application", id);
+    const metadata = await this.metadata("application", id);
+    const pending = (await this.optional(`${prefix}/resume.json`)) === undefined;
+    const reviewText = pending ? await this.optional(`${prefix}/review.json`) : undefined;
+    const resource = pending
+      ? {
+          resume: null,
+          review: reviewText ? Review.parse(JSON.parse(reviewText)) : null,
+          pdfUrl: null,
+          hash: "",
+          archived: typeof metadata.archived === "string" ? metadata.archived : undefined,
+          instructions: String(metadata.notes ?? ""),
+        }
+      : await this.resource("application", id);
     return {
       ...resource,
+      status: pending ? "needs-answers" : resource.review?.done ? "done" : "draft",
       jobText: await readText(this.ws.root, `${prefix}/job.md`),
       notes: resource.instructions ?? "",
       analysis: JobAnalysis.parse(JSON.parse(await readText(this.ws.root, `${prefix}/analysis.json`))),
@@ -253,16 +275,17 @@ export class WorkspaceRuntime {
   async applications(archived?: ArchivedFilter): Promise<ApplicationSummary[]> {
     const results: ApplicationSummary[] = [];
     for (const id of await this.ids("applications")) {
-      if ((await this.optional(`applications/${id}/resume.json`)) === undefined) continue;
+      if ((await this.optional(`applications/${id}/analysis.json`)) === undefined) continue;
       const resource = await this.application(id);
       if (archived === "only" ? !resource.archived : archived !== "include" && resource.archived) continue;
       results.push({
         archived: resource.archived,
         instructions: resource.instructions,
         id,
+        status: resource.status,
         title: resource.analysis.title,
         company: resource.analysis.company,
-        baseId: String((await this.metadata("application", id)).baseId ?? resource.resume.parent ?? "") || null,
+        baseId: String((await this.metadata("application", id)).baseId ?? resource.resume?.parent ?? "") || null,
         done: resource.review?.done ?? false,
         pdfUrl: resource.pdfUrl,
       });
@@ -285,8 +308,8 @@ export class WorkspaceRuntime {
         "The master cannot be archived, deleted or given base instructions",
       );
     this.assertAvailable(scope, id);
-    const resource = await this.resource(scope, id);
-    if (scope === "resume" && resource.resume.kind !== "base")
+    const resource = scope === "application" ? await this.application(id) : await this.resource(scope, id);
+    if (scope === "resume" && resource.resume?.kind !== "base")
       throw new ApiFailure(409, "master-protected", "Only base resumes support this action");
     return resource;
   }
@@ -580,6 +603,7 @@ export class WorkspaceRuntime {
       notes?: string;
       instructions?: string;
       answers?: Record<string, string>;
+      skip?: boolean;
     },
   ) {
     return this.jobs.enqueue(kind, id, (ctx) =>
@@ -609,16 +633,17 @@ export class WorkspaceRuntime {
             this.ws,
             {
               jobText: existing?.jobText ?? input.jobText ?? "",
-              baseId: existing?.resume.parent ?? input.baseId,
+              baseId: existing?.resume?.parent ?? input.baseId,
               applicationId: existing ? (id ?? undefined) : undefined,
               slug: existing ? undefined : `job-${ctx.signal.aborted ? "cancelled" : randomUUID().slice(0, 12)}`,
               answers: input.answers,
+              skip: input.skip,
               notes: existing?.instructions ?? input.instructions ?? input.notes,
               template: (await this.settings()).template,
             },
             deps,
           );
-          resultId = result.resume.id;
+          resultId = path.basename(result.applicationDir);
         }
         return { scope, id: resultId, sha: (await log(this.ws.root, 1))[0]?.sha ?? null };
       }),
@@ -629,7 +654,8 @@ export class WorkspaceRuntime {
       if (this.jobs.hasActive("application", id))
         throw new ApiFailure(409, "resource-busy", "Generation is still running for this resource");
       const resource = await this.application(id);
-      if (!resource.review) throw new ApiFailure(409, "review-required", "A checked resume is required before export");
+      if (!resource.resume || !resource.review)
+        throw new ApiFailure(409, "review-required", "A checked resume is required before export");
       const { index, rules, pack, maxPages } = await loadReviewContext(this.ws, resource.resume);
       const lint = lintResume(resource.resume, { index, rules, pack });
       const overrides = resource.resume.sections.flatMap((section) =>
