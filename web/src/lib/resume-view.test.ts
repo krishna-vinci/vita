@@ -52,6 +52,7 @@ const review = {
   ats: [],
   render: null,
   gaps: [],
+  suggestions: [],
   overrides: [],
   done: false,
   blocking: [],

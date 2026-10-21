@@ -31,6 +31,7 @@ function Form({
 }) {
   const save = useSaveRules();
   const [pages, setPages] = useState(String(initial.max_pages));
+  const [fill, setFill] = useState(String(Math.round(initial.min_fill * 100)));
   const [chars, setChars] = useState(initial.max_bullet_chars ? String(initial.max_bullet_chars) : "");
   const [banned, setBanned] = useState((initial.banned_phrases ?? []).join("\n"));
   const [required, setRequired] = useState((initial.required_sections ?? []).join("\n"));
@@ -40,6 +41,7 @@ function Form({
   const submit = () => {
     const rules = {
       max_pages: Number(pages) || 1,
+      min_fill: (Number(fill) || 85) / 100,
       ...(Number(chars) > 0 ? { max_bullet_chars: Number(chars) } : {}),
       ...(lines(banned).length ? { banned_phrases: lines(banned) } : {}),
       ...(lines(required).length ? { required_sections: lines(required) } : {}),
@@ -84,6 +86,17 @@ function Form({
             max={4}
             value={pages}
             onChange={(event) => setPages(event.target.value)}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="rule-fill">Fill at least (% of page)</Label>
+          <Input
+            id="rule-fill"
+            type="number"
+            min={50}
+            max={100}
+            value={fill}
+            onChange={(event) => setFill(event.target.value)}
           />
         </div>
         <div className="flex flex-col gap-2">

@@ -9,11 +9,13 @@ import { SplitWithChat } from "@/components/SplitWithChat";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { type ProjectCard, parseProjects, plural } from "@/lib/projects-view";
 import { ImportDialog } from "./ImportDialog";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { MetricCard } from "./MetricCard";
+import { ProjectRole, roleLabels } from "./ProjectRole";
 import { ResearchDialog } from "./ResearchDialog";
 import { SourceChat } from "./SourceChat";
 
@@ -93,6 +95,8 @@ export default function ProjectsTab() {
 }
 
 function ProjectItem({ card }: { card: ProjectCard }) {
+  const [roleOpen, setRoleOpen] = useState(false);
+  const canSetRole = card.relationship !== undefined || card.repoUrl !== "";
   return (
     <Card className="h-full">
       <CardHeader>
@@ -109,7 +113,32 @@ function ProjectItem({ card }: { card: ProjectCard }) {
           {card.variants > 0 && (
             <Badge variant="outline">{plural(card.variants, "ready-made wording", "ready-made wordings")}</Badge>
           )}
+          {canSetRole && (
+            <button type="button" onClick={() => setRoleOpen(true)} aria-label={`Edit your role in ${card.title}`}>
+              {card.relationship ? (
+                <Badge variant="outline">Role: {roleLabels[card.relationship]}</Badge>
+              ) : (
+                <Badge variant="outline">Set your role</Badge>
+              )}
+            </button>
+          )}
         </div>
+        {canSetRole && (
+          <Dialog open={roleOpen} onOpenChange={setRoleOpen}>
+            <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Your role in {card.title}</DialogTitle>
+                <DialogDescription>Vita uses this to decide what you may claim about the project.</DialogDescription>
+              </DialogHeader>
+              <ProjectRole
+                slug={slugify(card.title)}
+                repoUrl={card.repoUrl || undefined}
+                value={card.relationship}
+                contribution={card.contribution}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
         <div>
           <ResearchDialog
             title={`Refresh ${card.title} from its source`}

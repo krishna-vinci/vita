@@ -37,10 +37,12 @@ import {
   type OnboardingMutation,
   type OnboardingProposal,
   type OnboardingStatus,
+  type OwnershipSuggestion,
   type PackSummary,
   type Prep,
   type PromoteRequest,
   type PutMarkdownRequest,
+  type PutRelationshipRequest,
   type PutResumeInstructionsRequest,
   type PutRulesRequest,
   type PutSettingsRequest,
@@ -269,6 +271,8 @@ export const api = {
     get: (signal?: AbortSignal) => get<MarkdownResource>("/projects", signal),
     save: (body: PutMarkdownRequest) => send<MarkdownMutation>("/projects", body, "PUT"),
     importLegacy: (body: ImportLegacyRequest) => send<ImportLegacyResult>("/projects/import-legacy", body),
+    setRelationship: (slug: string, body: PutRelationshipRequest) =>
+      send<MarkdownMutation>(`/projects/${segment(slug)}/relationship`, body, "PUT"),
   },
   resumes: {
     list: (signal?: AbortSignal, archived?: "include" | "only") =>
@@ -346,7 +350,11 @@ export const api = {
     suggestions: (signal?: AbortSignal) => get<SyncSuggestion[]>("/sync/suggestions", signal),
     apply: (body: SyncApplyRequest) => send<SyncMutation>("/sync/apply", body),
   },
-  research: (body: ResearchRequest) => send<JobMutation>("/research", body),
+  research: {
+    start: (body: ResearchRequest) => send<JobMutation>("/research", body),
+    ownership: (repo: string, signal?: AbortSignal) =>
+      get<OwnershipSuggestion>(`/research/ownership?repo=${encodeURIComponent(repo)}`, signal),
+  },
   metrics: {
     questions: (signal?: AbortSignal) => get<MetricQuestion[]>("/metrics/questions", signal),
     answer: (body: AnswerMetricRequest) => send<SourceProposal>("/metrics/answer", body),
