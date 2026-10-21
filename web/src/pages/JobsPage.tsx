@@ -187,6 +187,7 @@ function ArchivedJobs() {
 function JobCard({ row }: { row: Row }) {
   const status = row.track?.tracker.status;
   const id = encodeURIComponent(row.app.id);
+  const asking = row.app.status === "needs-answers";
   return (
     <li className="flex flex-col gap-2 rounded-xl border bg-card p-4">
       <div className="flex items-start justify-between gap-2">
@@ -203,22 +204,33 @@ function JobCard({ row }: { row: Row }) {
         <JobMenu app={row.app} />
       </div>
       <div className="flex flex-wrap gap-1.5">
-        <Badge variant={row.app.done ? "secondary" : "outline"}>
-          {row.app.done ? "Ready to export" : "Needs review"}
-        </Badge>
+        {asking ? (
+          <Badge>Needs your answers</Badge>
+        ) : (
+          <Badge variant={row.app.done ? "secondary" : "outline"}>
+            {row.app.done ? "Ready to export" : "Needs review"}
+          </Badge>
+        )}
         {status && status !== "draft" && <Badge variant="secondary">{statusLabel[status]}</Badge>}
         <Flags track={row.track} />
       </div>
+      {asking && (
+        <Button asChild className="h-11 w-full">
+          <Link to={`/jobs/${id}`}>Answer questions</Link>
+        </Button>
+      )}
       <div className="flex flex-wrap gap-3 text-sm">
         <Link to={`/jobs/${id}/timeline`} className="text-primary underline underline-offset-2">
           Timeline
         </Link>
-        <Link
-          to={`/jobs/${id}/prep`}
-          className="inline-flex items-center gap-1 text-primary underline underline-offset-2"
-        >
-          <GraduationCap className="size-3.5" aria-hidden="true" /> Interview prep
-        </Link>
+        {!asking && (
+          <Link
+            to={`/jobs/${id}/prep`}
+            className="inline-flex items-center gap-1 text-primary underline underline-offset-2"
+          >
+            <GraduationCap className="size-3.5" aria-hidden="true" /> Interview prep
+          </Link>
+        )}
       </div>
     </li>
   );

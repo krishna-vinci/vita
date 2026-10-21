@@ -68,3 +68,22 @@ it("shows archived jobs with restore, and the delete dialog lists what goes", as
   fireEvent.click(within(dialog).getByRole("button", { name: "Delete permanently" }));
   await waitFor(() => expect(remove).toHaveBeenCalledWith("old", expect.anything()));
 });
+it("marks a job that is waiting for answers, with a way in and no interview prep", async () => {
+  vi.spyOn(api.applications, "list").mockResolvedValue([
+    {
+      id: "asking",
+      title: "SRE",
+      company: "Asking Co",
+      baseId: null,
+      status: "needs-answers",
+      done: false,
+      pdfUrl: null,
+    },
+  ]);
+  mount();
+  await screen.findAllByText("Needs your answers");
+  expect(screen.queryByText("Needs review")).toBeNull();
+  expect(screen.getAllByRole("link", { name: "Answer questions" })[0]?.getAttribute("href")).toBe("/jobs/asking");
+  expect(screen.queryByRole("link", { name: /Interview prep/ })).toBeNull();
+  expect(screen.queryByText(/PDF/)).toBeNull();
+});

@@ -82,7 +82,8 @@ function JobForm({ jobId, onJob }: { jobId: string; onJob: (id: string) => void 
       <div className="flex flex-col gap-2">
         <h1 className="font-display text-3xl font-bold">A resume for your next job</h1>
         <p className="text-muted-foreground">
-          Paste the job description. Vita picks your best-matching work and checks every line against your notes.
+          Paste the job description. Vita picks your best-matching work and checks every line against your notes. If the
+          job asks for something your notes don't show, it asks you a few questions first, then writes once.
         </p>
       </div>
       {failed && (

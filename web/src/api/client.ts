@@ -74,6 +74,7 @@ import {
   type UndoRequest,
   type UndoResult,
   type WorkspaceView,
+  type WriteApplicationRequest,
 } from "@vita/shared";
 
 export class ApiError extends Error {
@@ -302,6 +303,7 @@ export const api = {
     get: (id: string, signal?: AbortSignal) => get<ApplicationResource>(`/applications/${segment(id)}`, signal),
     create: (body: CreateApplicationRequest) => send<JobMutation>("/applications", body),
     answers: (id: string, body: AnswersRequest) => send<JobMutation>(`/applications/${segment(id)}/answers`, body),
+    write: (id: string, body: WriteApplicationRequest) => send<JobMutation>(`/applications/${segment(id)}/write`, body),
     ops: (id: string, body: ResumeOpsRequest) => send<ResumeMutation>(`/applications/${segment(id)}/ops`, body),
     export: (id: string) => send<ExportResult>(`/applications/${segment(id)}/export`, {}),
   },

@@ -1,4 +1,4 @@
-import type { ApiResumeOp, ApplicationResource, ResumeResource } from "@vita/shared";
+import type { ApiResumeOp, ApplicationResource, Resume, ResumeResource } from "@vita/shared";
 import { ArrowLeft, GraduationCap, MessageSquareText } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -40,11 +40,16 @@ import { ChatPanel } from "./ChatPanel";
 import { DetailsPanel } from "./DetailsPanel";
 import { FitDialog, type FitState } from "./FitDialog";
 import { JobTabs } from "./JobTabs";
+import { useRememberOwnership } from "./OwnershipQuestion";
 import { parseGaps, Questions } from "./Questions";
+import { QuestionsStep } from "./QuestionsStep";
 import { ResumeSheet } from "./ResumeSheet";
 import { Toolbar } from "./Toolbar";
 import type { SheetActions } from "./types";
 import { useChatThread } from "./useChatThread";
+
+/** A resume that exists. A job whose questions are still open has none yet. */
+type LoadedData = (ApplicationResource | ResumeResource) & { resume: Resume };
 
 const store = {
   get(key: string): string | null {
@@ -75,6 +80,7 @@ export default function WorkspacePage({ scope }: { scope: "application" | "resum
     (job) => job.resourceId === id && (job.status === "queued" || job.status === "running"),
   );
   const cancel = useCancelJob();
+  const writing = isJob && (query.data as ApplicationResource | undefined)?.status === "needs-answers";
   const back = isJob ? { to: "/jobs", label: "All jobs" } : { to: "/me/resumes", label: "Base resumes" };
   if (active)
     return (
@@ -82,14 +88,30 @@ export default function WorkspacePage({ scope }: { scope: "application" | "resum
         <BackLink {...back} />
         <JobProgress
           job={active}
-          title={isJob ? "Updating your resume" : "Writing your resume"}
+          title={isJob && !writing ? "Updating your resume" : "Writing your resume"}
           onCancel={() => cancel.mutate(active.id)}
         />
       </div>
     );
   if (query.isPending) return <PageLoading />;
   if (query.isError) return <PageError error={query.error} retry={() => void query.refetch()} />;
-  return <Loaded key={`${scope}:${id}`} scope={scope} id={id} data={query.data} back={back} />;
+  if (!query.data.resume)
+    return <Pending key={`${scope}:${id}`} id={id} data={query.data as ApplicationResource} back={back} />;
+  return <Loaded key={`${scope}:${id}`} scope={scope} id={id} data={query.data as LoadedData} back={back} />;
+}
+
+/** A job that stopped before drafting because it has questions. */
+function Pending({ id, data, back }: { id: string; data: ApplicationResource; back: { to: string; label: string } }) {
+  const jobs = useJobs();
+  const latest = (jobs.data ?? [])
+    .filter((job) => job.resourceId === id)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+  return (
+    <div className="flex flex-col gap-4">
+      <BackLink {...back} />
+      <QuestionsStep id={id} app={data} failure={latest?.status === "failed" ? latest : undefined} />
+    </div>
+  );
 }
 
 function BackLink({ to, label }: { to: string; label: string }) {
@@ -110,7 +132,7 @@ function Loaded({
 }: {
   scope: "application" | "resume";
   id: string;
-  data: ApplicationResource | ResumeResource;
+  data: LoadedData;
   back: { to: string; label: string };
 }) {
   const isJob = scope === "application";
@@ -140,6 +162,7 @@ function Loaded({
   const baseOps = useResumeOps(isJob ? "" : id);
   const ops = isJob ? appOps : baseOps;
   const answers = useApplicationAnswers(id);
+  const remember = useRememberOwnership();
   const exporter = useExportApplication(id);
   const undo = useUndo();
   const create = useCreateApplication();
@@ -232,6 +255,7 @@ function Loaded({
         <Questions
           gaps={gaps}
           pending={answers.isPending}
+          onRemember={remember}
           onSkipAll={() => rememberSkipped([...skipped, ...gaps.map((gap) => gap.id)])}
           onSubmit={async (given) => {
             if (!Object.keys(given).length) return rememberSkipped([...skipped, ...gaps.map((gap) => gap.id)]);

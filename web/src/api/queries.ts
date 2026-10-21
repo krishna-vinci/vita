@@ -52,6 +52,16 @@ export const useApplicationAnswers = (id: string) =>
     (input: Parameters<typeof api.applications.answers>[1]) => api.applications.answers(id, input),
     [queryKeys.jobs, queryKeys.application(id)],
   );
+export const useWriteApplication = (id: string) =>
+  useApiMutation(() => api.applications.write(id, { skip: true }), [queryKeys.jobs, queryKeys.application(id)]);
+export const useSetRelationship = () =>
+  useApiMutation(
+    (input: { slug: string } & Parameters<typeof api.projects.setRelationship>[1]) => {
+      const { slug, ...body } = input;
+      return api.projects.setRelationship(slug, body);
+    },
+    [queryKeys.projects],
+  );
 export const useResumeOps = (id: string) =>
   useApiMutation(
     (input: Parameters<typeof api.resumes.ops>[1]) => api.resumes.ops(id, input),

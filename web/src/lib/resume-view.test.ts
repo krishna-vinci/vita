@@ -56,6 +56,7 @@ const review = {
   overrides: [],
   done: false,
   blocking: [],
+  suggestions: [],
 } as Review;
 
 it("flags unsourced figures and overstated lines, but not vouched ones", () => {
