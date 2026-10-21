@@ -70,7 +70,9 @@ import {
   type SourceChatReply,
   type SourceProposal,
   type SyncApplyRequest,
+  type SyncCascade,
   type SyncMutation,
+  type SyncStatus,
   type SyncSuggestion,
   type TemplateApproval,
   type TemplateContract,
@@ -419,6 +421,8 @@ export const api = {
   sync: {
     suggestions: (signal?: AbortSignal) => get<SyncSuggestion[]>("/sync/suggestions", signal),
     apply: (body: SyncApplyRequest) => send<SyncMutation>("/sync/apply", body),
+    status: (signal?: AbortSignal) => get<SyncStatus>("/sync/status", signal),
+    cascade: () => send<SyncCascade>("/sync/cascade", {}),
   },
   research: {
     start: (body: ResearchRequest) => send<JobMutation>("/research", body),

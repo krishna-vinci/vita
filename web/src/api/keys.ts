@@ -29,6 +29,7 @@ export const queryKeys = {
   mcp: ["mcp"] as const,
   packs: ["packs"] as const,
   sync: ["sync"] as const,
+  syncStatus: ["sync", "status"] as const,
   settings: ["settings"] as const,
   jobs: ["jobs"] as const,
   job: (id: string) => ["jobs", id] as const,

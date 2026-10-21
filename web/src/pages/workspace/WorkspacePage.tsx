@@ -23,6 +23,7 @@ import {
 } from "@/api/queries";
 import { InstructionsDialog } from "@/components/InstructionsDialog";
 import { PageError, PageLoading } from "@/components/PageState";
+import { StaleBanner } from "@/components/StaleBanner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -202,6 +203,15 @@ function Loaded({
     () => new Map((data.review?.checks ?? []).map((note) => [note.bulletId, note])),
     [data.review],
   );
+  const estimates = useMemo(
+    () =>
+      new Map(
+        (data.review?.lint ?? [])
+          .filter((finding) => finding.rule === "statement-estimate" && finding.bulletId)
+          .map((finding) => [finding.bulletId as string, finding.message]),
+      ),
+    [data.review],
+  );
 
   const run = async (list: ApiResumeOp[]): Promise<boolean> => {
     try {
@@ -218,9 +228,23 @@ function Loaded({
     if (!matchMedia("(min-width: 1024px)").matches) setChatOpen(true);
     void thread.send(message);
   };
+  const undoLast = () =>
+    undo.mutate(
+      { scope, id },
+      {
+        onSuccess: (result) => {
+          setChanged(new Set());
+          if (result.sha) toast.success("Undid the last change.");
+          else toast.info("Nothing left to undo. This is the first version.");
+        },
+        onError: (error) => toast.error(error.message),
+      },
+    );
   const actions: SheetActions = {
     edit: (bulletId, text) => run([{ op: "bullet.edit", id: bulletId, text }]),
     hide: (bulletId, hidden) => void run([{ op: "bullet.hide", id: bulletId, hidden }]),
+    lock: (bulletId, locked) => void run([{ op: "bullet.lock", id: bulletId, locked }]),
+    undo: () => undoLast(),
     hideSection: (sectionId, hidden) => void run([{ op: "section.hide", id: sectionId, hidden }]),
     hideItem: (itemId, hidden) => void run([{ op: "item.hide", id: itemId, hidden }]),
     move: (bulletId, toParent, index) => run([{ op: "move", id: bulletId, toParent, index }]),
@@ -394,6 +418,7 @@ function Loaded({
         )}
       </header>
       {!isJob && <SyncBanner resumeId={id} />}
+      <StaleBanner resumeId={id} />
       {data.patchConflict && data.resume.kind !== "master" && (
         <div
           role="status"
@@ -412,19 +437,7 @@ function Loaded({
           store.set("vita:details", on ? "1" : "0");
         }}
         undoing={undo.isPending}
-        onUndo={() =>
-          undo.mutate(
-            { scope, id },
-            {
-              onSuccess: (result) => {
-                setChanged(new Set());
-                if (result.sha) toast.success("Undid the last change.");
-                else toast.info("Nothing left to undo. This is the first version.");
-              },
-              onError: (error) => toast.error(error.message),
-            },
-          )
-        }
+        onUndo={undoLast}
         onPdf={() => void onPdf()}
         onMarkdown={() => download(`${id}.md`, "text/markdown", resumeToMarkdown(data.resume))}
         exporting={jobExporter.isPending || resumeExporter.isPending}
@@ -466,6 +479,7 @@ function Loaded({
             changed: new Set([...changed, ...thread.changed]),
             claims,
             checks,
+            estimates,
             links: data.links,
           }}
         />

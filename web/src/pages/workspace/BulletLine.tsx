@@ -1,8 +1,9 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Bullet, CheckNote } from "@vita/shared";
-import { Eye, EyeOff, GripVertical, MoreHorizontal, Pencil } from "lucide-react";
+import { Eye, EyeOff, GripVertical, Lock, MoreHorizontal, Pencil, Unlock } from "lucide-react";
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { type Flag, splitAround } from "@/lib/resume-view";
 import { cn } from "@/lib/utils";
 import { FlagPopover } from "./FlagPopover";
@@ -34,7 +36,7 @@ export function BulletLine({
   /** Sits in a run of lines, separated by commas, as a titled list item does. */
   inline?: boolean;
 }) {
-  const { actions, details, busy, changed, claims, checks } = ctx;
+  const { actions, details, busy, changed, claims, checks, estimates } = ctx;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(bullet.text);
   const sortable = useSortable({ id: bullet.id });
@@ -123,7 +125,28 @@ export function BulletLine({
         {!inline && (
           <span aria-hidden="true" className="absolute top-2.5 left-[18px] size-1 rounded-full bg-sheet-ink" />
         )}
-        <div className={cn("min-w-0 flex-1 break-words", !inline && "pl-3")}>{body}</div>
+        <div className={cn("min-w-0 flex-1 break-words", !inline && "pl-3")}>
+          {body}
+          {!details && !editing && checks.get(bullet.id)?.basis === "statement" && (
+            <Badge variant="outline" className="ml-1 align-middle text-[10px]">
+              you said
+            </Badge>
+          )}
+        </div>
+        {bullet.locked && !editing && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                role="img"
+                aria-label="Locked: regenerating keeps this line unless your outline changes"
+                className="flex h-8 shrink-0 items-center px-1 text-sheet-muted"
+              >
+                <Lock className="size-3" aria-hidden="true" />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>Locked: regenerating keeps this line unless your outline changes</TooltipContent>
+          </Tooltip>
+        )}
         {!editing && (
           <div className="flex shrink-0 items-center">
             <button
@@ -163,6 +186,10 @@ export function BulletLine({
                   {bullet.hidden ? <Eye /> : <EyeOff />}
                   {bullet.hidden ? "Show this line" : "Hide this line"}
                 </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => actions.lock(bullet.id, !bullet.locked)}>
+                  {bullet.locked ? <Unlock /> : <Lock />}
+                  {bullet.locked ? "Unlock" : "Lock"}
+                </DropdownMenuItem>
                 {actions.promote && !bullet.hidden && (
                   <>
                     <DropdownMenuSeparator />
@@ -185,7 +212,23 @@ export function BulletLine({
       {bullet.hidden && !editing && (
         <p className="pl-3 font-sans text-xs text-sheet-muted">Hidden, so it is not in your PDF.</p>
       )}
-      {details && <LineDetails bullet={bullet} flag={flag} sources={sources} note={checks.get(bullet.id)} />}
+      {bullet.updatedFromSource && !editing && (
+        <div className="flex flex-wrap items-center gap-x-2 pl-3 font-sans text-xs text-sheet-muted">
+          <span>Updated from your outline (you edited this line before)</span>
+          <Button variant="link" className="h-8 px-0 text-xs text-sheet-ink" onClick={() => actions.undo()}>
+            Undo
+          </Button>
+        </div>
+      )}
+      {details && (
+        <LineDetails
+          bullet={bullet}
+          flag={flag}
+          sources={sources}
+          note={checks.get(bullet.id)}
+          estimate={estimates.get(bullet.id)}
+        />
+      )}
     </li>
   );
 }
@@ -195,8 +238,11 @@ function LineDetails({
   flag,
   sources,
   note,
+  estimate,
 }: {
   note?: CheckNote;
+  /** Lint's estimate message, which already reads "Your estimate: ...". */
+  estimate?: string;
   bullet: Bullet;
   flag?: Flag;
   sources: { id: string; claim?: { text: string; evidence: { id: string; text: string }[] } }[];
@@ -216,11 +262,15 @@ function LineDetails({
       ) : (
         <span>No source recorded for this line.</span>
       )}
-      {note && (
-        <span>
-          Checked: {note.verdict}, {note.reason}
-        </span>
-      )}
+      {note &&
+        (note.basis === "statement" ? (
+          <span>Checked: {note.verdict}, from what you said</span>
+        ) : (
+          <span>
+            Checked: {note.verdict}, {note.reason}
+          </span>
+        ))}
+      {estimate && <span className="text-[#9a6410]">{estimate}</span>}
       {bullet.override && (
         <span className="text-[#9a6410]">
           You vouched for this{bullet.override.note ? `: ${bullet.override.note}` : "."}

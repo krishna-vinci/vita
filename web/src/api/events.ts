@@ -50,6 +50,7 @@ export function invalidateEvent(client: QueryClient, event: VitaEvent): void {
       for (const key of [queryKeys.instructions, queryKeys.rules, queryKeys.mcp, queryKeys.metrics, queryKeys.memory])
         invalidate(key);
     if (event.scope === "projects") invalidate(queryKeys.metrics);
+    invalidate(queryKeys.syncStatus);
     invalidate(queryKeys.workspace);
     return;
   }
@@ -61,6 +62,7 @@ export function invalidateEvent(client: QueryClient, event: VitaEvent): void {
     invalidate(queryKeys.applications);
     if (event.job.kind === "prep") invalidate(["prep"]);
   }
+  invalidate(queryKeys.syncStatus);
   invalidate(queryKeys.workspace);
 }
 

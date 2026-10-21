@@ -5,6 +5,9 @@ import type { SourceClaim } from "@/lib/resume-view";
 export interface SheetActions {
   edit(id: string, text: string): Promise<boolean>;
   hide(id: string, hidden: boolean): void;
+  lock(id: string, locked: boolean): void;
+  /** The workspace's undo, which restores the previous version of the whole resume. */
+  undo(): void;
   hideSection(id: string, hidden: boolean): void;
   hideItem(id: string, hidden: boolean): void;
   move(id: string, toParent: string, index: number): Promise<boolean>;
@@ -22,6 +25,8 @@ export interface SheetContext {
   changed: ReadonlySet<string>;
   claims: ReadonlyMap<string, SourceClaim>;
   checks: ReadonlyMap<string, CheckNote>;
+  /** Lint's "your estimate" messages per line, for numbers backed only by what the person said. */
+  estimates: ReadonlyMap<string, string>;
   /** Links per item id as the PDF shows them. */
   links?: Readonly<Record<string, ItemLink[]>>;
 }

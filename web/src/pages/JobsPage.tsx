@@ -27,6 +27,7 @@ import {
 } from "@/api/queries";
 import { DeleteDialog } from "@/components/DeleteDialog";
 import { PageError, PageLoading } from "@/components/PageState";
+import { StaleBanner } from "@/components/StaleBanner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -267,6 +268,7 @@ export default function JobsPage() {
           </Link>
         </Button>
       </div>
+      <StaleBanner />
       {rows.length === 0 ? (
         <Empty className="min-h-80 border">
           <EmptyHeader>

@@ -202,6 +202,9 @@ export function useSaveResumeTex(scope: "resume" | "application", id: string) {
 export const useDiscardTemplate = () => useApiMutation(api.templates.discard, [queryKeys.templates]);
 export const useSyncSuggestions = () =>
   useQuery({ queryKey: queryKeys.sync, queryFn: ({ signal }) => api.sync.suggestions(signal), retry: false });
+export const useSyncStatus = () =>
+  useQuery({ queryKey: queryKeys.syncStatus, queryFn: ({ signal }) => api.sync.status(signal), retry: false });
+export const useCascade = () => useApiMutation(api.sync.cascade, [queryKeys.syncStatus, queryKeys.jobs]);
 export const useApplySync = () =>
   useApiMutation(api.sync.apply, [queryKeys.sync, queryKeys.resumes, queryKeys.workspace]);
 export const usePromote = () => useApiMutation(api.promote, [queryKeys.sync, queryKeys.projects, queryKeys.resumes]);
