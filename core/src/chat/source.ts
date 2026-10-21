@@ -35,6 +35,7 @@ export async function proposeSourceEdit(
       }),
       task: [
         chatTask(input.message, input.history),
+        `Today is ${(deps.now?.() ?? new Date()).toISOString().slice(0, 10)}. A statement the user makes in this chat is dated today: use that date for statement evidence and never ask for it. Turn relative dates ("last month", "last year") into months or years from today.`,
         "Return propose_edit with { reply, proposal, memory? }. For a lasting preference or decision explicitly stated by the user, propose a memory entry { text, kind }; these require approval and never become evidence. A proposal has file, before, after, summary. Copy before exactly from the supplied snapshot with enough context to be unique. Return proposal: null for questions or refusals.",
         wrapUntrusted("outline.md", snapshots.outline),
         wrapUntrusted("projects.md", snapshots.projects),

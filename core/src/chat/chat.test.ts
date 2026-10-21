@@ -317,6 +317,23 @@ it.each(["outline", "projects"] as const)(
   },
 );
 
+it("tells the source chat today's date so it never asks the person to date their own statement", async () => {
+  let task = "";
+  faux.setResponses([
+    (context) => {
+      task = JSON.stringify(context.messages);
+      return source(null, "Done.");
+    },
+  ]);
+  await proposeSourceEdit(
+    ws,
+    { message: "I built Newsy entirely myself.", history: [] },
+    { ...deps, now: () => new Date("2026-10-21T09:00:00Z") },
+  );
+  expect(task).toContain("Today is 2026-10-21");
+  expect(task).toContain("never ask for it");
+});
+
 it("asks for a missing metric with no proposal and no source write", async () => {
   const before = await fileHash(ws.root, "projects.md");
   faux.setResponses([source(null, "What did you measure, over what period, and where is it recorded?")]);
