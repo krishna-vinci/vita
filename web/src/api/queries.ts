@@ -133,7 +133,20 @@ export const useApplySync = () =>
   useApiMutation(api.sync.apply, [queryKeys.sync, queryKeys.resumes, queryKeys.workspace]);
 export const usePromote = () => useApiMutation(api.promote, [queryKeys.sync, queryKeys.projects, queryKeys.resumes]);
 
-export const useStartResearch = () => useApiMutation(api.research, [queryKeys.jobs]);
+export const useStartResearch = () => useApiMutation(api.research.start, [queryKeys.jobs]);
+export const useOwnership = (repo?: string) =>
+  useQuery({
+    queryKey: ["ownership", repo],
+    queryFn: ({ signal }) => api.research.ownership(repo ?? "", signal),
+    enabled: !!repo,
+    retry: false,
+  });
+export const useSetRelationship = () =>
+  useApiMutation(
+    (input: { slug: string; body: Parameters<typeof api.projects.setRelationship>[1] }) =>
+      api.projects.setRelationship(input.slug, input.body),
+    [queryKeys.projects, queryKeys.workspace],
+  );
 export const useMetricQuestions = () =>
   useQuery({ queryKey: queryKeys.metrics, queryFn: ({ signal }) => api.metrics.questions(signal), retry: false });
 export const useAnswerMetric = () => useMutation({ mutationFn: api.metrics.answer });

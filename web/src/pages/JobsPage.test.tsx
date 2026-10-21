@@ -35,6 +35,7 @@ it("renders applications as text with review status and detail links", async () 
       title: "<script>role</script>",
       company: "Example company",
       baseId: "master",
+      status: "done",
       done: true,
       pdfUrl: null,
     },
@@ -46,7 +47,15 @@ it("renders applications as text with review status and detail links", async () 
   expect(document.querySelector("script")).toBeNull();
 });
 it("shows archived jobs with restore, and the delete dialog lists what goes", async () => {
-  const gone = { id: "old", title: "Old role", company: "Old Co", baseId: "master", done: true, pdfUrl: null };
+  const gone = {
+    id: "old",
+    title: "Old role",
+    company: "Old Co",
+    baseId: "master",
+    status: "done" as const,
+    done: true,
+    pdfUrl: null,
+  };
   vi.spyOn(api.applications, "list").mockImplementation(async (_signal, filter) => (filter === "only" ? [gone] : []));
   const remove = vi.spyOn(api.applications, "remove").mockResolvedValue({ deleted: true, sha: null });
   mount();

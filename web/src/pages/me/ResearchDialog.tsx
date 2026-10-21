@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { githubRepo } from "@/lib/projects-view";
+import { ProjectRole } from "./ProjectRole";
 
 /** Look something up (a repo, a site or a project name) and review what Vita would add. */
 export function ResearchDialog({
@@ -86,6 +88,7 @@ export function ResearchDialog({
                 required
               />
             </div>
+            {initial && githubRepo(target) && <ProjectRole slug={initial.itemSlug} repoUrl={target.trim()} />}
             <DialogFooter>
               <Button type="submit" disabled={!target.trim() || start.isPending}>
                 {start.isPending ? "Starting…" : "Look it up"}
