@@ -100,6 +100,10 @@ export type DeleteResourceResult = z.infer<typeof DeleteResourceResult>;
 export const AnswersRequest = z.strictObject({
   answers: z.record(id, z.string().max(20_000)).refine((answers) => Object.keys(answers).length <= 100),
 });
+export const WriteApplicationRequest = z.strictObject({ skip: z.literal(true) });
+export type WriteApplicationRequest = z.infer<typeof WriteApplicationRequest>;
+export const ApplicationStatus = z.enum(["needs-answers", "draft", "done"]);
+export type ApplicationStatus = z.infer<typeof ApplicationStatus>;
 export const EmptyRequest = z.strictObject({});
 export const UndoRequest = z
   .strictObject({ scope: z.enum(["resume", "application", "outline", "projects"]), id: Slug.optional() })
@@ -125,6 +129,7 @@ export const ResumeSummary = z.object({
 });
 export type ResumeSummary = z.infer<typeof ResumeSummary>;
 export const ApplicationSummary = z.object({
+  status: ApplicationStatus,
   ...ResourceMetadata.shape,
   id: Slug,
   title: z.string(),
@@ -151,6 +156,8 @@ export const ResumeMutation = ResumeResource.extend({
 });
 export type ResumeMutation = z.infer<typeof ResumeMutation>;
 export const ApplicationResource = ResumeResource.extend({
+  status: ApplicationStatus,
+  resume: Resume.nullable(),
   jobText: z.string(),
   notes: z.string(),
   analysis: JobAnalysis,

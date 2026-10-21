@@ -28,9 +28,14 @@ export const Claim = z.object({
 });
 export type Claim = z.infer<typeof Claim>;
 
+export const Relationship = z.enum(["sole", "lead", "team", "contributor"]);
+export type Relationship = z.infer<typeof Relationship>;
+
 export const ItemMeta = z
   .object({
     kind: z.string().default("project"),
+    relationship: Relationship.optional(),
+    contribution: z.string().optional(),
     links: z.array(z.string()).default([]),
     stack: z.array(z.string()).default([]),
     period: z.string().optional(),

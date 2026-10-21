@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { Bullet, type CheckNote, Resume, visibleBullets } from "@vita/shared";
+import { Bullet, type CheckNote, JobAnalysis, Resume, visibleBullets } from "@vita/shared";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { parse as parseYaml } from "yaml";
 import * as agent from "../agent/index.js";
@@ -14,8 +14,15 @@ import { tectonicAvailable } from "../render/index.js";
 import { commitPaths, ensureRepo, log, readText, writeTextAtomic } from "../workspace/index.js";
 import { BaseGenerationError, generateBase } from "./base.js";
 import { generateMaster } from "./master.js";
-import { tailor } from "./tailor.js";
+import { tailor as tailorJob } from "./tailor.js";
 import type { PipelineDeps } from "./types.js";
+
+// These existing scenarios expect a draft. Pending applications are covered separately below.
+async function tailor(...args: Parameters<typeof tailorJob>) {
+  const result = await tailorJob(...args);
+  if (!result.resume) throw new Error(`Expected draft, got ${result.status}: ${result.review.gaps.join("; ")}`);
+  return { ...result, resume: result.resume };
+}
 
 const bundledDir = fileURLToPath(new URL("../../../", import.meta.url));
 const execute = promisify(execFile);
@@ -235,13 +242,15 @@ describe("faux generation pipeline", () => {
     ]);
     const progress = vi.fn();
     options.onProgress = progress;
-    const result = await tailor(ws, { jobText: "Job" }, options);
+    const result = await tailorJob(ws, { jobText: "Job" }, options);
     expect(result.review.gaps).toEqual([
       "req-short: Have you worked with Example skill?",
       "req-four: Have you worked with One two three four?",
       "req-long: Have you worked with leading a team across multiple locations?",
     ]);
-    expect(result.review.done).toBe(true);
+    expect(result.review.done).toBe(false);
+    expect(result.status).toBe("needs-answers");
+    expect(result.resume).toBeNull();
     expect(progress).toHaveBeenCalledWith({ stage: "gaps", message: result.review.gaps[2] });
   });
 
@@ -673,4 +682,130 @@ it("reruns with saved Job guidance and reuses analysis, answers and locked bulle
   expect(spy.mock.calls.map(([opts]) => opts.role.name).sort()).toEqual(["ats-reviewer", "checker", "writer"]);
   for (const [opts] of spy.mock.calls)
     expect(opts.system).toContain("Job guidance (job notes):\nEmphasize recent work.");
+});
+
+it("stops before drafting for missing or weak must-haves, then answers or skips into one draft", async () => {
+  const { ws, resume } = await profile();
+  vi.spyOn(render, "compileTex").mockResolvedValue({ pdf: Buffer.from("stub-pdf"), log: "" });
+  vi.spyOn(render, "pdfText").mockResolvedValue({
+    text: visibleBullets(resume)
+      .map((b) => b.text)
+      .join("\n"),
+    pages: 1,
+    fill: 1,
+  });
+  // A receipt mentions the requirement, while its linked claim does not: predicted weak coverage.
+  const projects = await readText(ws.root, "projects.md");
+  await writeTextAtomic(
+    ws.root,
+    "projects.md",
+    projects.replace(/text: ([^\n]+)/, 'text: "UnusualSpecialty appears in the receipt only."'),
+  );
+  const missing = { id: "req-missing", text: "UnusualSpecialty", importance: "must", keywords: [["UnusualSpecialty"]] };
+  const jobAnalysis = { ...analysis, requirements: [...analysis.requirements, missing] };
+  const { loadContext, findGaps } = await import("./context.js");
+  const context = await loadContext(ws);
+  try {
+    // Search finds the receipt, so only predicted weak coverage can ask this up front.
+    expect(findGaps(context, JobAnalysis.parse(jobAnalysis))).toEqual([]);
+  } finally {
+    context.search.close();
+  }
+  const spy = vi.spyOn(agent, "runRole");
+  for (const skip of [true, false]) {
+    spy.mockClear();
+    const initial = await tailorJob(
+      ws,
+      { jobText: "Catalogue and UnusualSpecialty", slug: skip ? "skip-questions" : "answer-questions" },
+      await deps([{ tool: "submit_analysis", arguments: jobAnalysis }]),
+    );
+    expect(initial).toMatchObject({ status: "needs-answers", resume: null });
+    expect(spy.mock.calls.map(([opts]) => opts.role.name)).toEqual(["analyst"]);
+    expect(initial.review.gaps).toContain("req-missing: Have you worked with UnusualSpecialty?");
+    expect(await readText(ws.root, `${initial.applicationDir}/analysis.json`)).toContain("req-missing");
+    await expect(readText(ws.root, `${initial.applicationDir}/resume.json`)).rejects.toMatchObject({ code: "ENOENT" });
+    const meta = parseYaml(await readText(ws.root, `${initial.applicationDir}/meta.yaml`));
+    expect(meta.status).toBe("needs-answers");
+    spy.mockClear();
+    const result = await tailorJob(
+      ws,
+      {
+        applicationId: initial.applicationDir.split("/")[1],
+        jobText: "Catalogue and UnusualSpecialty",
+        ...(skip
+          ? { skip: true }
+          : { answers: { "req-missing": "Yes: Completed introductory UnusualSpecialty training." } }),
+      },
+      await deps(draft(resume)),
+    );
+    expect(result.status).toBe("done");
+    if (!skip) expect(result.review.suggestions).toContain("Uncovered must-have: req-missing: UnusualSpecialty");
+    expect(spy.mock.calls.filter(([opts]) => opts.role.name === "writer")).toHaveLength(1);
+    expect(spy.mock.calls.some(([opts]) => opts.role.name === "analyst")).toBe(false);
+    const saved = parseYaml(await readText(ws.root, `${result.applicationDir}/meta.yaml`));
+    expect(saved.answers["req-missing"]).toBe(skip ? "skip" : "Yes: Completed introductory UnusualSpecialty training.");
+    expect(saved.usage.map((entry: { role: string }) => entry.role)).toEqual([
+      "analyst",
+      "writer",
+      "checker",
+      "ats-reviewer",
+    ]);
+    if (!skip)
+      expect(spy.mock.calls.find(([opts]) => opts.role.name === "writer")?.[0].task).toContain(
+        "Completed introductory UnusualSpecialty training.",
+      );
+  }
+});
+
+it("asks unknown repository ownership before drafting and uses a confirmed answer without guessing", async () => {
+  const { ws, resume } = await profile();
+  const projects = await readText(ws.root, "projects.md");
+  // This selected fixture item has no relationship yet.
+  await writeTextAtomic(
+    ws.root,
+    "projects.md",
+    projects.replace("links: []", "links: [https://github.com/example/archive]"),
+  );
+  const { parseProjects } = await import("../source/index.js");
+  const item = parseProjects(await readText(ws.root, "projects.md")).doc.items.find((item) =>
+    item.meta.links.some((link) => link.includes("github.com")),
+  );
+  if (!item) throw new Error("Missing repo-backed fixture item");
+  const selectedAnalysis = {
+    ...analysis,
+    requirements: [{ id: "r", text: "Catalogue", importance: "must", keywords: [["catalogue", "catalog"]] }],
+  };
+  const initial = await tailorJob(
+    ws,
+    { jobText: "Catalogue role" },
+    await deps([{ tool: "submit_analysis", arguments: selectedAnalysis }]),
+  );
+  expect(initial.status).toBe("needs-answers");
+  expect(initial.review.gaps).toContain(`ownership.${item.slug}: What was your role in ${item.name}?`);
+  vi.spyOn(render, "compileTex").mockResolvedValue({ pdf: Buffer.from("stub-pdf"), log: "" });
+  vi.spyOn(render, "pdfText").mockResolvedValue({
+    text: visibleBullets(resume)
+      .map((bullet) => bullet.text)
+      .join("\n"),
+    pages: 1,
+    fill: 1,
+  });
+  const spy = vi.spyOn(agent, "runRole");
+  const result = await tailorJob(
+    ws,
+    {
+      applicationId: initial.applicationDir.split("/")[1],
+      jobText: "Catalogue role",
+      answers: { [`ownership.${item.slug}`]: "sole: Whole project" },
+    },
+    await deps(draft(resume)),
+  );
+  expect(result.status).toBe("done");
+  expect(spy.mock.calls.find(([opts]) => opts.role.name === "writer")?.[0].task).toContain(
+    "&quot;relationship&quot;:&quot;sole&quot;",
+  );
+  expect(spy.mock.calls.find(([opts]) => opts.role.name === "checker")?.[0].task).toContain(
+    "&quot;relationship&quot;:&quot;sole&quot;",
+  );
+  expect(await readText(ws.root, "projects.md")).not.toContain("relationship:");
 });

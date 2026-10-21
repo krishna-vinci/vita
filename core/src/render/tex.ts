@@ -1,11 +1,11 @@
-import type { Resume } from "@vita/shared";
+import { orderedSections, type Resume } from "@vita/shared";
 import { contactView, linkedResume, type RenderSources } from "./links";
 import { createTexEnv } from "./nunjucks";
 import { type LoadedTemplate, resolveLayout } from "./templates";
 
 export function renderTex(resume: Resume, tpl: LoadedTemplate, sources: RenderSources = {}): string {
   resume = linkedResume(resume, sources);
-  const sections = resume.sections
+  const sections = orderedSections(resume)
     .filter((section) => !section.hidden)
     .map((section) => ({
       ...section,

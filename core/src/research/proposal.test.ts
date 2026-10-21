@@ -92,3 +92,23 @@ it("turns an empty inline evidence list into a readable block list", () => {
   expect(issues).toEqual([]);
   expect(doc.items[0]?.meta.evidence.length).toBeGreaterThan(0);
 });
+
+it("rejects third-person claims and variants at intake with a clear action-voice message", () => {
+  const submission = {
+    item: { name: "Archive", kind: "project", links: [], stack: [] },
+    claims: [{ text: "Archive provides search.", evidence: [{ kind: "doc" as const, ref: "README.md" }] }],
+    variants: [],
+    limits: [],
+    notes: [],
+  };
+  expect(() => evidenceProposal("", "a".repeat(64), submission)).toThrow(
+    /Research proposal rejected:.*implied first person/,
+  );
+  expect(() =>
+    evidenceProposal("", "a".repeat(64), {
+      ...submission,
+      claims: [],
+      variants: [{ label: "General", text: "Its records are searchable." }],
+    }),
+  ).toThrow(/Research proposal rejected/);
+});

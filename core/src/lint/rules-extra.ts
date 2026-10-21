@@ -1,4 +1,4 @@
-import type { Finding, Resume, Rules } from "@vita/shared";
+import { type Finding, orderedSections, type Resume, type Rules } from "@vita/shared";
 
 const normalize = (title: string) => title.trim().toLowerCase();
 
@@ -11,7 +11,7 @@ function validPeriod(period: string, format: NonNullable<Rules["date_format"]>):
 
 export function lintExtraRules(resume: Resume, rules: Partial<Rules>): Finding[] {
   const findings: Finding[] = [];
-  const sections = resume.sections.filter((section) => !section.hidden);
+  const sections = orderedSections(resume).filter((section) => !section.hidden);
   for (const title of rules.required_sections ?? []) {
     if (!sections.some((section) => normalize(section.title) === normalize(title))) {
       findings.push({ rule: "required-section", severity: "block", message: `Missing section: ${title}.` });

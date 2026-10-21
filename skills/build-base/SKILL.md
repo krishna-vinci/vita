@@ -23,3 +23,8 @@ page budget to choose relevant items and order them for that direction.
 
 The result is a base with parent master. A separate checker reviews every visible
 bullet; the writer does not approve its own work.
+
+Use `Item.subtitle` for experience role lines. Categorise skills in a `list`
+section: each item's `title` names a category and its bullets list supported
+skills. Avoid a single uncategorised list. Follow confirmed ownership and action
+voice from write-bullets, and preserve the requested layout.section_order.

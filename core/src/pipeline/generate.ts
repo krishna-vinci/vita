@@ -33,12 +33,14 @@ import {
   type RenderSources,
   renderMarkdown,
   renderTex,
+  resolveLayout,
 } from "../render/index.js";
 import type { Selection } from "../search/index.js";
 import { resolveInWorkspace } from "../workspace/index.js";
 import type { Context } from "./context.js";
 import { evaluateDone } from "./done.js";
 import { checkerContext, VerdictCache, writerEvidence } from "./efficient-context.js";
+import { deepenClaims } from "./fill.js";
 import type { PipelineDeps, RoleUsage } from "./types.js";
 
 export function data(source: string, value: unknown): string {
@@ -180,6 +182,8 @@ export interface GenerationInput {
   pack: Pack;
   selection?: Selection;
   gaps: string[];
+  depthSelection?: Selection;
+  minFill?: number;
   jobText?: string;
   answers?: Record<string, string>;
   /** Must-haves with supporting claims; each needs a bullet or skill entry citing one of them. */
@@ -198,7 +202,12 @@ export async function generate(
   usage: RoleUsage[],
   profile: Profile,
 ) {
-  const header = { name: profile.name, headline: profile.headline, contact: profile.contact };
+  const header = {
+    name: profile.name,
+    headline: profile.headline,
+    location: profile.location,
+    contact: profile.contact,
+  };
   const writer: RoleSpec<Resume> = {
     ...writerRole,
     skills: input.kind === "base" ? [...writerRole.skills, "build-base"] : writerRole.skills,
@@ -237,6 +246,9 @@ export async function generate(
   let tex = "";
   let pdf: Buffer | undefined;
   let markdown = "";
+  let deepen: string[] = [];
+  let deepened = false;
+  let revisions = 0;
   const renderSources: RenderSources = { projects: ctx.projectsText, outline: ctx.outlineText };
   const evidence = writerEvidence(ctx, input);
   const writerSession = new RoleSession();
@@ -245,9 +257,14 @@ export async function generate(
     data("selected claims, variants and items", evidence),
     data("analysis", input.analysis),
     data("selection", input.selection ?? null),
+    data(
+      "per-item bullet budgets",
+      input.selection?.items.map(({ itemSlug, relevance, bulletBudget }) => ({ itemSlug, relevance, bulletBudget })) ??
+        [],
+    ),
     data("base config", input.baseConfig ?? null),
     data("effective pack", input.pack),
-    data("rules", { ...ctx.rules, max_pages: input.maxPages }),
+    data("rules", { ...ctx.rules, max_pages: input.maxPages, min_fill: input.minFill ?? ctx.rules.min_fill }),
     data(
       "locked bullets",
       input.seed?.sections.flatMap((section) =>
@@ -260,36 +277,49 @@ export async function generate(
     data("must-haves to cover", input.mustCover ?? []),
     data("user notes", input.notes ?? ""),
   ].join("\n\n");
-  // Two checked drafts total: initial draft plus one revision.
+  // One correction revision and at most one additional depth pass; every pass is checked and metered.
   try {
-    for (let round = 1; round <= 2; round++) {
-      deps.onProgress?.({ stage: round === 1 ? "write" : "revise", round });
+    for (let round = 1; round <= 3; round++) {
+      deps.onProgress?.({ stage: deepen.length ? "deepen" : round === 1 ? "write" : "revise", round });
       const draft = await run(
         writer,
-        round > 1
+        deepen.length
           ? [
-              "Revise the previous draft to address these review notes. Preserve locked bullets and the original generation constraints. Return submit_resume.",
+              "Deepen this resume once: the compiled PDF is below the fill floor. Add supported action-voice bullets only to the highest-ranked relevant items, using these unused claims and respecting each item's bullet budget. Preserve locked bullets. Do not pad, duplicate claims or add irrelevant content. Return submit_resume.",
               data("previous resume", resume),
-              data("previous review", review),
+              data(
+                "unused relevant claims and receipts",
+                deepen.map((id) => ctx.index.claims.get(id)),
+              ),
+              data("per-item bullet budgets", input.depthSelection?.items),
             ].join("\n\n")
-          : [
-              `Generate a ${input.kind} resume with id ${input.id}, parent ${input.parent ?? "null"}, template ${input.template}, at most ${input.maxPages} pages.`,
-              "Preserve locked bullets exactly, including visibility. Answer claims are the person's own dated statements from gap questions: you may cite their ids for bullets or skills, using only what they say (never inflate a basic understanding into expertise). Other answers (no, skip) are gaps: never write them as experience. Never invent claim IDs or grant overrides. Cover every entry in \"must-haves to cover\" with a bullet (or a skills entry) that cites one of its claim ids and uses the requirement's wording where the claim supports it; recruiters and ATS look for that wording.",
-              ...(input.kind === "base"
-                ? [
-                    "Select and order content from the master resume for the direction in the following data.",
-                    data("direction", input.direction),
-                  ]
-                : []),
-              "The engine supplies the header from profile.yaml. Return the resume content without a header through submit_resume.",
-              context,
-              data("previous resume", resume ?? null),
-              data("previous review", review ?? null),
-            ].join("\n\n"),
+          : round > 1
+            ? [
+                "Revise the previous draft to address these review notes. Preserve locked bullets and the original generation constraints. Return submit_resume.",
+                data("previous resume", resume),
+                data("previous review", review),
+              ].join("\n\n")
+            : [
+                `Generate a ${input.kind} resume with id ${input.id}, parent ${input.parent ?? "null"}, template ${input.template}, at most ${input.maxPages} pages.`,
+                "Preserve locked bullets exactly, including visibility. Answer claims are the person's own dated statements from gap questions: you may cite their ids for bullets or skills, using only what they say (never inflate a basic understanding into expertise). Other answers (no, skip) are gaps: never write them as experience. Never invent claim IDs or grant overrides. Cover every entry in \"must-haves to cover\" with a bullet (or a skills entry) that cites one of its claim ids and uses the requirement's wording where the claim supports it; recruiters and ATS look for that wording.",
+                ...(input.kind === "base"
+                  ? [
+                      "Select and order content from the master resume for the direction in the following data.",
+                      data("direction", input.direction),
+                    ]
+                  : []),
+                `Use action voice and confirmed relationship/contribution for scope: sole permits Built for the whole project; team needs owned parts or explicit team scope; contributor needs Contributed X to Y. Never assume sole ownership. Put experience roles in Item.subtitle. Skills must use list sections with labelled category items. Follow per-item bullet budgets, aiming for ${Math.round((input.minFill ?? ctx.rules.min_fill) * 100)}–100% fill with supported relevant content only.`,
+                "The engine supplies the header from profile.yaml. Return the resume content without a header through submit_resume.",
+                context,
+                data("previous resume", resume ?? null),
+                data("previous review", review ?? null),
+              ].join("\n\n"),
         resume,
         input.analysis,
         writerSession,
       );
+      if (round > 1 && !deepen.length) revisions++;
+      deepen = [];
       resume = carryUserState(
         { ...draft, header, id: input.id, kind: input.kind, parent: input.parent, template: input.template },
         input.seed,
@@ -335,7 +365,9 @@ export async function generate(
           );
           tex = renderTex(current, template, renderSources);
           const compiled = await compileTex({ tex, assetsDir: template.dir });
-          const result = checkRender(current, await pdfText(compiled.pdf), input.maxPages);
+          const margin = resolveLayout(template.meta, current.layout).margin_in;
+          const extracted = await pdfText(compiled.pdf, typeof margin === "number" ? margin : 0.75);
+          const result = checkRender(current, extracted, input.maxPages);
           pdf = compiled.pdf;
           return result;
         } catch (error) {
@@ -396,7 +428,20 @@ export async function generate(
         overrides,
         ...evaluateDone({ resume, lint, checks, analysis: input.analysis, gaps: input.gaps, render, overrides }),
       });
-      if (review.done) break;
+      if (
+        review.done &&
+        input.kind === "job" &&
+        !deepened &&
+        render?.fill !== undefined &&
+        render.fill < (input.minFill ?? ctx.rules.min_fill)
+      ) {
+        deepen = deepenClaims(resume, input.depthSelection ?? input.selection);
+        if (deepen.length) {
+          deepened = true;
+          continue;
+        }
+      }
+      if (review.done || revisions >= 1 || round === 3) break;
     }
   } finally {
     writerSession.dispose();

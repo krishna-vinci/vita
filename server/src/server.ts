@@ -15,6 +15,7 @@ import {
   Slug,
   slugify,
   UndoRequest,
+  WriteApplicationRequest,
 } from "@vita/shared";
 import { type Context, Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
@@ -172,6 +173,13 @@ export function createWorkspaceApp(runtime: WorkspaceRuntime, options: { webDist
     await runtime.application(resourceId);
     if (runtime.jobs.hasActive("application", resourceId))
       throw new ApiFailure(409, "resource-busy", "Generation is already queued for this application");
+    return c.json({ job: runtime.enqueue("answers", resourceId, input), sha: null }, 202);
+  });
+  app.post("/api/applications/:id/write", async (c) => {
+    const resourceId = id(c);
+    const input = await body(c, WriteApplicationRequest);
+    await runtime.application(resourceId);
+    runtime.assertAvailable("application", resourceId);
     return c.json({ job: runtime.enqueue("answers", resourceId, input), sha: null }, 202);
   });
   for (const [plural, scope] of [

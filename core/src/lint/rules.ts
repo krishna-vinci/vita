@@ -1,5 +1,6 @@
 import { type Finding, type Pack, type Resume, type Rules, visibleBullets } from "@vita/shared";
 import type { ClaimIndex, IndexedClaim } from "../claims/index.js";
+import { actionVoiceProblem } from "./action-voice.js";
 import { extractNumbers, normalizeNumber } from "./numbers.js";
 import { lintExtraRules } from "./rules-extra.js";
 
@@ -42,6 +43,24 @@ export function lintResume(resume: Resume, ctx: LintContext): Finding[] {
     ...ctx.rules,
     section_order: ctx.rules.section_order ?? ctx.pack.section_order,
   });
+  for (const section of resume.sections.filter((section) => !section.hidden && section.kind === "list")) {
+    const items = section.items.filter((item) => !item.hidden);
+    const item = items[0];
+    if (
+      items.length === 1 &&
+      item &&
+      (!item.title.trim() || /^(?:skills|technical skills|all|general)$/i.test(item.title.trim())) &&
+      item.bullets.filter((bullet) => !bullet.hidden).length >= 5
+    ) {
+      findings.push({
+        rule: "uncategorised-skills",
+        severity: "warn",
+        message: "Group this skills list into labelled categories (item titles).",
+      });
+    }
+  }
+  const titles = [...ctx.index.items.values()].map((item) => item.name);
+  titles.push(...resume.sections.flatMap((section) => section.items.map((item) => item.title)));
   const banned = [
     ...new Set(
       [...ctx.pack.banned_phrases, ...(ctx.rules.banned_phrases ?? [])]
@@ -54,6 +73,8 @@ export function lintResume(resume: Resume, ctx: LintContext): Finding[] {
     const add = (rule: string, severity: Finding["severity"], message: string) => {
       findings.push({ rule, severity, message, bulletId: bullet.id });
     };
+    const voice = actionVoiceProblem(bullet.text, titles);
+    if (voice) add("action-voice", "block", voice);
     if (bullet.origin === "ai" && bullet.claims.length === 0) {
       add("missing-claims", "block", "AI-written bullet has no claim IDs.");
     }

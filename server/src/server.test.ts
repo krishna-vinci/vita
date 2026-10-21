@@ -498,7 +498,7 @@ it("archives and unarchives bases and applications, filters lists and tracker an
     if (scope === "application") {
       expect((await (await server.request("/api/tracker")).json()).applications).toEqual([]);
       expect((await (await server.request("/api/tracker?archived=only")).json()).applications).toHaveLength(1);
-      expect((await runtime.application(id)).resume.parent).toBe("direction");
+      expect((await runtime.application(id)).resume?.parent).toBe("direction");
     }
     expect((await server.request("/api/undo", post({ scope, id }))).status).toBe(200);
     expect((await runtime.resource(scope, id)).archived).toBeUndefined();
@@ -673,3 +673,65 @@ it("returns display-only links per item without writing them into the resume", a
   const after = Resume.parse(JSON.parse(await core.readText(root, "resumes/master/resume.json")));
   expect(after).toEqual(stored);
 });
+
+it.each(["answers", "write"])(
+  "lists a needs-answers application without a resume and drafts once through %s",
+  async (action) => {
+    const pendingAnalysis = {
+      ...analysis,
+      requirements: [
+        { id: "req-specialty", text: "UnusualSpecialty", importance: "must", keywords: [["UnusualSpecialty"]] },
+      ],
+    };
+    const server = await app([{ tool: "submit_analysis", arguments: pendingAnalysis }, ...draft()]);
+    stubRender();
+    const spy = vi.spyOn(core, "tailor");
+    const initial = JobMutation.parse(
+      await (
+        await server.request(
+          "/api/applications",
+          post({ jobText: "UnusualSpecialty role", instructions: "Plain language" }),
+        )
+      ).json(),
+    );
+    await runtime.jobs.idle();
+    const done = runtime.jobs.get(initial.job.id);
+    expect(done?.status, done?.error).toBe("done");
+    const id = done?.result?.id;
+    if (!id) throw new Error("Missing application id");
+    const resource = ApplicationResource.parse(await (await server.request(`/api/applications/${id}`)).json());
+    expect(resource).toMatchObject({
+      status: "needs-answers",
+      resume: null,
+      pdfUrl: null,
+      answers: {},
+      instructions: "Plain language",
+    });
+    expect(resource.gaps).toEqual(["req-specialty: Have you worked with UnusualSpecialty?"]);
+    const list = await (await server.request("/api/applications")).json();
+    expect(list).toContainEqual(expect.objectContaining({ id, status: "needs-answers", done: false, pdfUrl: null }));
+    expect(WorkspaceView.parse(await (await server.request("/api/workspace")).json()).applications).toHaveLength(1);
+    expect((await server.request(`/api/applications/${id}/export`, post())).status).toBe(409);
+    expect(
+      (
+        await server.request(
+          `/api/applications/${id}/ops`,
+          post({ ops: [{ op: "section.add", id: "new", title: "New", kind: "list" }] }),
+        )
+      ).status,
+    ).toBe(409);
+    const request = action === "write" ? { skip: true } : { answers: { "req-specialty": "no" } };
+    if (action === "write")
+      expect((await server.request(`/api/applications/${id}/write`, post({ skip: false }))).status).toBe(400);
+    const response = await server.request(`/api/applications/${id}/${action}`, post(request));
+    expect(response.status, await response.clone().text()).toBe(202);
+    const queued = JobMutation.parse(await response.json());
+    await runtime.jobs.idle();
+    expect(runtime.jobs.get(queued.job.id)).toMatchObject({ status: "done", result: { id } });
+    const written = ApplicationResource.parse(await (await server.request(`/api/applications/${id}`)).json());
+    expect(written.status).toBe("done");
+    expect(written.resume).not.toBeNull();
+    expect(written.answers["req-specialty"]).toBe(action === "write" ? "skip" : "no");
+    expect(spy).toHaveBeenCalledTimes(2);
+  },
+);

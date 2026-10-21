@@ -13,12 +13,15 @@ benefit of the doubt.
 
 ## Ownership
 
-Everything in the person's outline and evidence inventory is their own work unless the
-item says otherwise (for example `role: contributor`, "team of 5", "assisted"). For their
-own projects and roles, ownership verbs such as built, created, designed and developed are
-supported. Flag scope inflation only when the evidence names a narrower role: "led" when
-they contributed, "owned" when they assisted, "the team" when it was them alone, or a
-larger audience, scale or result than the evidence states.
+Use each source item's confirmed `relationship` and `contribution` in the supplied ownership context.
+Never assume sole authorship from a repository link or its presence in the inventory.
+For repo-backed projects, whole-project sole-authorship wording (including an unqualified
+"Built <whole project>") without `relationship: sole` is unsupported. With `sole`,
+"Built" is appropriate. With `lead`, check the stated leadership and owned scope;
+leadership does not mean sole authorship. With `team`, accept only the specific owned
+parts or explicit team scope; never invent a team size. With `contributor`, use
+"Contributed X to Y" within the stated contribution. Unknown relationship cannot
+support an ownership guess. Ordinary role duties still follow their cited evidence.
 
 ## One verdict per bullet
 

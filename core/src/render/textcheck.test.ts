@@ -82,3 +82,28 @@ it("matches equivalent PDF hyphen glyphs while still detecting missing words and
       .outOfOrder,
   ).toEqual(["b1"]);
 });
+
+it("measures last-page text extent against usable height and ignores margin footers", async () => {
+  const { bboxFill } = await import("./textcheck");
+  const xml =
+    '<page width="600" height="800"><word yMax="700">Earlier</word></page><page width="600" height="800"><word yMax="400">Last</word><word yMax="780">Footer</word></page>';
+  expect(bboxFill(xml, { top: 50, bottom: 50 })).toBe(0.5);
+  expect(bboxFill('<page height="800"></page>', { top: 50, bottom: 50 })).toBe(0);
+});
+
+it("measures fill from a compiled fixture with Poppler bounding boxes", async (test) => {
+  const { compileTex, tectonicAvailable } = await import("./compile");
+  const { measureFill, pdfText } = await import("./textcheck");
+  if (!(await tectonicAvailable())) {
+    console.warn("Skipping compiled fill fixture: Tectonic is not on PATH.");
+    return test.skip();
+  }
+  const compiled = await compileTex({
+    tex: "\\documentclass{article}\n\\usepackage[margin=0.75in]{geometry}\n\\pagestyle{empty}\n\\begin{document}\nTop text.\\par\\vspace*{300pt}\\noindent Lowest text.\n\\end{document}",
+  });
+  const extracted = await pdfText(compiled.pdf);
+  expect(extracted.pages).toBe(1);
+  expect(extracted.fill).toBeGreaterThan(0.4);
+  expect(extracted.fill).toBeLessThan(0.7);
+  expect(await measureFill(compiled.pdf)).toBeCloseTo(extracted.fill ?? 0, 5);
+});

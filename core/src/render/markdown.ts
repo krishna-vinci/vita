@@ -1,4 +1,4 @@
-import type { Resume } from "@vita/shared";
+import { orderedSections, type Resume } from "@vita/shared";
 
 import { contactView, linkedResume, type RenderSources } from "./links";
 
@@ -10,6 +10,7 @@ export function renderMarkdown(resume: Resume, sources: RenderSources = {}): str
   resume = linkedResume(resume, sources);
   const blocks = [`# ${resume.header.name}`];
   if (resume.header.headline) blocks.push(resume.header.headline);
+  if (resume.header.location) blocks.push(resume.header.location);
   if (resume.header.contact.length) {
     blocks.push(
       resume.header.contact
@@ -18,7 +19,7 @@ export function renderMarkdown(resume: Resume, sources: RenderSources = {}): str
         .join(" · "),
     );
   }
-  for (const section of resume.sections) {
+  for (const section of orderedSections(resume)) {
     if (section.hidden) continue;
     blocks.push(`## ${section.title}`);
     if (section.text) blocks.push(section.text);

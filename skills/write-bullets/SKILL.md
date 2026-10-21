@@ -96,3 +96,27 @@ Write no files.
 
 Do not put URLs in an item's title, subtitle or location. Project links are added
 automatically from the evidence links when the resume is rendered.
+
+## Action voice, ownership and depth
+
+Use implied first-person actions in every bullet, including variants. Never copy
+third-person descriptions: "Archive provides a catalogue" → "Built a catalogue"
+(only with confirmed sole ownership); "The project implements intake" →
+"Implemented intake" within the confirmed contribution; "Its records are searchable"
+→ "Added record search" when that is the person's supported work.
+
+Use the source item's confirmed `relationship` and `contribution`. `sole` permits
+"Built" for the whole project. `lead` permits supported leadership, never an assumption
+of sole authorship. `team` means specific owned parts or "Built X as part of a team"
+(with a team size only if sourced). `contributor` means "Contributed X to Y".
+Unknown ownership is not permission to claim the whole project; omit unsupported scope.
+
+Follow each item's supplied bullet budget: the most job-relevant projects normally
+get 3–4 supported bullets, other items 1–2. Aim for rules.min_fill (default 85%) of
+the page budget. A deepen request adds only unused relevant claims to top items;
+never repeat a claim, invent an outcome or pad with unrelated content to fill space.
+
+Put experience roles in `Item.subtitle`; keep the organisation in `Item.title`.
+Skills use a `list` section with labelled items: `title` is the category and
+`bullets` hold the supported skills. Prefer several meaningful categories to one
+flat list. Preserve an existing `layout.section_order` when supplied.
