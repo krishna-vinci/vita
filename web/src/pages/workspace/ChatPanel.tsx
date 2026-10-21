@@ -1,78 +1,81 @@
 import { SendHorizontal } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { ChatHeader, ChatSkeleton } from "@/components/ChatHeader";
 import { Markdown } from "@/components/Markdown";
 import { MemoryProposals } from "@/components/MemoryProposals";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import type { Message, SavedChat } from "@/lib/use-chat-thread";
 import { useDraft } from "@/lib/use-draft";
+import { useScrollMemory } from "@/lib/use-scroll-memory";
 import { cn } from "@/lib/utils";
-import type { Message } from "./useChatThread";
 
 /** Simple chat: plain bubbles, and a before/after list for every change the assistant made. */
 export function ChatPanel({
-  messages,
-  pending,
-  onSend,
+  chat,
   intro,
+  placeholder = "e.g. Put the strongest work first",
   suggestions = [],
   className,
-  draftKey,
 }: {
-  messages: Message[];
-  pending: boolean;
-  onSend: (message: string) => void;
+  chat: SavedChat;
   intro: string;
+  placeholder?: string;
   suggestions?: string[];
   className?: string;
-  /** Names the unsent text in this tab's storage, e.g. `chat:application:j1`. */
-  draftKey: string;
 }) {
-  const [text, setText, clearText] = useDraft(draftKey);
+  const { messages, pending } = chat;
+  const [text, setText, clearText] = useDraft(chat.draftKey);
+  const log = useRef<HTMLDivElement>(null);
   const end = useRef<HTMLDivElement>(null);
+  useScrollMemory(log, chat.draftKey, !chat.loading, true);
   // biome-ignore lint/correctness/useExhaustiveDependencies: scroll whenever a message arrives.
   useEffect(() => end.current?.scrollIntoView?.({ block: "end" }), [messages.length, pending]);
   const submit = () => {
     const message = text.trim();
-    if (!message || pending) return;
+    if (!message || pending || chat.loading) return;
     clearText();
-    onSend(message);
+    void chat.send(message);
   };
+  const lastIndex = messages.length - 1;
   return (
     <section aria-label="Chat" className={cn("flex min-h-0 flex-col gap-3", className)}>
-      <h2 className="font-display text-lg font-medium">Ask for a change</h2>
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1" role="log" aria-live="polite">
-        <Bubble from="assistant">{intro}</Bubble>
-        {messages.map((message, index) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: append-only list
-          <Bubble key={index} from={message.role}>
-            {message.role === "assistant" ? <Markdown text={message.text} /> : message.text}
-            {message.changes && message.changes.length > 0 && (
-              <ul className="mt-2 flex flex-col gap-2 border-t pt-2 text-xs">
-                {message.changes.map((change) => (
-                  <li key={change.id} className="flex flex-col gap-0.5">
-                    {change.before && <span className="text-muted-foreground line-through">{change.before}</span>}
-                    <span>{change.hidden ? "Hidden from the resume" : change.after}</span>
-                  </li>
-                ))}
-              </ul>
+      <ChatHeader chat={chat} />
+      <div ref={log} className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1" role="log" aria-live="polite">
+        {chat.loading ? (
+          <ChatSkeleton />
+        ) : (
+          <>
+            <Bubble from="assistant">{intro}</Bubble>
+            {messages.map((message, index) => (
+              <Bubble key={message.id} from={message.role}>
+                <MessageBody message={message} />
+                {message.role === "error" && index === lastIndex && (
+                  <Button size="sm" variant="outline" className="mt-2" disabled={pending} onClick={chat.retry}>
+                    Retry
+                  </Button>
+                )}
+              </Bubble>
+            ))}
+            {pending && (
+              <p className="text-sm text-muted-foreground" role="status">
+                Working on it…
+              </p>
             )}
-            <MemoryProposals proposals={message.memoryProposals} />
-            {message.changes?.length === 0 && message.role === "assistant" && (
-              <p className="mt-1 text-xs text-muted-foreground">No lines were changed.</p>
-            )}
-          </Bubble>
-        ))}
-        {pending && (
-          <p className="text-sm text-muted-foreground" role="status">
-            Working on it…
-          </p>
+          </>
         )}
         <div ref={end} />
       </div>
-      {suggestions.length > 0 && messages.length === 0 && (
+      {suggestions.length > 0 && messages.length === 0 && !chat.loading && (
         <div className="flex flex-wrap gap-2">
           {suggestions.map((suggestion) => (
-            <Button key={suggestion} size="sm" variant="outline" disabled={pending} onClick={() => onSend(suggestion)}>
+            <Button
+              key={suggestion}
+              size="sm"
+              variant="outline"
+              disabled={pending}
+              onClick={() => void chat.send(suggestion)}
+            >
               {suggestion}
             </Button>
           ))}
@@ -95,11 +98,17 @@ export function ChatPanel({
             }
           }}
           aria-label="Ask for a change"
-          placeholder="e.g. Put the strongest work first"
+          placeholder={placeholder}
           className="max-h-32 min-h-11 flex-1"
           rows={1}
         />
-        <Button type="submit" size="icon" className="size-11" disabled={pending || !text.trim()} aria-label="Send">
+        <Button
+          type="submit"
+          size="icon"
+          className="size-11"
+          disabled={pending || chat.loading || !text.trim()}
+          aria-label="Send"
+        >
           <SendHorizontal />
         </Button>
       </form>
@@ -107,7 +116,30 @@ export function ChatPanel({
   );
 }
 
-function Bubble({ from, children }: { from: Message["role"]; children: React.ReactNode }) {
+/** The text of one turn, with the lines it changed. */
+export function MessageBody({ message }: { message: Message }) {
+  return (
+    <>
+      {message.role === "assistant" ? <Markdown text={message.text} /> : message.text}
+      {message.changes && message.changes.length > 0 && (
+        <ul className="mt-2 flex flex-col gap-2 border-t pt-2 text-xs">
+          {message.changes.map((change) => (
+            <li key={change.id} className="flex flex-col gap-0.5">
+              {change.before && <span className="text-muted-foreground line-through">{change.before}</span>}
+              <span>{change.hidden ? "Hidden from the resume" : change.after}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <MemoryProposals proposals={message.memoryProposals} />
+      {message.changes?.length === 0 && message.role === "assistant" && (
+        <p className="mt-1 text-xs text-muted-foreground">No lines were changed.</p>
+      )}
+    </>
+  );
+}
+
+export function Bubble({ from, children }: { from: Message["role"]; children: React.ReactNode }) {
   return (
     <div
       className={cn(

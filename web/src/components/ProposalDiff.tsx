@@ -59,7 +59,7 @@ export function ProposalReview({
               disabled={blocked || apply.isPending}
               onClick={async () => {
                 try {
-                  await (applyOverride ? applyOverride(proposal) : apply.mutateAsync(proposal));
+                  await (applyOverride ? applyOverride(proposal) : apply.mutateAsync({ proposal }));
                   setState("accepted");
                   toast.success("Added.");
                   onDone(true);

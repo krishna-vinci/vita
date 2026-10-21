@@ -36,7 +36,7 @@ export default function ProjectsTab() {
   );
   if (editing)
     return (
-      <SplitWithChat chat={<SourceChat dirty={dirty} className="h-full" draftKey="chat:projects" />}>
+      <SplitWithChat chat={<SourceChat dirty={dirty} className="h-full" />}>
         <div className="mb-4">{toggle}</div>
         <MarkdownEditor
           resource={query.data}

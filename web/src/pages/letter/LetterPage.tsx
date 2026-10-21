@@ -36,11 +36,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { download } from "@/lib/resume-view";
+import { useSavedChat } from "@/lib/use-chat-thread";
 import { useDetails } from "@/lib/use-details";
 import { useDraft } from "@/lib/use-draft";
 import { ChatPanel } from "../workspace/ChatPanel";
 import { JobTabs } from "../workspace/JobTabs";
-import type { Message } from "../workspace/useChatThread";
 import { LetterParagraph, type ParagraphActions } from "./LetterParagraph";
 import { letterFlags, letterToMarkdown } from "./letter-view";
 
@@ -169,8 +169,6 @@ function LetterView({ id, resource }: { id: string; resource: NonNullable<Return
   const client = useQueryClient();
   const [details, setDetails] = useDetails();
   const [changed, setChanged] = useState<ReadonlySet<string>>(new Set());
-  const [messages, setMessages] = useState<(Message & { memoryProposals?: never })[]>([]);
-  const [pending, setPending] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [local, setLocal] = useState<string[] | null>(null);
   const { letter, review } = resource;
@@ -194,36 +192,22 @@ function LetterView({ id, resource }: { id: string; resource: NonNullable<Return
       return false;
     }
   };
-  const send = async (message: string) => {
-    setMessages((all) => [...all, { role: "user", text: message }]);
-    setPending(true);
-    try {
-      const before = new Map(letter.paragraphs.map((paragraph) => [paragraph.id, paragraph.text]));
-      const reply = await api.letters.chat(id, message);
-      await refresh();
+  const chat = useSavedChat("letter", id, (message, threadId) => api.letters.chat(id, message, threadId), {
+    // Captured before the letter reloads, so each reply can show what a paragraph said before.
+    decorate: (reply) => ({
+      changes: reply.changedParagraphs.map((paragraphId) => ({
+        id: paragraphId,
+        before: letter.paragraphs.find((paragraph) => paragraph.id === paragraphId)?.text ?? "",
+        after: "Updated in your letter above.",
+        hidden: false,
+      })),
+    }),
+    onReply: (reply) => {
       setChanged(new Set(reply.changedParagraphs));
-      setMessages((all) => [
-        ...all,
-        {
-          role: "assistant",
-          text: reply.reply,
-          changes: reply.changedParagraphs.map((paragraphId) => ({
-            id: paragraphId,
-            before: before.get(paragraphId) ?? "",
-            after: "Updated in your letter above.",
-            hidden: false,
-          })),
-        },
-      ]);
-    } catch (error) {
-      setMessages((all) => [
-        ...all,
-        { role: "error", text: error instanceof Error ? error.message : "That didn't work." },
-      ]);
-    } finally {
-      setPending(false);
-    }
-  };
+      void refresh();
+    },
+  });
+  const send = (message: string) => chat.send(message);
   const actions: ParagraphActions = {
     edit: (paragraphId, text) => run([{ op: "paragraph.edit", id: paragraphId, text }]),
     hide: (paragraphId, hidden) => void run([{ op: "paragraph.hide", id: paragraphId, hidden }]),
@@ -266,13 +250,10 @@ function LetterView({ id, resource }: { id: string; resource: NonNullable<Return
     <SplitWithChat
       chat={
         <ChatPanel
-          messages={messages}
-          pending={pending}
-          onSend={(message) => void send(message)}
+          chat={chat}
           intro="Here's your cover letter. Click a paragraph to edit it, or ask me for a change."
           suggestions={["Make it shorter", "Open with something warmer"]}
           className="h-full"
-          draftKey={`chat:letter:${id}`}
         />
       }
     >

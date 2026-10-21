@@ -175,7 +175,7 @@ function Loaded({
   const jobs = useJobs();
   const outline = useOutline();
   const projects = useProjects();
-  const thread = useChatThread(scope, id, data.resume);
+  const thread = useChatThread(scope, id);
   const fitter = useFit(scope, id);
   const promoter = usePromote();
   const [fit, setFit] = useState<FitState | null>(null);
@@ -322,13 +322,10 @@ function Loaded({
   };
   const chat = (
     <ChatPanel
-      messages={thread.messages}
-      pending={thread.pending}
-      onSend={(message) => void thread.send(message)}
+      chat={thread}
       intro="Here's your resume. Ask me for any change, or click a line to edit it yourself."
       suggestions={["Put the strongest work first", "Make the summary shorter"]}
       className="h-full"
-      draftKey={`chat:${scope}:${id}`}
     />
   );
   return (
