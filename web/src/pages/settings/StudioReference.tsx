@@ -1,7 +1,9 @@
 import type { TemplateContract } from "@vita/shared";
 import { Plus } from "lucide-react";
+import { useRef } from "react";
 import { useTemplateContract } from "@/api/queries";
 import { Button } from "@/components/ui/button";
+import { useScrollMemory } from "@/lib/use-scroll-memory";
 
 /** One line each; the contract itself only carries the code. */
 const snippetAbout: Record<string, string> = {
@@ -39,6 +41,8 @@ function Fold({ title, children }: { title: string; children: React.ReactNode })
 /** What a template may use: the delimiters, variables and filters, and snippets that insert at the cursor. */
 export function StudioReference({ onInsert, canInsert }: { onInsert: (code: string) => void; canInsert: boolean }) {
   const contract = useTemplateContract();
+  const pane = useRef<HTMLDivElement>(null);
+  useScrollMemory(pane, "studio-reference", contract.isSuccess);
   if (contract.isPending)
     return (
       <p className="p-3 text-sm text-muted-foreground" role="status">
@@ -48,7 +52,7 @@ export function StudioReference({ onInsert, canInsert }: { onInsert: (code: stri
   if (contract.isError) return <p className="p-3 text-sm text-destructive">{contract.error.message}</p>;
   const data: TemplateContract = contract.data;
   return (
-    <div className="flex min-h-0 flex-col gap-3 overflow-y-auto p-1">
+    <div ref={pane} className="flex min-h-0 flex-col gap-3 overflow-y-auto p-1">
       <section aria-label="Delimiters" className="flex flex-col gap-1">
         <h3 className="text-sm font-medium">Delimiters</h3>
         <p className="font-mono text-xs break-words text-muted-foreground">((( ))) ((* *)) ((= =))</p>

@@ -8,6 +8,7 @@ import { Markdown } from "@/components/Markdown";
 import { ProposalReview } from "@/components/ProposalDiff";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useDraft } from "@/lib/use-draft";
 
 interface Turn {
   id: string;
@@ -25,13 +26,13 @@ export function InterviewFlow() {
       text: "Hi! Tell me about the work you're proudest of, or what you do day to day. I'll ask follow-ups and write it up for you.",
     },
   ]);
-  const [text, setText] = useState("");
+  const [text, setText, clearText] = useDraft("chat:interview");
   const [busy, setBusy] = useState(false);
   const client = useQueryClient();
   const send = async () => {
     const message = text.trim();
     if (!message || busy) return;
-    setText("");
+    clearText();
     setTurns((all) => [...all, { id: crypto.randomUUID(), role: "user", text: message }]);
     setBusy(true);
     try {

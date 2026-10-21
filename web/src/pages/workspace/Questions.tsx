@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useJsonDraft } from "@/lib/use-draft";
 import { cn } from "@/lib/utils";
 import {
   emptyOwnership,
@@ -27,6 +28,11 @@ export function parseGaps(gaps: string[]): Gap[] {
 }
 
 type Choice = "yes" | "no" | "skip";
+interface Saved {
+  choices?: Record<string, Choice>;
+  details?: Record<string, string>;
+  owners?: Record<string, OwnershipValue>;
+}
 
 /** One card per thing the job asks for that the user's notes do not yet show. */
 export function Questions({
@@ -41,10 +47,12 @@ export function Questions({
   skipLabel = "Skip and show my resume",
   stickyActions = false,
   notice,
+  draftKey,
 }: {
   gaps: Gap[];
   pending: boolean;
-  onSubmit: (answers: Record<string, string>) => void;
+  /** Return `false` when the answers could not be sent, so the typed text is kept. */
+  onSubmit: (answers: Record<string, string>) => unknown;
   onSkipAll: () => void;
   /** Called with the ownership answers marked "Remember", before `onSubmit`. */
   onRemember?: (items: Remembered[]) => Promise<void>;
@@ -55,10 +63,19 @@ export function Questions({
   /** Keep the buttons in view on a phone. */
   stickyActions?: boolean;
   notice?: ReactNode;
+  /** Keeps the choices and typed details for this tab, e.g. `questions:j1`. Cleared once sent. */
+  draftKey: string;
 }) {
-  const [choices, setChoices] = useState<Record<string, Choice>>({});
-  const [details, setDetails] = useState<Record<string, string>>({});
-  const [owners, setOwners] = useState<Record<string, OwnershipValue>>({});
+  const [saved, setSaved, clearSaved] = useJsonDraft<Saved>(draftKey, {});
+  const choices = saved.choices ?? {};
+  const details = saved.details ?? {};
+  const owners = saved.owners ?? {};
+  const setChoices = (next: (all: Record<string, Choice>) => Record<string, Choice>) =>
+    setSaved((all) => ({ ...all, choices: next(all.choices ?? {}) }));
+  const setDetails = (next: (all: Record<string, string>) => Record<string, string>) =>
+    setSaved((all) => ({ ...all, details: next(all.details ?? {}) }));
+  const setOwners = (next: (all: Record<string, OwnershipValue>) => Record<string, OwnershipValue>) =>
+    setSaved((all) => ({ ...all, owners: next(all.owners ?? {}) }));
   const [saving, setSaving] = useState(false);
   const collect = () => {
     const answers: Record<string, string> = {};
@@ -90,7 +107,7 @@ export function Questions({
         setSaving(false);
       }
     }
-    onSubmit(answers);
+    if ((await onSubmit(answers)) !== false) clearSaved();
   };
   const busy = pending || saving;
   return (
@@ -172,7 +189,15 @@ export function Questions({
         <Button className="h-11 max-sm:flex-1" onClick={() => void submit()} disabled={busy}>
           {busy ? "Sending…" : submitLabel}
         </Button>
-        <Button variant="ghost" className="h-11 max-sm:flex-1" onClick={onSkipAll} disabled={busy}>
+        <Button
+          variant="ghost"
+          className="h-11 max-sm:flex-1"
+          onClick={() => {
+            clearSaved();
+            onSkipAll();
+          }}
+          disabled={busy}
+        >
           {skipLabel}
         </Button>
         {stickyActions && (

@@ -18,7 +18,7 @@ export default function OutlineTab() {
   if (query.isError) return <PageError error={query.error} retry={() => void query.refetch()} />;
   const empty = !query.data.markdown.trim() && !dirty;
   return (
-    <SplitWithChat chat={<SourceChat dirty={dirty} className="h-full" />}>
+    <SplitWithChat chat={<SourceChat dirty={dirty} className="h-full" draftKey="chat:outline" />}>
       {empty && (
         <div className="mb-6 flex flex-col gap-3 rounded-xl border bg-card p-5">
           <h2 className="font-display text-xl font-medium">
@@ -45,6 +45,7 @@ export default function OutlineTab() {
         save={save.mutateAsync}
         fetchLatest={() => api.outline.get()}
         onDirty={setDirty}
+        draftKey="editor:outline"
         hideAnchors
         placeholder={
           "# Your name\n\n## Experience\n\n### Company — Role\n2023–2026\n\n- What you did, in your own words"

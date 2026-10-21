@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useCancelJob, useCreateApplication, useJob, useResumes, useWorkspace } from "@/api/queries";
@@ -10,6 +10,7 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useDraft } from "@/lib/use-draft";
 import { JobProgress } from "./JobProgress";
 
 export default function NewJobPage() {
@@ -40,9 +41,10 @@ export default function NewJobPage() {
 
 function JobForm({ jobId, onJob }: { jobId: string; onJob: (id: string) => void }) {
   const navigate = useNavigate();
-  const [jobText, setJobText] = useState("");
-  const [instructions, setInstructions] = useState("");
-  const [baseId, setBaseId] = useState("auto");
+  // Kept for this tab, so a reload or Back does not lose a pasted job post. Cleared once the resume is made.
+  const [jobText, setJobText, clearJobText] = useDraft("new-job:text");
+  const [instructions, setInstructions, clearInstructions] = useDraft("new-job:instructions");
+  const [baseId, setBaseId, clearBaseId] = useDraft("new-job:base", "auto");
   const bases = useResumes();
   const create = useCreateApplication();
   const cancel = useCancelJob();
@@ -50,8 +52,13 @@ function JobForm({ jobId, onJob }: { jobId: string; onJob: (id: string) => void 
   const status = job.data?.status;
   const resultId = job.data?.result?.id;
   useEffect(() => {
-    if (status === "done" && resultId) navigate(`/jobs/${encodeURIComponent(resultId)}`, { replace: true });
-  }, [status, resultId, navigate]);
+    if (status === "done" && resultId) {
+      clearJobText();
+      clearInstructions();
+      clearBaseId();
+      navigate(`/jobs/${encodeURIComponent(resultId)}`, { replace: true });
+    }
+  }, [status, resultId, navigate, clearJobText, clearInstructions, clearBaseId]);
 
   if (jobId && job.data && (status === "queued" || status === "running" || status === "done"))
     return (

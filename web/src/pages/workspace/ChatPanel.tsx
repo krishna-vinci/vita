@@ -1,9 +1,10 @@
 import { SendHorizontal } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Markdown } from "@/components/Markdown";
 import { MemoryProposals } from "@/components/MemoryProposals";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useDraft } from "@/lib/use-draft";
 import { cn } from "@/lib/utils";
 import type { Message } from "./useChatThread";
 
@@ -15,6 +16,7 @@ export function ChatPanel({
   intro,
   suggestions = [],
   className,
+  draftKey,
 }: {
   messages: Message[];
   pending: boolean;
@@ -22,15 +24,17 @@ export function ChatPanel({
   intro: string;
   suggestions?: string[];
   className?: string;
+  /** Names the unsent text in this tab's storage, e.g. `chat:application:j1`. */
+  draftKey: string;
 }) {
-  const [text, setText] = useState("");
+  const [text, setText, clearText] = useDraft(draftKey);
   const end = useRef<HTMLDivElement>(null);
   // biome-ignore lint/correctness/useExhaustiveDependencies: scroll whenever a message arrives.
   useEffect(() => end.current?.scrollIntoView?.({ block: "end" }), [messages.length, pending]);
   const submit = () => {
     const message = text.trim();
     if (!message || pending) return;
-    setText("");
+    clearText();
     onSend(message);
   };
   return (

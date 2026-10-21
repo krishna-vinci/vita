@@ -17,6 +17,7 @@ import {
 } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
 import { type Ref, useEffect, useImperativeHandle, useRef } from "react";
+import { rememberScroll } from "@/lib/use-scroll-memory";
 
 export interface TexEditorHandle {
   /** Insert text at the cursor (replacing any selection) and focus the editor. */
@@ -34,6 +35,8 @@ export interface TexEditorProps {
   onSave?(): void;
   height?: string;
   ariaLabel: string;
+  /** Remembers the scroll position in this tab under this name (include the route). */
+  scrollKey?: string;
   ref?: Ref<TexEditorHandle>;
 }
 
@@ -148,6 +151,7 @@ export default function TexEditor({
   onSave,
   height = "100%",
   ariaLabel,
+  scrollKey,
   ref,
 }: TexEditorProps) {
   const host = useRef<HTMLDivElement>(null);
@@ -157,7 +161,7 @@ export default function TexEditor({
   const editable = useRef(new Compartment());
   const wrapping = useRef(new Compartment());
   const label = useRef(new Compartment());
-  const initial = useRef({ value, readOnly, ariaLabel, errorLines });
+  const initial = useRef({ value, readOnly, ariaLabel, errorLines, scrollKey });
 
   useImperativeHandle(
     ref,
@@ -218,12 +222,14 @@ export default function TexEditor({
       }),
     });
     view.current = editor;
+    const stopRemembering = start.scrollKey ? rememberScroll(editor.scrollDOM, start.scrollKey) : undefined;
     const media = typeof matchMedia === "function" ? matchMedia("(max-width: 767px)") : null;
     const rewrap = () =>
       editor.dispatch({ effects: wrapping.current.reconfigure(narrow() ? EditorView.lineWrapping : []) });
     media?.addEventListener("change", rewrap);
     return () => {
       media?.removeEventListener("change", rewrap);
+      stopRemembering?.();
       editor.destroy();
       view.current = null;
     };

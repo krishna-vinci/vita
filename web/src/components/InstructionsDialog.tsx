@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { toast } from "sonner";
 import { useResumeInstructions } from "@/api/queries";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -13,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useDraft } from "@/lib/use-draft";
 
 export const instructionExamples =
   "e.g. Lead with backend and infrastructure work. Keep it to one page. Leave out Kite Algo.";
@@ -31,13 +31,15 @@ export function InstructionsDialog({
   id: string;
   saved: string;
 }) {
-  const [draft, setDraft] = useState(saved);
+  // Unsent edits are kept for this tab until saved.
+  const [draft, setDraft, clearDraft] = useDraft(`instructions:${scope}:${id}`, saved);
   const save = useResumeInstructions(scope, id);
   const run = (regenerate: boolean) =>
     save.mutate(
       { instructions: draft.trim(), regenerate },
       {
         onSuccess: () => {
+          clearDraft();
           toast.success(regenerate ? "Rewriting with your instructions." : "Instructions saved.");
           onOpenChange(false);
         },
@@ -47,10 +49,7 @@ export function InstructionsDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (next) {
-          setDraft(saved);
-          save.reset();
-        }
+        if (next) save.reset();
         onOpenChange(next);
       }}
     >

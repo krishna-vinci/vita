@@ -5,12 +5,14 @@ import { useId, useState } from "react";
 import { toast } from "sonner";
 import { ApiError } from "@/api/client";
 import { queryKeys, useProfile, useSaveProfile } from "@/api/queries";
+import { LeaveGuard, RestoredNote } from "@/components/LeaveGuard";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { readDraft, useJsonDraft } from "@/lib/use-draft";
 
 /** The server accepts at most this many contact rows. */
 const maxContacts = 12;
@@ -68,11 +70,14 @@ export default function ProfileTab() {
   const client = useQueryClient();
   if (query.isPending) return <PageLoading />;
   if (query.isError) return <PageError error={query.error} retry={() => void query.refetch()} />;
-  const submit = (profile: Profile) =>
+  const submit = (profile: Profile, done: () => void) =>
     save.mutate(
       { profile, baseHash: query.data.hash },
       {
-        onSuccess: () => toast.success("Saved"),
+        onSuccess: () => {
+          done();
+          toast.success("Saved");
+        },
         onError: (error) => {
           if (error instanceof ApiError && error.status === 409) {
             toast.error("Your profile changed elsewhere. Reloaded.");
@@ -98,12 +103,19 @@ function ProfileForm({
   view: ProfileView;
   saving: boolean;
   error: Error | null;
-  onSubmit: (profile: Profile) => void;
+  onSubmit: (profile: Profile, done: () => void) => void;
 }) {
   const ids = useId();
-  const [draft, setDraft] = useState(() => draftFrom(view.profile));
+  const [saved] = useState(() => draftFrom(view.profile));
+  // Unsaved edits survive a reload; they belong to this saved version of the profile.
+  const draftKey = `profile:${view.hash}`;
+  const [restored, setRestored] = useState(() => readDraft(draftKey) !== null);
+  const [stored, setStored, clearDraft] = useJsonDraft<Draft>(draftKey, saved);
+  const draft = stored;
+  for (const row of draft.rows) lastRowId = Math.max(lastRowId, row.id);
+  const setDraft = (next: Draft | ((current: Draft) => Draft)) => setStored(next);
   const body = profileFrom(draft);
-  const dirty = JSON.stringify(body) !== JSON.stringify(profileFrom(draftFrom(view.profile)));
+  const dirty = JSON.stringify(body) !== JSON.stringify(profileFrom(saved));
   const canSave = dirty && body.name !== "" && !saving;
   const serverMessage = error instanceof ApiError && error.status === 400 ? error.message : null;
   const updateRow = (id: number, patch: Partial<Contact>) =>
@@ -114,17 +126,28 @@ function ProfileForm({
 
   return (
     <Card className="max-w-2xl">
+      <LeaveGuard when={dirty} what="profile changes" />
       <CardHeader>
         <CardTitle className="font-display text-lg">Your details</CardTitle>
         <CardDescription>These go at the top of every resume and cover letter.</CardDescription>
       </CardHeader>
       <CardContent>
         {!view.profile && <p className="mb-6 text-muted-foreground">Add your name to begin.</p>}
+        {restored && dirty && (
+          <div className="mb-6">
+            <RestoredNote
+              onDiscard={() => {
+                clearDraft();
+                setRestored(false);
+              }}
+            />
+          </div>
+        )}
         <form
           className="flex flex-col gap-6"
           onSubmit={(event) => {
             event.preventDefault();
-            if (canSave) onSubmit(body);
+            if (canSave) onSubmit(body, clearDraft);
           }}
         >
           <div className="flex flex-col gap-2">
@@ -242,7 +265,7 @@ function ProfileForm({
               variant="outline"
               className="h-11"
               disabled={!dirty || saving}
-              onClick={() => setDraft(draftFrom(view.profile))}
+              onClick={() => clearDraft()}
             >
               Discard changes
             </Button>

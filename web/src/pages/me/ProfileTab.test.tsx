@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ProfileView } from "@vita/shared";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import { ApiError, api } from "@/api/client";
 import ProfileTab from "./ProfileTab";
@@ -32,7 +33,7 @@ function mount() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <ProfileTab />
+      <RouterProvider router={createMemoryRouter([{ path: "/", element: <ProfileTab /> }])} />
     </QueryClientProvider>,
   );
 }
@@ -115,4 +116,27 @@ it("refetches the profile after a 409", async () => {
   fireEvent.change(await screen.findByLabelText("Location"), { target: { value: "Berlin" } });
   fireEvent.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+});
+
+it("restores unsaved edits after a reload, says so, and Discard returns to the saved values", async () => {
+  vi.spyOn(api.profile, "get").mockResolvedValue(loaded);
+  mount();
+  fireEvent.change(await screen.findByLabelText("Headline"), { target: { value: "Half typed" } });
+  cleanup();
+  mount();
+  expect(((await screen.findByLabelText("Headline")) as HTMLInputElement).value).toBe("Half typed");
+  expect(screen.getByText("Restored your unsaved changes.")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Discard" }));
+  expect((screen.getByLabelText("Headline") as HTMLInputElement).value).toBe("Platform engineer");
+  expect(screen.queryByText("Restored your unsaved changes.")).toBeNull();
+});
+
+it("clears the kept edits once saved", async () => {
+  vi.spyOn(api.profile, "get").mockResolvedValue(loaded);
+  vi.spyOn(api.profile, "save").mockResolvedValue({ ...loaded, hash: "h2", sha: null });
+  mount();
+  fireEvent.change(await screen.findByLabelText("Headline"), { target: { value: "New headline" } });
+  expect(sessionStorage.getItem("vita:draft:profile:h1")).not.toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(sessionStorage.getItem("vita:draft:profile:h1")).toBeNull());
 });

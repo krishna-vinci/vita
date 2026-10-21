@@ -1,17 +1,18 @@
 import { FileUp, MessageCircleQuestion, PencilLine } from "lucide-react";
-import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useSaveSettings, useSettings } from "@/api/queries";
 import { TemplateGallery } from "@/components/TemplateGallery";
 import { Button } from "@/components/ui/button";
+import { useUrlParam } from "@/lib/use-url-state";
 import { ImportFlow } from "./ImportFlow";
 import { InterviewFlow } from "./InterviewFlow";
 
 type Mode = "choose" | "import" | "interview";
 
 export default function OnboardingPage() {
-  const [mode, setMode] = useState<Mode>("choose");
+  // A real view: Back returns to the choices.
+  const [mode, setMode] = useUrlParam<Mode>("mode", "choose", ["choose", "import", "interview"], { replace: false });
   const navigate = useNavigate();
   const settings = useSettings();
   const save = useSaveSettings();

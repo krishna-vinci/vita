@@ -11,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { useUrlFlag } from "@/lib/use-url-state";
 import { AdvancedSection } from "./settings/AdvancedSection";
 import { ModelPicker } from "./settings/ModelPicker";
 import { ModelSetupCard } from "./settings/ModelSetupCard";
@@ -28,7 +29,8 @@ function SettingsForm({ settings }: { settings: SettingsView }) {
   const available = useAvailableModels();
   const models = available.data?.models ?? [];
   const [draft, setDraft] = useState<PutSettingsRequest>({ models: settings.models, template: settings.template });
-  const [advanced, setAdvanced] = useState(false);
+  // "Models for each step" is in the URL (?steps=1), so a reload or Back keeps it open.
+  const [advanced, setAdvanced] = useUrlFlag("steps");
   const [error, setError] = useState<string | null>(null);
   const save = useSaveSettings();
   const templates = useTemplates();

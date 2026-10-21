@@ -8,6 +8,7 @@ import { MemoryProposals } from "@/components/MemoryProposals";
 import { Diff } from "@/components/ProposalDiff";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useDraft } from "@/lib/use-draft";
 import { cn } from "@/lib/utils";
 
 interface Turn {
@@ -21,9 +22,18 @@ interface Turn {
 const fileName = { outline: "your outline", projects: "your projects" } as const;
 
 /** Ask for a change in plain words; edits arrive as a proposal you accept or discard. Nothing is written until then. */
-export function SourceChat({ dirty, className }: { dirty: boolean; className?: string }) {
+export function SourceChat({
+  dirty,
+  className,
+  draftKey,
+}: {
+  dirty: boolean;
+  className?: string;
+  /** Names the unsent text in this tab's storage, e.g. `chat:outline`. */
+  draftKey: string;
+}) {
   const [turns, setTurns] = useState<Turn[]>([]);
-  const [text, setText] = useState("");
+  const [text, setText, clearText] = useDraft(draftKey);
   const chat = useSourceChat();
   const apply = useApplySource();
   const update = (index: number, patch: Partial<Turn>) =>
@@ -31,7 +41,7 @@ export function SourceChat({ dirty, className }: { dirty: boolean; className?: s
   const send = async () => {
     const message = text.trim();
     if (!message || chat.isPending) return;
-    setText("");
+    clearText();
     setTurns((all) => [...all, { role: "user", text: message }]);
     try {
       const reply = await chat.mutateAsync(message);

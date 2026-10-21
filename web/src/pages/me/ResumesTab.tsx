@@ -26,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { progressStep, progressSteps } from "@/lib/resume-view";
+import { useUrlFlag } from "@/lib/use-url-state";
 import { NewBaseDialog } from "./NewBaseDialog";
 import { SyncBanner } from "./SyncBanner";
 
@@ -144,7 +145,8 @@ function ArchivedBases() {
   const archived = useArchivedResumes();
   const restore = useUnarchiveResume();
   const remove = useDeleteResume();
-  const [open, setOpen] = useState(false);
+  // Open state is in the URL (?archived=1), so a reload or Back keeps it.
+  const [open, setOpen] = useUrlFlag("archived");
   const [target, setTarget] = useState<ResumeSummary | null>(null);
   const list = archived.data?.filter((resume) => resume.kind === "base") ?? [];
   if (list.length === 0) return null;

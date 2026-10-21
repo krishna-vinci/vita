@@ -18,15 +18,19 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useDraft } from "@/lib/use-draft";
 
 export function NewBaseDialog({ disabled }: { disabled?: boolean }) {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [instructions, setInstructions] = useState("");
+  // Unsent text is kept for this tab until the base is made.
+  const [name, setName, clearName] = useDraft("new-base:name");
+  const [instructions, setInstructions, clearInstructions] = useDraft("new-base:instructions");
   const [error, setError] = useState("");
   const create = useCreateBase();
   const packs = usePacks();
-  const [chosen, setChosen] = useState<string[]>([]);
+  const [chosenText, setChosenText, clearChosen] = useDraft("new-base:packs");
+  const chosen = chosenText ? chosenText.split(",") : [];
+  const setChosen = (next: (all: string[]) => string[]) => setChosenText(next(chosen).join(","));
   const submit = async () => {
     setError("");
     try {
@@ -37,9 +41,9 @@ export function NewBaseDialog({ disabled }: { disabled?: boolean }) {
       });
       toast.success(`Writing "${name.trim()}" now.`);
       setOpen(false);
-      setName("");
-      setInstructions("");
-      setChosen([]);
+      clearName();
+      clearInstructions();
+      clearChosen();
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "Could not start. Please try again.");
     }

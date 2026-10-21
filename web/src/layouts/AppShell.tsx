@@ -1,5 +1,5 @@
 import { BriefcaseBusiness, Monitor, Moon, Settings, Sun, UserRound } from "lucide-react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, ScrollRestoration, useLocation } from "react-router-dom";
 import { useEventInvalidation } from "@/api/events";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,7 @@ import {
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { type Theme, useTheme } from "@/lib/theme";
+import { useWindowScrollMemory } from "@/lib/use-scroll-memory";
 import { cn } from "@/lib/utils";
 import { AccountMenu } from "./AccountMenu";
 
@@ -49,6 +50,7 @@ function Navigation({ mobile = false }: { mobile?: boolean }) {
 }
 export default function AppShell() {
   useEventInvalidation();
+  useWindowScrollMemory();
   const { theme, setTheme } = useTheme();
   const Icon = theme === "system" ? Monitor : theme === "light" ? Sun : Moon;
   return (
@@ -94,6 +96,7 @@ export default function AppShell() {
       <div className="fixed inset-x-0 bottom-0 border-t bg-card px-2 pb-[env(safe-area-inset-bottom)] md:hidden">
         <Navigation mobile />
       </div>
+      <ScrollRestoration getKey={(location) => location.pathname} />
       <Toaster position="top-right" />
     </TooltipProvider>
   );

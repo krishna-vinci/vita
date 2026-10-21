@@ -43,6 +43,7 @@ export function InstructionsEditor() {
             label="Your instructions"
             save={save.mutateAsync}
             fetchLatest={() => api.instructions.get()}
+            draftKey="editor:instructions"
             placeholder="- Use British spelling"
           />
         </>

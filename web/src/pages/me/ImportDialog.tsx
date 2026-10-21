@@ -15,15 +15,17 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useDraft } from "@/lib/use-draft";
 
 /** Paste old notes as text, preview what would be added, then apply. Nothing is saved before the preview. */
 export function ImportDialog({ trigger }: { trigger: React.ReactNode }) {
   const [open, setOpen] = useState(false);
-  const [text, setText] = useState("");
+  // Pasted notes are kept for this tab until they are imported.
+  const [text, setText, clearText] = useDraft("import:notes");
   const [preview, setPreview] = useState<ImportLegacyResult | null>(null);
   const importer = useImportProjects();
   const reset = () => {
-    setText("");
+    clearText();
     setPreview(null);
   };
   const run = async (apply: boolean) => {
@@ -44,7 +46,7 @@ export function ImportDialog({ trigger }: { trigger: React.ReactNode }) {
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) reset();
+        if (!next) setPreview(null);
       }}
     >
       <DialogTrigger asChild>{trigger}</DialogTrigger>

@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { boardColumns, isDue, statusLabel } from "@/lib/tracker-view";
+import { useUrlFlag } from "@/lib/use-url-state";
 
 type Tracked = TrackerListView["applications"][number];
 interface Row {
@@ -113,7 +114,8 @@ function ArchivedJobs() {
   const archived = useArchivedApplications();
   const restore = useUnarchiveApplication();
   const remove = useDeleteApplication();
-  const [open, setOpen] = useState(false);
+  // Open state is in the URL (?archived=1), so a reload or Back keeps it.
+  const [open, setOpen] = useUrlFlag("archived");
   const [target, setTarget] = useState<ApplicationSummary | null>(null);
   const list = archived.data ?? [];
   if (list.length === 0) return null;

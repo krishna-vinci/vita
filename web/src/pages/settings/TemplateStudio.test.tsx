@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { TemplateMeta } from "@vita/shared";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { ApiError, api } from "@/api/client";
 import TemplateStudioPage from "./TemplateStudioPage";
@@ -89,18 +89,21 @@ beforeEach(() => {
   vi.spyOn(api.applications, "list").mockResolvedValue([]);
 });
 
-function mount(id: string) {
+function mount(id: string, search = "") {
+  const router = createMemoryRouter(
+    [
+      { path: "/settings/templates/:id", element: <TemplateStudioPage /> },
+      { path: "*", element: <p>elsewhere</p> },
+    ],
+    { initialEntries: [`/settings/templates/${id}${search}`] },
+  );
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[`/settings/templates/${id}`]}>
-        <Routes>
-          <Route path="/settings/templates/:id" element={<TemplateStudioPage />} />
-          <Route path="*" element={<p>elsewhere</p>} />
-        </Routes>
-      </MemoryRouter>
+      <RouterProvider router={router} />
     </QueryClientProvider>,
   );
+  return router;
 }
 const editorOf = (name: string) => screen.findByLabelText(`LaTeX source of ${name}`) as Promise<HTMLTextAreaElement>;
 const type = (editor: HTMLElement, text: string) => fireEvent.change(editor, { target: { value: text } });
@@ -248,4 +251,55 @@ it("keeps a failed apply in the card", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Apply" }));
   expect(await screen.findByText("main.tex.njk:2: Bad")).toBeTruthy();
   expect(screen.getByRole("button", { name: "Apply" })).toBeTruthy();
+});
+
+it("opens the tab named in the URL and writes the tab back to the URL when it changes", async () => {
+  vi.spyOn(api.templates, "source").mockResolvedValue(mine);
+  const router = mount("my-copy", "?tab=preview");
+  await editorOf("My copy");
+  const tabs = screen.getByRole("tablist", { name: "Studio sections" });
+  expect(within(tabs).getByRole("tab", { name: "Preview" }).getAttribute("aria-selected")).toBe("true");
+  fireEvent.click(within(tabs).getByRole("tab", { name: "Design" }));
+  expect(router.state.location.search).toBe("?tab=design");
+  expect(within(tabs).getByRole("tab", { name: "Design" }).getAttribute("aria-selected")).toBe("true");
+  fireEvent.click(within(tabs).getByRole("tab", { name: "Code" }));
+  expect(router.state.location.search).toBe("");
+});
+
+it("asks before in-app navigation away from unsaved changes, and stays on Stay", async () => {
+  vi.spyOn(api.templates, "source").mockResolvedValue(mine);
+  const router = mount("my-copy");
+  type(await editorOf("My copy"), "unsaved");
+  await act(() => router.navigate("/elsewhere"));
+  const dialog = await screen.findByRole("alertdialog");
+  expect(within(dialog).getByText("Leave without saving?")).toBeTruthy();
+  fireEvent.click(within(dialog).getByRole("button", { name: "Stay" }));
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  expect(router.state.location.pathname).toBe("/settings/templates/my-copy");
+  await act(() => router.navigate("/elsewhere"));
+  fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Leave" }));
+  await waitFor(() => expect(router.state.location.pathname).toBe("/elsewhere"));
+});
+
+it("does not ask when nothing is unsaved", async () => {
+  vi.spyOn(api.templates, "source").mockResolvedValue(mine);
+  const router = mount("my-copy");
+  await editorOf("My copy");
+  await act(() => router.navigate("/elsewhere"));
+  expect(router.state.location.pathname).toBe("/elsewhere");
+});
+
+it("restores unsaved source after a reload and says so, and Discard goes back to the saved text", async () => {
+  vi.spyOn(api.templates, "source").mockResolvedValue(mine);
+  const first = mount("my-copy");
+  type(await editorOf("My copy"), "half typed");
+  await act(() => first.navigate("/elsewhere"));
+  fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Leave" }));
+  cleanup();
+  mount("my-copy");
+  expect(((await editorOf("My copy")) as HTMLTextAreaElement).value).toBe("half typed");
+  expect(screen.getByText("Restored your unsaved changes.")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Discard" }));
+  expect(((await editorOf("My copy")) as HTMLTextAreaElement).value).toBe(mine.source);
+  expect(screen.queryByText("Restored your unsaved changes.")).toBeNull();
 });

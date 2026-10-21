@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useDraft } from "@/lib/use-draft";
 
 const groups: { kind: MemoryKind; title: string; hint: string }[] = [
   { kind: "preference", title: "Preferences", hint: "How you like your resumes to read." },
@@ -24,14 +25,14 @@ export default function MemoryTab() {
   const memory = useMemory();
   const client = useQueryClient();
   const [kind, setKind] = useState<MemoryKind>("preference");
-  const [text, setText] = useState("");
+  const [text, setText, clearText] = useDraft("memory:note");
   const [busy, setBusy] = useState(false);
   const refresh = () => client.invalidateQueries({ queryKey: queryKeys.memory });
   const add = async () => {
     setBusy(true);
     try {
       await api.memory.add({ kind, text: text.trim(), apply: true });
-      setText("");
+      clearText();
       await refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save that.");

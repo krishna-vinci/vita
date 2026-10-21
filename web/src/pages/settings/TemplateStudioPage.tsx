@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { TemplateDesignResult } from "@vita/shared";
 import { ArrowLeft, Copy, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ApiError, api } from "@/api/client";
 import {
@@ -15,6 +15,7 @@ import {
   useTemplateSource,
   useTemplates,
 } from "@/api/queries";
+import { LeaveGuard, RestoredNote } from "@/components/LeaveGuard";
 import { PageError, PageLoading } from "@/components/PageState";
 import { DeleteTemplateDialog, ForkDialog } from "@/components/TemplateMenu";
 import type { TexEditorHandle } from "@/components/TexEditor";
@@ -32,6 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { errorLinesOf, errorMessages } from "@/lib/template-errors";
+import { readDraft, writeDraft } from "@/lib/use-draft";
 import { cn } from "@/lib/utils";
 import { StudioDesign } from "./StudioDesign";
 import { MASTER_CHOICE, StudioPreview } from "./StudioPreview";
@@ -41,6 +43,21 @@ import { StudioReference } from "./StudioReference";
 const TexEditor = lazy(() => import("@/components/TexEditor"));
 
 type Tab = "code" | "preview" | "reference" | "design";
+const tabIds: readonly string[] = ["code", "preview", "reference", "design"];
+
+/** Unsaved source from before a reload, when it differs from what is saved. */
+function storedSource(id: string, saved: string): { text: string; hash: string } | null {
+  const raw = readDraft(`studio:${id}`);
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw) as { text?: unknown; hash?: unknown };
+    return typeof value.text === "string" && typeof value.hash === "string" && value.text !== saved
+      ? { text: value.text, hash: value.hash }
+      : null;
+  } catch {
+    return null;
+  }
+}
 type Problem = { kind: "invalid" | "conflict" | "error"; message: string };
 const tabs: { id: Tab; label: string }[] = [
   { id: "code", label: "Code" },
@@ -65,9 +82,32 @@ function Studio({ id }: { id: string }) {
   const [base, setBase] = useState<{ source: string; hash: string } | null>(null);
   const [draft, setDraft] = useState("");
   const [problem, setProblem] = useState<Problem | null>(null);
-  const [tab, setTabState] = useState<Tab>("code");
-  const [leftTab, setLeftTab] = useState<"reference" | "design">("reference");
-  const [leftOpen, setLeftOpen] = useState(true);
+  // Which section is open is kept in the URL (replace: a toggle is not a Back step).
+  const [params, setParams] = useSearchParams();
+  const tab = (tabIds.includes(params.get("tab") ?? "") ? params.get("tab") : "code") as Tab;
+  const side = params.get("side");
+  const leftTab = side === "design" || side === "reference" ? side : tab === "design" ? "design" : "reference";
+  const leftOpen = params.get("reference") !== "hidden";
+  const setLeftTab = (next: "reference" | "design") =>
+    setParams(
+      (current) => {
+        const copy = new URLSearchParams(current);
+        copy.set("side", next);
+        return copy;
+      },
+      { replace: true },
+    );
+  const setLeftOpen = (open: boolean) =>
+    setParams(
+      (current) => {
+        const copy = new URLSearchParams(current);
+        if (open) copy.delete("reference");
+        else copy.set("reference", "hidden");
+        return copy;
+      },
+      { replace: true },
+    );
+  const [restored, setRestored] = useState(false);
   const [resumeChoice, setResumeChoice] = useState(MASTER_CHOICE);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -81,19 +121,33 @@ function Studio({ id }: { id: string }) {
   const data = source.data;
   useEffect(() => {
     if (data && !base) {
-      setBase({ source: data.source, hash: data.hash });
-      setDraft(data.source);
+      // Unsaved text from before a reload comes back, based on the version it was written from.
+      const kept = data.editable ? storedSource(id, data.source) : null;
+      setBase({ source: data.source, hash: kept?.hash ?? data.hash });
+      setDraft(kept?.text ?? data.source);
+      setRestored(!!kept);
     }
-  }, [data, base]);
+  }, [data, base, id]);
 
   const editable = !!data?.editable;
   const dirty = !!base && draft !== base.source;
   const saving = saveMutation.isPending;
 
-  const setTab = (next: Tab) => {
-    setTabState(next);
-    if (next === "reference" || next === "design") setLeftTab(next);
-  };
+  const setTab = (next: Tab) =>
+    setParams(
+      (current) => {
+        const copy = new URLSearchParams(current);
+        if (next === "code") copy.delete("tab");
+        else copy.set("tab", next);
+        // Choosing a side tab on a phone also points the desktop side panel at it.
+        copy.delete("side");
+        return copy;
+      },
+      { replace: true },
+    );
+  useEffect(() => {
+    if (base) writeDraft(`studio:${id}`, dirty ? JSON.stringify({ text: draft, hash: base.hash }) : null);
+  }, [id, base, dirty, draft]);
 
   const runPreview = useCallback(
     (choice: string) => {
@@ -254,6 +308,17 @@ function Studio({ id }: { id: string }) {
         </div>
       </header>
 
+      <LeaveGuard when={dirty} what="template changes" />
+      {restored && dirty && (
+        <RestoredNote
+          onDiscard={() => {
+            setBase({ source: data.source, hash: data.hash });
+            setDraft(data.source);
+            setRestored(false);
+            setProblem(null);
+          }}
+        />
+      )}
       {!editable && (
         <Alert>
           <AlertTitle>Built-in templates can't be edited</AlertTitle>
@@ -322,6 +387,7 @@ function Studio({ id }: { id: string }) {
             <StudioReference onInsert={insert} canInsert={editable} />
           ) : editable ? (
             <StudioDesign
+              draftKey={`studio-design:${id}`}
               disabledReason={dirty ? "Save first. The designer works on the saved template." : null}
               pending={designMutation.isPending}
               error={designError}
@@ -361,7 +427,7 @@ function Studio({ id }: { id: string }) {
               variant="ghost"
               size="sm"
               className="hidden h-9 lg:inline-flex"
-              onClick={() => setLeftOpen((open) => !open)}
+              onClick={() => setLeftOpen(!leftOpen)}
             >
               {leftOpen ? <PanelLeftClose aria-hidden="true" /> : <PanelLeftOpen aria-hidden="true" />}
               {leftOpen ? "Hide reference" : "Show reference"}
@@ -377,6 +443,7 @@ function Studio({ id }: { id: string }) {
                 errorLines={errorLines}
                 onSave={() => void save()}
                 ariaLabel={`LaTeX source of ${name}`}
+                scrollKey={`studio:${id}`}
                 height="100%"
               />
             </Suspense>
@@ -456,7 +523,9 @@ function Studio({ id }: { id: string }) {
             <Button
               className="h-11"
               onClick={() => {
-                setDraft(base.source);
+                setBase({ source: data.source, hash: data.hash });
+                setDraft(data.source);
+                setRestored(false);
                 setProblem(null);
                 setConfirmDiscard(false);
               }}
