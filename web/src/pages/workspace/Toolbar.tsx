@@ -1,4 +1,4 @@
-import { ChevronDown, Download, ScrollText, Undo2 } from "lucide-react";
+import { ChevronDown, Download, Palette, ScrollText, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -22,6 +22,7 @@ export function Toolbar({
   overBy,
   onFit,
   onTemplate,
+  onStyle,
   onInstructions,
 }: {
   details: boolean;
@@ -36,6 +37,7 @@ export function Toolbar({
   overBy?: number;
   onFit: (pages: number) => void;
   onTemplate: () => void;
+  onStyle: () => void;
   onInstructions: () => void;
 }) {
   return (
@@ -49,6 +51,9 @@ export function Toolbar({
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="ghost" className="h-11" onClick={onInstructions}>
           <ScrollText /> Instructions
+        </Button>
+        <Button variant="ghost" className="h-11" onClick={onStyle}>
+          <Palette /> Style
         </Button>
         <Button variant="ghost" className="h-11" onClick={onUndo} disabled={undoing}>
           <Undo2 /> Undo

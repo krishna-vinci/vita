@@ -44,6 +44,7 @@ import { useRememberOwnership } from "./OwnershipQuestion";
 import { parseGaps, Questions } from "./Questions";
 import { QuestionsStep } from "./QuestionsStep";
 import { ResumeSheet } from "./ResumeSheet";
+import { StyleDialog } from "./StyleDialog";
 import { Toolbar } from "./Toolbar";
 import type { SheetActions } from "./types";
 import { useChatThread } from "./useChatThread";
@@ -175,6 +176,7 @@ function Loaded({
   const promoter = usePromote();
   const [fit, setFit] = useState<FitState | null>(null);
   const [templates, setTemplates] = useState(false);
+  const [styling, setStyling] = useState(false);
   const [instructionsOpen, setInstructionsOpen] = useState(false);
   const startFit = async (pages: number) => {
     setFit({ pages, loading: true });
@@ -408,6 +410,7 @@ function Loaded({
         }
         onFit={(pages) => void startFit(pages)}
         onTemplate={() => setTemplates(true)}
+        onStyle={() => setStyling(true)}
         onInstructions={() => setInstructionsOpen(true)}
       />
       {details && (
@@ -450,6 +453,17 @@ function Loaded({
         <MessageSquareText /> Ask for a change
       </Button>
       <ChangeTemplateDialog open={templates} onOpenChange={setTemplates} />
+      <StyleDialog
+        open={styling}
+        onOpenChange={setStyling}
+        resume={data.resume}
+        applying={ops.isPending}
+        onApply={async (list) => {
+          const saved = await run(list);
+          if (saved) toast.success("Done. Undo is one click away.");
+          return saved;
+        }}
+      />
       <InstructionsDialog
         open={instructionsOpen}
         onOpenChange={setInstructionsOpen}
