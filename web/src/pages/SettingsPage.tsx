@@ -1,11 +1,10 @@
 import { PutSettingsRequest, type SettingsView } from "@vita/shared";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAvailableModels, useSaveSettings, useSettings, useTemplates } from "@/api/queries";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -33,18 +32,35 @@ function SettingsForm({ settings }: { settings: SettingsView }) {
   const [error, setError] = useState<string | null>(null);
   const save = useSaveSettings();
   const templates = useTemplates();
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    const result = PutSettingsRequest.safeParse(draft);
+  const [saved, setSaved] = useState(true);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const persist = (next: PutSettingsRequest) => {
+    const result = PutSettingsRequest.safeParse(next);
     if (!result.success) {
       setError("Use provider/model for each model, and a template ID with lowercase letters, numbers or hyphens.");
       return;
     }
     setError(null);
     save.mutate(result.data, {
-      onSuccess: () => toast.success("Settings saved"),
+      onSuccess: () => {
+        setSaved(true);
+        toast.success("Saved");
+      },
       onError: (failure) => setError(failure.message),
     });
+  };
+  // Every change saves on its own, after a short pause so typing a custom model ID saves once.
+  const change = (next: PutSettingsRequest) => {
+    setDraft(next);
+    setSaved(false);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => persist(next), 600);
+  };
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    clearTimeout(timer.current);
+    persist(draft);
   };
   return (
     <form onSubmit={submit} className="flex max-w-2xl flex-col gap-8">
@@ -57,7 +73,7 @@ function SettingsForm({ settings }: { settings: SettingsView }) {
             value={draft.models.default}
             models={models}
             disabled={save.isPending}
-            onChange={(value) => setDraft({ ...draft, models: { ...draft.models, default: value ?? "" } })}
+            onChange={(value) => change({ ...draft, models: { ...draft.models, default: value ?? "" } })}
           />
           <FieldDescription>Used for every step unless you choose a different model below.</FieldDescription>
         </Field>
@@ -66,7 +82,7 @@ function SettingsForm({ settings }: { settings: SettingsView }) {
           {templates.data?.length ? (
             <Select
               value={draft.template}
-              onValueChange={(template) => setDraft({ ...draft, template })}
+              onValueChange={(template) => change({ ...draft, template })}
               disabled={save.isPending}
             >
               <SelectTrigger id="template" className="w-full sm:w-80">
@@ -84,7 +100,7 @@ function SettingsForm({ settings }: { settings: SettingsView }) {
             <Input
               id="template"
               value={draft.template}
-              onChange={(event) => setDraft({ ...draft, template: event.target.value })}
+              onChange={(event) => change({ ...draft, template: event.target.value })}
               required
               disabled={save.isPending}
             />
@@ -136,7 +152,7 @@ function SettingsForm({ settings }: { settings: SettingsView }) {
                   const next = { ...draft.models.roles };
                   if (value === undefined) delete next[id];
                   else next[id] = value;
-                  setDraft({ ...draft, models: { ...draft.models, roles: next } });
+                  change({ ...draft, models: { ...draft.models, roles: next } });
                 }}
               />
             </Field>
@@ -169,9 +185,9 @@ function SettingsForm({ settings }: { settings: SettingsView }) {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      <Button type="submit" disabled={save.isPending} className="h-11 w-fit">
-        {save.isPending ? "Saving…" : "Save settings"}
-      </Button>
+      <p className="text-sm text-muted-foreground" aria-live="polite">
+        {save.isPending || !saved ? "Saving…" : "Changes save automatically."}
+      </p>
     </form>
   );
 }

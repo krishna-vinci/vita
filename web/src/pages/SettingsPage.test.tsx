@@ -52,28 +52,28 @@ it("shows credential status, reveals roles and saves a typed configuration", asy
   expect(screen.getAllByRole("combobox")).toHaveLength(5);
   fireEvent.change(screen.getByLabelText("Checking the facts model ID"), { target: { value: "different/check" } });
   fireEvent.change(screen.getByLabelText("Default model model ID"), { target: { value: "writer/model" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+  // Changes save on their own, once, after a short pause.
   await waitFor(() =>
     expect(save).toHaveBeenCalledWith(
       { models: { default: "writer/model", roles: { checker: "different/check" } }, template: "rover-base" },
       expect.anything(),
     ),
   );
+  expect(save).toHaveBeenCalledTimes(1);
 });
 it("keeps the form editable and reports server save failures", async () => {
   vi.spyOn(api.settings, "save").mockRejectedValue(new ApiError(400, "not-found", "Template not installed"));
   mount();
   await screen.findByLabelText("Default model model ID");
-  fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+  fireEvent.change(screen.getByLabelText("Default model model ID"), { target: { value: "faux/other" } });
   expect(await screen.findByText("Template not installed")).toBeTruthy();
-  expect((screen.getByLabelText("Default model model ID") as HTMLInputElement).value).toBe("faux/echo");
+  expect((screen.getByLabelText("Default model model ID") as HTMLInputElement).value).toBe("faux/other");
 });
 it("rejects malformed model IDs before sending them", async () => {
   const save = vi.spyOn(api.settings, "save");
   mount();
   await screen.findByLabelText("Default model model ID");
   fireEvent.change(screen.getByLabelText("Default model model ID"), { target: { value: "missing-provider" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
   expect(await screen.findByText(/Use provider\/model for each model/)).toBeTruthy();
   expect(save).not.toHaveBeenCalled();
 });
