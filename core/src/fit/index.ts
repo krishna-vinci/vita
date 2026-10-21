@@ -2,7 +2,7 @@ import { type Resume, visibleBullets } from "@vita/shared";
 import { compileTex, type LoadedTemplate, pdfText, renderTex, resolveLayout } from "../render/index.js";
 
 export interface FitPlan {
-  layout: Record<string, number>;
+  layout: Resume["layout"];
   hide: string[];
   pages: number;
   fits: boolean;
@@ -53,7 +53,7 @@ export async function fitToPage(
   for (const key of KNOBS) {
     const knob = tpl.meta.knobs[key];
     const start = layout[key];
-    if (!knob || start === undefined || start <= knob.min) continue;
+    if (!knob || (knob.type && knob.type !== "number") || typeof start !== "number" || start <= knob.min) continue;
     for (let step = 1; step <= 4; step++) {
       layout[key] = step === 4 ? knob.min : start - ((start - knob.min) * step) / 4;
       plan.steps.push(`${key}=${layout[key]}`);

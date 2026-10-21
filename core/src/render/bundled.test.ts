@@ -164,3 +164,54 @@ for (const id of ids) {
     expect(checkRender(resume, await pdfText(pdf), 1).ok).toBe(true);
   }, 60_000);
 }
+
+for (const id of ids) {
+  it.concurrent(`${id} compiles defaults and every exposed option at its alternative values offline`, async (context) => {
+    if (!available) context.skip();
+    const template = await loadTemplate([templatesDir], id);
+    const resume = Resume.parse(
+      JSON.parse(await readFile(new URL("./fixtures/resume-basic.json", import.meta.url), "utf8")),
+    );
+    resume.header.location = "Example City";
+    resume.header.contact = [
+      { label: "Email", value: "alex@example.test" },
+      { label: "Website", value: "https://example.test" },
+    ];
+    const entry = resume.sections.find((section) => section.kind === "entries")?.items[0];
+    if (entry) {
+      entry.period = "2023-01 – 2026-10";
+      entry.links = [{ label: "Website", url: "https://example.test" }];
+    }
+    const layouts: Resume["layout"][] = [{}];
+    for (const [key, knob] of Object.entries(template.meta.knobs)) {
+      const values =
+        knob.type === "enum"
+          ? knob.options.filter((value) => value !== knob.default)
+          : knob.type === "bool"
+            ? [!knob.default]
+            : knob.type === "color"
+              ? ["#7521A8"]
+              : [knob.max];
+      layouts.push(...values.map((value) => ({ [key]: value })));
+    }
+    layouts.push({
+      font: "fira-sans",
+      accent: "#141E61",
+      icons: true,
+      footer: "name+page",
+      link_style: "label+icon",
+      header_align: "center",
+    });
+    for (const layout of layouts) {
+      const tex = renderTex({ ...resume, template: id, layout }, template);
+      if (layout.accent) expect(tex).toContain(`\\definecolor{accent}{HTML}{${String(layout.accent).slice(1)}}`);
+      const { pdf } = await compileTex({ tex, assetsDir: template.dir }).catch((error) => {
+        throw new Error(`${id} ${JSON.stringify(layout)}: ${error.message}\n${error.log?.slice(-6000)}`);
+      });
+      const extracted = await pdfText(pdf);
+      expect(checkRender(resume, extracted).ok, `${id} ${JSON.stringify(layout)}\n${extracted.text}`).toBe(true);
+      expect(extracted.text).toContain("Example City");
+      if (layout.footer === "name+page") expect(extracted.text).toMatch(/Page 1 of 1/);
+    }
+  }, 180_000);
+}

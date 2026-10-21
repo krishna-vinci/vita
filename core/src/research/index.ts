@@ -77,6 +77,10 @@ export async function researchItem(
       task: [
         "For github.com/<owner>/<repo> targets, prefer github_repo, github_tree, github_file and github_commits. Code search needs a token. Use MCP only when configured, or web_fetch for allow-listed pages. Call submit_evidence with item, claims, limits, variants and notes. If no evidence is established, submit empty additions and explain missing sources in notes.",
         wrapUntrusted("research target", JSON.stringify(request)),
+        wrapUntrusted(
+          "confirmed ownership",
+          JSON.stringify({ relationship: item?.meta.relationship ?? "unknown", contribution: item?.meta.contribution }),
+        ),
         wrapUntrusted("allow-listed URLs", JSON.stringify(urls)),
       ].join("\n\n"),
       tools: { root: ws.root, index: ctx.index, search: ctx.search },
@@ -110,3 +114,5 @@ export async function researchItem(
     ctx.search.close();
   }
 }
+
+export { profileGitHubLogin, suggestOwnership } from "./ownership.js";

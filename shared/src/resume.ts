@@ -58,10 +58,11 @@ export const Resume = z
     kind: z.enum(["master", "base", "job"]),
     parent: z.string().nullable(),
     template: Slug,
-    layout: z.record(z.string(), z.union([z.number(), z.string()])).default({}),
+    layout: z.record(z.string(), z.union([z.number(), z.string(), z.boolean(), z.array(z.string())])).default({}),
     header: z.object({
       name: z.string(),
       headline: z.string().optional(),
+      location: z.string().optional(),
       contact: z.array(Contact).default([]),
     }),
     sections: z.array(Section),
@@ -101,4 +102,15 @@ export function visibleBullets(resume: Resume): Bullet[] {
     }
   }
   return bullets;
+}
+
+/** Render ordering is stable: unknown ids are ignored, unlisted sections follow. */
+export function orderedSections(resume: Resume): Resume["sections"] {
+  const order = resume.layout.section_order;
+  if (!Array.isArray(order)) return resume.sections;
+  const positions = new Map<string, number>();
+  for (const id of order) if (!positions.has(id)) positions.set(id, positions.size);
+  return [...resume.sections].sort(
+    (a, b) => (positions.get(a.id) ?? positions.size) - (positions.get(b.id) ?? positions.size),
+  );
 }

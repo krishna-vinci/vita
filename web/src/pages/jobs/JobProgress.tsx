@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 /** Plain-word progress for a running job. Internal stage names never reach the page. */
 export function JobProgress({ job, title, onCancel }: { job: JobView; title: string; onCancel?: () => void }) {
+  const foundQuestions = job.progress.startsWith("needs-answers");
   const current = job.status === "queued" ? -1 : Math.max(progressStep(job.progress), 0);
   return (
     <section aria-labelledby="progress-title" className="mx-auto flex w-full max-w-xl flex-col gap-6 py-6">
@@ -14,7 +15,11 @@ export function JobProgress({ job, title, onCancel }: { job: JobView; title: str
           {title}
         </h2>
         <p className="text-muted-foreground" role="status" aria-live="polite">
-          {job.status === "queued" ? "Waiting for a turn…" : `${progressSteps[current]}…`}
+          {job.status === "queued"
+            ? "Waiting for a turn…"
+            : foundQuestions
+              ? "Found a few questions"
+              : `${progressSteps[current]}…`}
         </p>
       </div>
       <ol className="flex flex-col gap-3 rounded-xl border bg-card p-5">

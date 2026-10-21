@@ -116,6 +116,15 @@ async function addAnswerClaims(
     const analysisText = await optionalText(ws.root, `applications/${app}/analysis.json`);
     const analysis = analysisText ? JobAnalysis.safeParse(JSON.parse(analysisText)) : undefined;
     for (const [requirementId, raw] of Object.entries(parsed.answers)) {
+      if (requirementId.startsWith("ownership.")) {
+        const item = index.items.get(requirementId.slice("ownership.".length));
+        const match = /^(sole|lead|team|contributor)(?:\s*:\s*([\s\S]*))?$/i.exec(String(raw).trim());
+        if (item && !item.meta.relationship && match) {
+          item.meta.relationship = match[1]?.toLowerCase() as "sole" | "lead" | "team" | "contributor";
+          if (match[2]) item.meta.contribution = match[2];
+        }
+        continue;
+      }
       const fact = answerFact(String(raw));
       if (!fact) continue;
       const requirement = analysis?.success

@@ -58,7 +58,11 @@ export const ApiResumeOp = z.discriminatedUnion("op", [
   z.strictObject({ op: z.literal("section.rename"), id, title: z.string() }),
   z.strictObject({ op: z.literal("item.hide"), id, hidden: z.boolean() }),
   z.strictObject({ op: z.literal("section.hide"), id, hidden: z.boolean() }),
-  z.strictObject({ op: z.literal("layout.set"), key: id, value: z.union([z.number(), z.string()]) }),
+  z.strictObject({
+    op: z.literal("layout.set"),
+    key: id,
+    value: z.union([z.number(), z.string(), z.boolean(), z.array(z.string()).max(50)]),
+  }),
   z.strictObject({ op: z.literal("variant.swap"), bulletId: id, variantId: id }),
   z.strictObject({
     op: z.literal("bullet.override"),
@@ -100,6 +104,10 @@ export type DeleteResourceResult = z.infer<typeof DeleteResourceResult>;
 export const AnswersRequest = z.strictObject({
   answers: z.record(id, z.string().max(20_000)).refine((answers) => Object.keys(answers).length <= 100),
 });
+export const WriteApplicationRequest = z.strictObject({ skip: z.literal(true) });
+export type WriteApplicationRequest = z.infer<typeof WriteApplicationRequest>;
+export const ApplicationStatus = z.enum(["needs-answers", "draft", "done"]);
+export type ApplicationStatus = z.infer<typeof ApplicationStatus>;
 export const EmptyRequest = z.strictObject({});
 export const UndoRequest = z
   .strictObject({ scope: z.enum(["resume", "application", "outline", "projects"]), id: Slug.optional() })
@@ -125,6 +133,7 @@ export const ResumeSummary = z.object({
 });
 export type ResumeSummary = z.infer<typeof ResumeSummary>;
 export const ApplicationSummary = z.object({
+  status: ApplicationStatus,
   ...ResourceMetadata.shape,
   id: Slug,
   title: z.string(),
@@ -136,6 +145,7 @@ export const ApplicationSummary = z.object({
 export type ApplicationSummary = z.infer<typeof ApplicationSummary>;
 export const ResumeResource = z.object({
   ...ResourceMetadata.shape,
+  patchConflict: z.boolean().optional(),
   resume: Resume,
   review: Review.nullable(),
   pdfUrl: z.string().nullable(),
@@ -151,6 +161,8 @@ export const ResumeMutation = ResumeResource.extend({
 });
 export type ResumeMutation = z.infer<typeof ResumeMutation>;
 export const ApplicationResource = ResumeResource.extend({
+  status: ApplicationStatus,
+  resume: Resume.nullable(),
   jobText: z.string(),
   notes: z.string(),
   analysis: JobAnalysis,
@@ -181,6 +193,7 @@ export const ApiModelsConfig = z.strictObject({
       "source-editor": model.optional(),
       researcher: model.optional(),
       interviewer: model.optional(),
+      "template-designer": model.optional(),
       "template-adopter": model.optional(),
       onboarder: model.optional(),
     })
@@ -247,6 +260,8 @@ export const VitaEvent = z.discriminatedUnion("type", [
 export type VitaEvent = z.infer<typeof VitaEvent>;
 export const ExportResult = z.object({ resource: ApplicationResource, sha: CommitSha, pdfUrl: z.string() });
 export type ExportResult = z.infer<typeof ExportResult>;
+export const ResumeExportResult = z.object({ resource: ResumeResource, sha: CommitSha, pdfUrl: z.string() });
+export type ResumeExportResult = z.infer<typeof ResumeExportResult>;
 export type UndoResult = {
   resource: MarkdownResource | ResumeResource | ApplicationResource | null;
   sha: string | null;

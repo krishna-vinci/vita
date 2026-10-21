@@ -131,10 +131,10 @@ describe("selectEvidence", () => {
       maxClaims: 3,
     });
     expect(selection.claimIds).toEqual(["nurse-project-1", "nurse-project-2", "nurse-work-1"]);
-    expect(selection.items).toEqual([
+    expect(selection.items.map(({ itemSlug, claimIds, variantIds }) => ({ itemSlug, claimIds, variantIds }))).toEqual([
+      { itemSlug: "linden-community-clinic", claimIds: ["nurse-work-1"], variantIds: [] },
       { itemSlug: "discharge-information-review", claimIds: ["nurse-project-1", "nurse-project-2"], variantIds: [] },
       { itemSlug: "empty-item", claimIds: [], variantIds: [] },
-      { itemSlug: "linden-community-clinic", claimIds: ["nurse-work-1"], variantIds: [] },
     ]);
   });
 
@@ -151,7 +151,7 @@ describe("selectEvidence", () => {
     ];
     const selection = select(developer, { keywords: [["catalogue"]], locked, maxClaims: 2 });
     expect(selection.claimIds).toEqual(["developer-qualification-1", "extra-fact"]);
-    expect(selection.items).toEqual([
+    expect(selection.items.map(({ itemSlug, claimIds, variantIds }) => ({ itemSlug, claimIds, variantIds }))).toEqual([
       { itemSlug: "bsc-in-computing", claimIds: ["developer-qualification-1"], variantIds: [] },
     ]);
   });
@@ -167,7 +167,7 @@ describe("selectEvidence", () => {
       itemSlug: "community-archive",
     });
     expect(select(developer, { keywords: [["accessibility"]] }).claimIds).toEqual(["developer-work-1"]);
-    expect(select(developer, { keywords: [["inclusive"]] }).items).toEqual([
+    expect(select(developer, { keywords: [["inclusive"]] }).items).toMatchObject([
       {
         itemSlug: "community-archive",
         claimIds: ["developer-project-1", "developer-project-2"],
@@ -212,6 +212,17 @@ describe("selectEvidence", () => {
     ]);
     expect(select(fixture, { keywords: [["matching"]], maxClaims: undefined }).claimIds).toHaveLength(40);
     expect(select(fixture, { keywords: [["matching"]], maxClaims: 0 }).claimIds).toEqual([]);
-    expect(select(fixture)).toEqual({ items: [], claimIds: [] });
+    expect(select(fixture)).toEqual({ items: [], claimIds: [], claimScores: {} });
   });
+});
+
+it("gives higher-relevance items larger bullet budgets even when a weaker item is a lead", () => {
+  const outline = parseOutline("");
+  const { doc } = parseProjects(
+    "## Top\n### Claims\n- Added alpha beta gamma. <!-- c:top -->\n## Other\n### Claims\n- Added alpha. <!-- c:other -->\n## Unrelated\n### Claims\n- Organised workshops. <!-- c:unrelated -->\n",
+  );
+  const fixture = { index: buildClaimIndex(doc, outline), outline };
+  const result = select(fixture, { keywords: [["alpha"], ["beta"], ["gamma"]], lead: ["other", "unrelated"] });
+  expect(result.items.map((item) => item.itemSlug)).toEqual(["top", "other", "unrelated"]);
+  expect(result.items.map((item) => item.bulletBudget)).toEqual([4, 3, 1]);
 });

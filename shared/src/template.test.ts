@@ -58,3 +58,17 @@ describe("review schemas", () => {
     expect(RenderCheck.safeParse({ pages: 1.5, missingBullets: [], outOfOrder: [], ok: true }).success).toBe(false);
   });
 });
+
+it("parses typed knobs and rejects invalid defaults without breaking legacy numeric knobs", () => {
+  expect(Knob.parse({ type: "enum", options: ["left", "right"], default: "left" }).type).toBe("enum");
+  expect(Knob.parse({ type: "color", default: "#141E61" }).default).toBe("#141E61");
+  expect(Knob.parse({ type: "bool", default: false }).default).toBe(false);
+  for (const knob of [
+    { type: "enum", options: ["left"], default: "right" },
+    { type: "enum", options: [], default: "left" },
+    { type: "color", default: "red" },
+    { type: "color", default: "#fff" },
+    { type: "bool", default: "false" },
+  ])
+    expect(Knob.safeParse(knob).success).toBe(false);
+});

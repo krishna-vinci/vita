@@ -83,6 +83,13 @@ export function checkerContext(resume: Resume, index: ClaimIndex) {
               section: { id: section.id, title: section.title, kind: section.kind },
               item: parent,
               claims: bullet.claims.map((id) => index.claims.get(id) ?? { id, missing: true }),
+              ownership: [...new Set(bullet.claims.flatMap((id) => index.claims.get(id)?.itemSlug ?? []))].map(
+                (slug) => ({
+                  itemSlug: slug,
+                  relationship: index.items.get(slug)?.meta.relationship ?? "unknown",
+                  contribution: index.items.get(slug)?.meta.contribution,
+                }),
+              ),
             }));
         }),
     );
@@ -105,6 +112,7 @@ export class VerdictCache {
       [...entry.bullet.claims].sort(),
       entry.item,
       entry.section,
+      entry.ownership,
       [...entry.claims].sort((a, b) => a.id.localeCompare(b.id)),
     ]);
   }

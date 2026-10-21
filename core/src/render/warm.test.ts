@@ -50,12 +50,12 @@ it("compiles every bundled template once with a sample and network-enabled flags
     .map((entry) => entry.name))
     if (!(await readFile(join(templates, id, "template.yaml"), "utf8")).includes("kind: letter"))
       resumeTemplates.push(id);
-  expect(calls).toHaveLength(resumeTemplates.length);
+  expect(calls).toHaveLength(resumeTemplates.length + 2);
   for (const call of calls) {
     expect(call.args).toEqual(["-X", "compile", "main.tex"]);
     expect(call.tex).toContain("Alex Example");
-    expect(call.tex).toContain("\\href{https://example.test/}{example.test}");
-    expect(call.tex).toContain("\\href{https://example.test/review?x=1\\%25\\#notes}{Website}");
+    expect(call.tex).toContain("\\href{https://example.test/}{example.test");
+    expect(call.tex).toContain("\\href{https://example.test/review?x=1\\%25\\#notes}{Website");
     expect(call.tex).toContain("Organised records");
     expect(call.tex).toContain("\\textbf{Coordination}");
     expect(call.tex).toContain("Documented clear notes");

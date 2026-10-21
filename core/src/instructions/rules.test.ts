@@ -42,6 +42,7 @@ it("locks numeric caps, unions restrictions and preserves host categorical rules
     locale: "en-US" as const,
   };
   expect(mergeRules(host, user)).toEqual({
+    min_fill: 0.85,
     max_pages: 2,
     max_bullet_chars: 180,
     banned_phrases: ["Team Player", "guru"],
@@ -69,7 +70,7 @@ it("loads config/rules.yaml with host locks, including an omitted user page limi
     rules: { max_pages: 3, required_sections: ["Experience", "Summary"] },
   });
   vi.stubEnv("VITA_INSTANCE_DIR", "");
-  expect((await loadRules({ root })).rules).toEqual({ max_pages: 1, required_sections: ["Summary"] });
+  expect((await loadRules({ root })).rules).toEqual({ min_fill: 0.85, max_pages: 1, required_sections: ["Summary"] });
 });
 
 it("lets users override unlocked host rules and rejects invalid mechanical settings", () => {
@@ -78,7 +79,7 @@ it("lets users override unlocked host rules and rejects invalid mechanical setti
       { locked: false, max_pages: 1, required_sections: ["Experience"] },
       { max_pages: 3, required_sections: [] },
     ),
-  ).toEqual({ max_pages: 3, required_sections: [] });
+  ).toEqual({ min_fill: 0.85, max_pages: 3, required_sections: [] });
   for (const value of [
     { date_format: "anything" },
     { locale: "any" },
@@ -87,4 +88,11 @@ it("lets users override unlocked host rules and rejects invalid mechanical setti
     { locked: true },
   ])
     expect(Rules.safeParse(value).success).toBe(false);
+});
+
+it("validates min_fill, preserves an omitted user floor and enforces a locked host floor", () => {
+  expect(Rules.parse({}).min_fill).toBe(0.85);
+  expect(mergeRules({ locked: true, min_fill: 0.9 }, { min_fill: 0.5 }).min_fill).toBe(0.9);
+  expect(mergeRules({ locked: false, min_fill: 0.7 }, {}).min_fill).toBe(0.7);
+  expect(Rules.safeParse({ min_fill: 1.1 }).success).toBe(false);
 });

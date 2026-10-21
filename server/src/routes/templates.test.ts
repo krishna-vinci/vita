@@ -191,3 +191,115 @@ it("rejects invalid and missing bundled PNGs and never serves workspace preview 
   await cp(join(bundledDir, "templates/rover-base/preview.png"), join(root, "templates/workspace-only/preview.png"));
   expect((await server.request("/api/templates/workspace-only/preview.png")).status).toBe(404);
 });
+
+it("forks bundled templates, exposes the full contract, validates source with line errors, previews and uses optimistic source saves", async () => {
+  const server = await app();
+  const dto = await import("@vita/shared");
+  const contract = dto.TemplateContract.parse(await (await server.request("/api/templates/contract")).json());
+  for (const key of [
+    "contact.href",
+    "contact.display",
+    "item.links",
+    "header.location",
+    "section.paragraphs",
+    "section.detailItems",
+  ])
+    expect(contract.variables[key]).toBeTruthy();
+  expect(Object.keys(contract.snippets)).toEqual(
+    expect.arrayContaining(["icons", "links", "footer", "two-column-skills", "location"]),
+  );
+  const response = await server.request("/api/templates/rover-base/fork", post({ name: "My copy" }));
+  expect(response.status, await response.clone().text()).toBe(201);
+  const fork = dto.TemplateSourceMutation.parse(await response.json());
+  expect(fork).toMatchObject({ id: "my-copy", editable: true, meta: { forkedFrom: "rover-base" } });
+  const bundled = dto.TemplateSourceView.parse(await (await server.request("/api/templates/rover-base/source")).json());
+  expect(bundled.editable).toBe(false);
+  expect(
+    (
+      await server.request("/api/templates/rover-base/source", {
+        ...post({ source: bundled.source, baseHash: bundled.hash }),
+        method: "PUT",
+      })
+    ).status,
+  ).toBe(403);
+  const bad = await server.request("/api/templates/my-copy/source", {
+    ...post({ source: `${fork.source}\n\\write18{evil}`, baseHash: fork.hash }),
+    method: "PUT",
+  });
+  expect(bad.status).toBe(422);
+  expect(await bad.text()).toMatch(/main.tex.njk:\d+: Unsafe command/);
+  const syntax = await server.request("/api/templates/my-copy/source", {
+    ...post({ source: `${fork.source}\n((* include 'outside' *))`, baseHash: fork.hash }),
+    method: "PUT",
+  });
+  expect(syntax.status).toBe(422);
+  expect(await syntax.text()).toMatch(/main.tex.njk:\d+:/);
+  const saved = dto.TemplateSourceMutation.parse(
+    await (
+      await server.request(
+        "/api/templates/my-copy/source",
+        post({ source: `${fork.source}\n% spacing`, baseHash: fork.hash }),
+      )
+    ).json(),
+  );
+  expect(saved.hash).not.toBe(fork.hash);
+  expect(
+    (await server.request("/api/templates/my-copy/source", post({ source: fork.source, baseHash: fork.hash }))).status,
+  ).toBe(409);
+  const render = await import("../../../core/src/render/index.js");
+  vi.spyOn(render, "compileTex").mockResolvedValue({
+    pdf: Buffer.from("preview-current-resume"),
+    log: "Preview compiled",
+  });
+  const master = Resume.parse(JSON.parse(await core.readText(root, "resumes/master/resume.json")));
+  vi.spyOn(render, "pdfText").mockResolvedValue({ text: core.renderMarkdown(master), pages: 1 });
+  const preview = await server.request("/api/templates/my-copy/preview", post());
+  expect(preview.status, await preview.clone().text()).toBe(200);
+  const result = dto.TemplatePreviewResult.parse(await preview.json());
+  expect(await (await server.request(result.previewUrl)).text()).toBe("preview-current-resume");
+  expect((await server.request("/api/templates/my-copy", { method: "DELETE" })).status).toBe(204);
+});
+
+it("refuses deletion while any resume or base configuration uses a workspace template, listing those resources", async () => {
+  const server = await app();
+  await server.request("/api/templates/rover-base/fork", post({ name: "In use" }));
+  const master = JSON.parse(await core.readText(root, "resumes/master/resume.json"));
+  await core.writeTextAtomic(root, "resumes/master/resume.json", JSON.stringify({ ...master, template: "in-use" }));
+  await core.writeTextAtomic(root, "resumes/future-base/base.yaml", "name: Future base\ntemplate: in-use\n");
+  const response = await server.request("/api/templates/in-use", { method: "DELETE" });
+  expect(response.status).toBe(409);
+  expect(await response.json()).toMatchObject({
+    error: {
+      code: "template-in-use",
+      details: { resumes: expect.arrayContaining(["resumes/master", "resumes/future-base"]) },
+    },
+  });
+  expect((await server.request("/api/templates/rover-base", { method: "DELETE" })).status).toBe(403);
+});
+
+it("returns a faux designer proposal and preview without saving until the optimistic source POST", async () => {
+  const source = `${await readFile(join(bundledDir, "templates/rover-base/main.tex.njk"), "utf8")}\n% More breathing room`;
+  const server = await app([{ tool: "submit_design", arguments: { source } }]);
+  await server.request("/api/templates/rover-base/fork", post({ name: "Design copy" }));
+  const render = await import("../../../core/src/render/index.js");
+  vi.spyOn(render, "compileTex").mockResolvedValue({ pdf: Buffer.from("designed-preview"), log: "Design compiled" });
+  vi.spyOn(render, "pdfText").mockResolvedValue({
+    text: "Organised records and documented the review process.",
+    pages: 1,
+  });
+  const response = await server.request("/api/templates/design-copy/design", post({ message: "Add breathing room" }));
+  expect(response.status, await response.clone().text()).toBe(200);
+  const dto = await import("@vita/shared");
+  const proposal = dto.TemplateDesignResult.parse(await response.json());
+  expect(proposal.diff).toContain("+% More breathing room");
+  const before = dto.TemplateSourceView.parse(await (await server.request("/api/templates/design-copy/source")).json());
+  expect(before.source).not.toBe(source);
+  expect(
+    (
+      await server.request(
+        "/api/templates/design-copy/source",
+        post({ source: proposal.source, baseHash: proposal.baseHash }),
+      )
+    ).status,
+  ).toBe(200);
+});

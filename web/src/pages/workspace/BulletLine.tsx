@@ -25,11 +25,14 @@ export function BulletLine({
   flag,
   ctx,
   position,
+  inline = false,
 }: {
   bullet: Bullet;
   flag?: Flag;
   ctx: SheetContext;
   position: { itemId: string; itemSlug: string; index: number; count: number };
+  /** Sits in a run of lines, separated by commas, as a titled list item does. */
+  inline?: boolean;
 }) {
   const { actions, details, busy, changed, claims, checks } = ctx;
   const [editing, setEditing] = useState(false);
@@ -109,14 +112,18 @@ export function BulletLine({
       ref={sortable.setNodeRef}
       style={{ transform: CSS.Translate.toString(sortable.transform), transition: sortable.transition }}
       className={cn(
-        "group/line relative -ml-6 flex list-none flex-col rounded-sm py-0.5 pl-6",
+        inline
+          ? "group/line relative inline-flex list-none items-start rounded-sm after:content-[','] last:after:content-none"
+          : "group/line relative -ml-6 flex list-none flex-col rounded-sm py-0.5 pl-6",
         changed.has(bullet.id) && "bg-primary/10",
         sortable.isDragging && "z-10 opacity-40",
       )}
     >
       <div className="flex items-start gap-1">
-        <span aria-hidden="true" className="absolute top-2.5 left-[18px] size-1 rounded-full bg-sheet-ink" />
-        <div className="min-w-0 flex-1 pl-3 break-words">{body}</div>
+        {!inline && (
+          <span aria-hidden="true" className="absolute top-2.5 left-[18px] size-1 rounded-full bg-sheet-ink" />
+        )}
+        <div className={cn("min-w-0 flex-1 break-words", !inline && "pl-3")}>{body}</div>
         {!editing && (
           <div className="flex shrink-0 items-center">
             <button

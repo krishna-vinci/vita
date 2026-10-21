@@ -212,9 +212,26 @@ export function applyOps(
         break;
       }
       case "layout.set": {
+        // Section order is not a template knob: every template honours it (render/tex.ts orderedSections).
+        if (op.key === "section_order") {
+          if (!Array.isArray(op.value)) throw new OpError("invalid", "section_order must be a list of section ids");
+          const known = new Set(draft.sections.map((section) => section.id));
+          draft.layout = {
+            ...draft.layout,
+            section_order: [...new Set(op.value.filter((sectionId) => known.has(sectionId)))],
+          };
+          break;
+        }
+        if (Array.isArray(op.value)) throw new OpError("invalid", `Layout key ${op.key} takes a single value`);
         if (!Object.hasOwn(ctx.template.knobs, op.key)) throw new OpError("invalid", `Unknown layout key: ${op.key}`);
-        const value = resolveLayout(ctx.template, { [op.key]: op.value })[op.key];
-        if (value === undefined) throw new OpError("invalid", `Unresolved layout key: ${op.key}`);
+        let value: number | string | boolean | string[] | undefined;
+        try {
+          value = resolveLayout(ctx.template, { [op.key]: op.value })[op.key];
+        } catch (error) {
+          throw new OpError("invalid", error instanceof Error ? error.message : String(error));
+        }
+        if (value === undefined || Array.isArray(value))
+          throw new OpError("invalid", `Unresolved layout key: ${op.key}`);
         draft.layout = { ...draft.layout, [op.key]: value };
         break;
       }

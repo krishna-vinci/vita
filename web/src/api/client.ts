@@ -37,10 +37,12 @@ import {
   type OnboardingMutation,
   type OnboardingProposal,
   type OnboardingStatus,
+  type OwnershipSuggestion,
   type PackSummary,
   type Prep,
   type PromoteRequest,
   type PutMarkdownRequest,
+  type PutRelationshipRequest,
   type PutResumeInstructionsRequest,
   type PutRulesRequest,
   type PutSettingsRequest,
@@ -49,6 +51,7 @@ import {
   type ResearchRequest,
   type ResourceMetadataMutation,
   type ResumeChatReply,
+  type ResumeExportResult,
   type ResumeMutation,
   type ResumeOpsRequest,
   type ResumeResource,
@@ -64,14 +67,22 @@ import {
   type SyncMutation,
   type SyncSuggestion,
   type TemplateApproval,
+  type TemplateContract,
+  type TemplateDesignResult,
+  type TemplatePreviewResult,
+  type TemplateSourceMutation,
+  type TemplateSourceView,
   type TemplateSummary,
   type TemplateUploadView,
+  type TexMutation,
+  type TexView,
   type Tracker,
   type TrackerEventInput,
   type TrackerFollowUpInput,
   type UndoRequest,
   type UndoResult,
   type WorkspaceView,
+  type WriteApplicationRequest,
 } from "@vita/shared";
 
 export class ApiError extends Error {
@@ -139,6 +150,8 @@ async function discard(path: string): Promise<void> {
       response.status,
       parsed.success ? parsed.data.error.code : "request-failed",
       parsed.success ? parsed.data.error.message : `The request failed (${response.status}). Please try again.`,
+      undefined,
+      parsed.success ? parsed.data.error.details : undefined,
     );
   }
 }
@@ -269,6 +282,8 @@ export const api = {
     get: (signal?: AbortSignal) => get<MarkdownResource>("/projects", signal),
     save: (body: PutMarkdownRequest) => send<MarkdownMutation>("/projects", body, "PUT"),
     importLegacy: (body: ImportLegacyRequest) => send<ImportLegacyResult>("/projects/import-legacy", body),
+    setRelationship: (slug: string, body: PutRelationshipRequest) =>
+      send<MarkdownMutation>(`/projects/${segment(slug)}/relationship`, body, "PUT"),
   },
   resumes: {
     list: (signal?: AbortSignal, archived?: "include" | "only") =>
@@ -284,6 +299,7 @@ export const api = {
     create: (body: CreateBaseRequest) => send<JobMutation>("/resumes", body),
     generateMaster: () => send<JobMutation>("/master/generate", {}),
     ops: (id: string, body: ResumeOpsRequest) => send<ResumeMutation>(`/resumes/${segment(id)}/ops`, body),
+    export: (id: string) => send<ResumeExportResult>(`/resumes/${segment(id)}/export`, {}),
   },
   applications: {
     list: (signal?: AbortSignal, archived?: "include" | "only") =>
@@ -298,6 +314,7 @@ export const api = {
     get: (id: string, signal?: AbortSignal) => get<ApplicationResource>(`/applications/${segment(id)}`, signal),
     create: (body: CreateApplicationRequest) => send<JobMutation>("/applications", body),
     answers: (id: string, body: AnswersRequest) => send<JobMutation>(`/applications/${segment(id)}/answers`, body),
+    write: (id: string, body: WriteApplicationRequest) => send<JobMutation>(`/applications/${segment(id)}/write`, body),
     ops: (id: string, body: ResumeOpsRequest) => send<ResumeMutation>(`/applications/${segment(id)}/ops`, body),
     export: (id: string) => send<ExportResult>(`/applications/${segment(id)}/export`, {}),
   },
@@ -324,6 +341,16 @@ export const api = {
     start: (id: string) => send<JobMutation>(`/applications/${segment(id)}/prep`, {}),
     get: (id: string, signal?: AbortSignal) => get<Prep>(`/applications/${segment(id)}/prep`, signal),
   },
+  tex: {
+    get: (scope: "resume" | "application", id: string, signal?: AbortSignal) =>
+      get<TexView>(`/${scope === "resume" ? "resumes" : "applications"}/${segment(id)}/tex`, signal),
+    save: (scope: "resume" | "application", id: string, body: { tex: string; baseHash: string }) =>
+      send<TexMutation>(`/${scope === "resume" ? "resumes" : "applications"}/${segment(id)}/tex`, body, "PUT"),
+    reset: (scope: "resume" | "application", id: string) =>
+      request<TexMutation>(`/${scope === "resume" ? "resumes" : "applications"}/${segment(id)}/tex`, {
+        method: "DELETE",
+      }),
+  },
   fit: (scope: "resume" | "application", id: string, maxPages?: number) =>
     send<FitResponse>(
       `/${scope === "resume" ? "resumes" : "applications"}/${segment(id)}/fit`,
@@ -341,12 +368,25 @@ export const api = {
     approve: (id: string, proposal: AdoptionProposal) =>
       send<TemplateApproval>(`/templates/${segment(id)}/approve`, proposal),
     discard: (id: string) => discard(`/templates/${segment(id)}`),
+    contract: (signal?: AbortSignal) => get<TemplateContract>("/templates/contract", signal),
+    fork: (id: string, name: string) => send<TemplateSourceMutation>(`/templates/${segment(id)}/fork`, { name }),
+    source: (id: string, signal?: AbortSignal) => get<TemplateSourceView>(`/templates/${segment(id)}/source`, signal),
+    saveSource: (id: string, body: { source: string; baseHash: string }) =>
+      send<TemplateSourceMutation>(`/templates/${segment(id)}/source`, body, "PUT"),
+    preview: (id: string, resumeId?: string) =>
+      send<TemplatePreviewResult>(`/templates/${segment(id)}/preview`, resumeId ? { resumeId } : {}),
+    design: (id: string, message: string) =>
+      send<TemplateDesignResult>(`/templates/${segment(id)}/design`, { message }),
   },
   sync: {
     suggestions: (signal?: AbortSignal) => get<SyncSuggestion[]>("/sync/suggestions", signal),
     apply: (body: SyncApplyRequest) => send<SyncMutation>("/sync/apply", body),
   },
-  research: (body: ResearchRequest) => send<JobMutation>("/research", body),
+  research: {
+    start: (body: ResearchRequest) => send<JobMutation>("/research", body),
+    ownership: (repo: string, signal?: AbortSignal) =>
+      get<OwnershipSuggestion>(`/research/ownership?repo=${encodeURIComponent(repo)}`, signal),
+  },
   metrics: {
     questions: (signal?: AbortSignal) => get<MetricQuestion[]>("/metrics/questions", signal),
     answer: (body: AnswerMetricRequest) => send<SourceProposal>("/metrics/answer", body),

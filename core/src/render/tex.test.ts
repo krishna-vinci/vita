@@ -81,3 +81,92 @@ it("renders bullets placed in summary and list sections", async () => {
   expect(tex).toContain("\\textbf{Tools}: Spreadsheets, Rostering\\par");
   expect(tex).toContain("First aid\\par");
 });
+
+it("renders header location, experience subtitle and stable section_order in every bundled resume template", async () => {
+  const { readdir } = await import("node:fs/promises");
+  const { renderMarkdown } = await import("./markdown");
+  const { checkRender } = await import("./textcheck");
+  const root = fileURLToPath(new URL("../../../templates", import.meta.url));
+  const resume = Resume.parse({
+    id: "master",
+    kind: "master",
+    parent: null,
+    template: "rover-base",
+    header: { name: "Example", location: "Pune & Remote" },
+    layout: { section_order: ["second", "unknown", "second"] },
+    sections: [
+      {
+        id: "first",
+        title: "First section",
+        kind: "entries",
+        items: [
+          {
+            id: "role",
+            title: "Clinic",
+            subtitle: "Care coordinator",
+            bullets: [{ id: "b1", text: "Coordinated intake." }],
+          },
+        ],
+      },
+      {
+        id: "second",
+        title: "Second section",
+        kind: "entries",
+        items: [{ id: "project", title: "Workshop", bullets: [{ id: "b2", text: "Organised workshops." }] }],
+      },
+      { id: "third", title: "Third section", kind: "text", text: "Available locally." },
+    ],
+  });
+  for (const id of await readdir(root)) {
+    if (!id.startsWith("rover-") || id === "rover-letter") continue;
+    const tex = renderTex(resume, await loadTemplate([root], id));
+    expect(tex, id).toContain("Pune \\& Remote");
+    expect(tex.split("Pune \\& Remote").length - 1, id).toBe(1);
+    expect(tex, id).toContain("Care coordinator");
+    expect(tex.indexOf("Second section"), id).toBeLessThan(tex.indexOf("First section"));
+    expect(tex.indexOf("First section"), id).toBeLessThan(tex.indexOf("Third section"));
+  }
+  const markdown = renderMarkdown(resume);
+  expect(markdown).toContain("Pune & Remote");
+  expect(markdown.indexOf("Second section")).toBeLessThan(markdown.indexOf("First section"));
+  expect(checkRender(resume, { text: markdown, pages: 1 }).ok).toBe(true);
+  expect(resume.sections.map((section) => section.id)).toEqual(["first", "second", "third"]);
+});
+
+it("compiles location exactly once in each bundled resume header", async (test) => {
+  const { readdir } = await import("node:fs/promises");
+  const { compileTex, tectonicAvailable } = await import("./compile");
+  const { pdfText } = await import("./textcheck");
+  if (!(await tectonicAvailable())) {
+    console.warn("Skipping compiled location fixtures: Tectonic is not on PATH.");
+    return test.skip();
+  }
+  const root = fileURLToPath(new URL("../../../templates", import.meta.url));
+  const resume = Resume.parse({
+    id: "master",
+    kind: "master",
+    parent: null,
+    template: "rover-base",
+    header: {
+      name: "Example",
+      location: "Pune & Remote",
+      contact: [{ label: "Email", value: "example@example.test" }],
+    },
+    sections: [],
+  });
+  for (const id of await readdir(root)) {
+    if (!id.startsWith("rover-") || id === "rover-letter") continue;
+    const template = await loadTemplate([root], id);
+    const { pdf } = await compileTex({ tex: renderTex(resume, template), assetsDir: template.dir });
+    const { text } = await pdfText(pdf);
+    expect(text.split("Pune & Remote").length - 1, id).toBe(1);
+  }
+}, 60_000);
+
+it("formats dates without inventing months and keeps optional header location in the context", async () => {
+  const { formatPeriod } = await import("./tex");
+  expect(formatPeriod("2023-01 – 2026-10", "month-year")).toBe("Jan 2023 – Oct 2026");
+  expect(formatPeriod("Jan 2023 – Present", "year")).toBe("2023 – Present");
+  expect(formatPeriod("2023 – Present", "month-year")).toBe("2023 – Present");
+  expect(formatPeriod("2023-01 – Present", "original")).toBe("2023-01 – Present");
+});

@@ -3,18 +3,19 @@ import {
   type JobAnalysis,
   JobAnalysis as JobAnalysisSchema,
   Resume,
-  type Review,
+  Review,
+  RoleUsage as RoleUsageSchema,
   Slug,
   slugify,
   visibleBullets,
 } from "@vita/shared";
-import { parse as parseYaml } from "yaml";
+import { parse as parseYaml, stringify } from "yaml";
 import { z } from "zod";
 import { analystRole } from "../agent/roles.js";
 import { selectEvidence } from "../search/index.js";
-import { fileHash, readText, resolveInWorkspace } from "../workspace/index.js";
+import { commitPaths, fileHash, readText, resolveInWorkspace, writeTextAtomic } from "../workspace/index.js";
 import { answerClaimId, effectivePack, findGaps, loadContext, mergeKeywords, optionalText } from "./context.js";
-import { answerFact, expandGroup, gapQuestion, requirementLabel } from "./coverage.js";
+import { answerFact, expandGroup, gapQuestion, requirementCoveredByText, requirementLabel } from "./coverage.js";
 import { localDate } from "./date.js";
 import { baseSummaries } from "./efficient-context.js";
 import { data, generate, roleRunner } from "./generate.js";
@@ -33,9 +34,10 @@ export async function tailor(
     applicationId?: string;
     notes?: string;
     template?: string;
+    skip?: boolean;
   },
   deps: PipelineDeps,
-): Promise<{ applicationDir: string; resume: Resume; review: Review; analysis: JobAnalysis }> {
+) {
   return withGenerationLock(ws.root, async () => {
     deps.signal?.throwIfAborted();
     const profile = await loadProfile(ws.root);
@@ -45,21 +47,38 @@ export async function tailor(
     if (input.applicationId !== undefined) Slug.parse(input.applicationId);
     const existingDir = input.applicationId ? `applications/${input.applicationId}` : undefined;
     const expectedExisting = existingDir ? await fileHash(ws.root, `${existingDir}/resume.json`) : null;
-    const existing = existingDir
-      ? Resume.parse(JSON.parse(await readText(ws.root, `${existingDir}/resume.json`)))
-      : undefined;
+    const existingText = existingDir ? await optionalText(ws.root, `${existingDir}/resume.json`) : undefined;
+    const existing = existingText ? Resume.parse(JSON.parse(existingText)) : undefined;
     const metadata = existingDir
       ? z.record(z.string(), z.unknown()).parse(parseYaml(await readText(ws.root, `${existingDir}/meta.yaml`)))
       : {};
     const notes = input.notes ?? z.string().optional().parse(metadata.notes);
-    const requestedBaseId = input.baseId ?? existing?.parent ?? undefined;
+    const requestedBaseId =
+      input.baseId ?? existing?.parent ?? z.string().nullable().optional().parse(metadata.baseId) ?? undefined;
     const answers = { ...z.record(z.string(), z.string()).parse(metadata.answers ?? {}), ...input.answers };
     const ctx = await loadContext(
       ws,
       input.applicationId ? { answers: { applicationId: input.applicationId, answers } } : {},
     );
     try {
-      const usage: RoleUsage[] = [];
+      const usage: RoleUsage[] = z
+        .array(
+          RoleUsageSchema.extend({
+            role: z.enum([
+              "analyst",
+              "writer",
+              "checker",
+              "ats-reviewer",
+              "resume-editor",
+              "source-editor",
+              "researcher",
+              "interviewer",
+              "template-adopter",
+              "onboarder",
+            ]),
+          }).passthrough(),
+        )
+        .parse(metadata.usage ?? []);
       deps.onProgress?.({ stage: "analyse" });
       const general = await effectivePack(ctx);
       // A rerun of the same job keeps its analysis, so requirement ids (and the answers keyed by them) stay stable.
@@ -106,6 +125,23 @@ export async function tailor(
       };
       deps.onProgress?.({ stage: "gaps" });
       const gaps = findGaps(ctx, analysis);
+      // A receipt-only or expanded-keyword hit can be too weak to write honestly.
+      for (const requirement of analysis.requirements.filter((entry) => entry.importance === "must")) {
+        if (gaps.some((gap) => gap.startsWith(`${requirement.id}:`))) continue;
+        const predicted = selectEvidence(ctx.search, ctx.index, {
+          keywords: requirement.keywords,
+          lead: [],
+          locked: [],
+          maxClaims: 3,
+        });
+        if (
+          !predicted.claimIds.some((id) => {
+            const claim = ctx.index.claims.get(id);
+            return claim && requirementCoveredByText(claim.text, requirement);
+          })
+        )
+          gaps.push(`${requirement.id}: ${gapQuestion(requirement)}`);
+      }
       for (const message of gaps) deps.onProgress?.({ stage: "gaps", message });
       // Must-haves the profile can support: tell the writer which claims cover each, so none is silently dropped.
       const gapIds = new Set(gaps.map((gap) => gap.slice(0, gap.indexOf(":"))));
@@ -124,11 +160,27 @@ export async function tailor(
         .filter((entry) => entry.claimIds.length > 0);
       deps.onProgress?.({ stage: "select" });
       const selection = selectEvidence(ctx.search, ctx.index, {
-        keywords: [...analysis.requirements.flatMap((requirement) => requirement.keywords), ...pack.keywords],
+        keywords: analysis.requirements.flatMap((requirement) => requirement.keywords.map(expandGroup)),
         lead: base?.config.emphasis.lead_items ?? [],
         locked: seed ? visibleBullets(seed).filter((bullet) => bullet.locked) : [],
         maxClaims: 40,
       });
+      for (const selected of selection.items) {
+        const item = ctx.index.items.get(selected.itemSlug);
+        if (
+          !item ||
+          item.meta.relationship ||
+          !item.meta.links.some((link) => /^(?:https?:\/\/)?(?:www\.)?github\.com\/[^/]+\/[^/]+/i.test(link))
+        )
+          continue;
+        const key = `ownership.${item.slug}`;
+        const answer = answers[key]?.trim();
+        const relationship = /^(sole|lead|team|contributor)(?:\s*:\s*([\s\S]*))?$/i.exec(answer ?? "");
+        if (relationship) {
+          item.meta.relationship = relationship[1]?.toLowerCase() as "sole" | "lead" | "team" | "contributor";
+          if (relationship[2]) item.meta.contribution = relationship[2];
+        } else gaps.push(`${key}: What was your role in ${item.name}?`);
+      }
       const slug = Slug.parse(input.slug ?? slugify([analysis.company, analysis.title].filter(Boolean).join("-")));
       const id = input.applicationId ?? `${date}-${slug}`;
       const applicationDir = `applications/${id}`;
@@ -140,6 +192,54 @@ export async function tailor(
           if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
         }
       const expected = existingDir ? expectedExisting : await fileHash(ws.root, `${applicationDir}/resume.json`);
+      const unanswered = gaps.filter((gap) => !answers[gap.slice(0, gap.indexOf(":"))]?.trim());
+      // Submitting answers continues this application; remaining questions are explicitly skipped.
+      const writeNow = input.skip || (input.answers !== undefined && existingDir !== undefined);
+      if (writeNow) for (const gap of unanswered) answers[gap.slice(0, gap.indexOf(":"))] = "skip";
+      if (unanswered.length && !writeNow && !existing) {
+        const review = Review.parse({
+          round: 0,
+          lint: [],
+          checks: [],
+          ats: [],
+          render: null,
+          gaps,
+          overrides: [],
+          done: false,
+          blocking: [],
+        });
+        const files = {
+          [`${applicationDir}/job.md`]: input.jobText,
+          [`${applicationDir}/analysis.json`]: `${JSON.stringify(analysis, null, 2)}\n`,
+          [`${applicationDir}/review.json`]: `${JSON.stringify(review, null, 2)}\n`,
+          [`${applicationDir}/meta.yaml`]: stringify({
+            ...metadata,
+            id,
+            kind: "job",
+            createdAt: metadata.createdAt ?? date,
+            title: analysis.title,
+            company: analysis.company,
+            baseId: base?.id ?? (seed ? "master" : null),
+            answers,
+            notes,
+            status: "needs-answers",
+            usage,
+          }),
+        };
+        deps.signal?.throwIfAborted();
+        if ((await fileHash(ws.root, `${applicationDir}/resume.json`)) !== expected)
+          throw new Error("Application changed during analysis");
+        for (const [rel, content] of Object.entries(files)) await writeTextAtomic(ws.root, rel, content);
+        await commitPaths(ws.root, Object.keys(files), `Analyse application: ${id}`, "system");
+        deps.onProgress?.({ stage: "needs-answers", message: unanswered.join("\n") });
+        return { applicationDir, status: "needs-answers" as const, resume: null, review, analysis };
+      }
+      const depthSelection = selectEvidence(ctx.search, ctx.index, {
+        keywords: analysis.requirements.flatMap((requirement) => requirement.keywords.map(expandGroup)),
+        lead: base?.config.emphasis.lead_items ?? [],
+        locked: [],
+        maxClaims: Number.MAX_SAFE_INTEGER,
+      });
       const result = await generate(
         ctx,
         {
@@ -153,6 +253,8 @@ export async function tailor(
           analysis,
           pack,
           selection,
+          depthSelection,
+          minFill: base?.config.rules.min_fill ?? ctx.rules.min_fill,
           gaps,
           jobText: input.jobText,
           answers,
@@ -170,32 +272,6 @@ export async function tailor(
         usage,
         profile,
       );
-      // A must-have the writer could not honestly show becomes a question for the person, not a dead end:
-      // answering "yes" adds a claim and the next run can cover it (principle 3).
-      const uncovered = result.review.blocking
-        .filter((line) => line.startsWith("Uncovered must-have: "))
-        .map((line) => line.slice("Uncovered must-have: ".length).split(":")[0]?.trim() ?? "");
-      if (uncovered.length > 0) {
-        const asked = new Set(result.review.gaps.map((gap) => gap.slice(0, gap.indexOf(":"))));
-        for (const requirement of analysis.requirements) {
-          const answer = answers[requirement.id];
-          // A "yes" means the writer must use that answer; "no" or "skip" keeps it as an acknowledged gap.
-          if (
-            !uncovered.includes(requirement.id) ||
-            asked.has(requirement.id) ||
-            (answer !== undefined && answerFact(answer) !== null)
-          )
-            continue;
-          result.review.gaps.push(`${requirement.id}: ${gapQuestion(requirement)}`);
-        }
-        const gapIds = new Set(result.review.gaps.map((gap) => gap.slice(0, gap.indexOf(":"))));
-        result.review.blocking = result.review.blocking.filter((line) => {
-          if (!line.startsWith("Uncovered must-have: ")) return true;
-          const id = line.slice("Uncovered must-have: ".length).split(":")[0]?.trim() ?? "";
-          return !gapIds.has(id);
-        });
-        result.review.done = result.review.blocking.length === 0;
-      }
       await persist(
         ws,
         applicationDir,
@@ -210,6 +286,7 @@ export async function tailor(
         expected,
         {
           ...metadata,
+          status: result.review.done ? "done" : "draft",
           createdAt: metadata.createdAt ?? date,
           title: analysis.title,
           company: analysis.company,
@@ -219,7 +296,13 @@ export async function tailor(
         },
         existingDir ? `Rerun ${id} with answers` : undefined,
       );
-      return { applicationDir, resume: result.resume, review: result.review, analysis };
+      return {
+        applicationDir,
+        status: result.review.done ? ("done" as const) : ("draft" as const),
+        resume: result.resume,
+        review: result.review,
+        analysis,
+      };
     } finally {
       ctx.search.close();
     }

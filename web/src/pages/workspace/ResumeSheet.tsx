@@ -111,6 +111,10 @@ export function ResumeSheet({
     setLocal(null);
   };
   const contact = resume.header.contact.filter((entry) => entry.value).map(contactView);
+  const headerLine = [
+    ...(resume.header.location ? [{ key: "location", display: resume.header.location, href: undefined }] : []),
+    ...contact.map((entry) => ({ key: `${entry.label}-${entry.value}`, display: entry.display, href: entry.href })),
+  ];
   const active = activeId ? bullets.get(activeId) : undefined;
   return (
     <DndContext
@@ -130,10 +134,10 @@ export function ResumeSheet({
       >
         <h2 className="text-center text-[26px] leading-none font-semibold">{resume.header.name}</h2>
         {resume.header.headline && <p className="text-center text-sheet-muted">{resume.header.headline}</p>}
-        {contact.length > 0 && (
+        {headerLine.length > 0 && (
           <p className="text-center text-sm break-words text-sheet-muted">
-            {contact.map((entry, index) => (
-              <span key={`${entry.label}-${entry.value}`}>
+            {headerLine.map((entry, index) => (
+              <span key={entry.key}>
                 {index > 0 && " · "}
                 {entry.href ? (
                   <a href={entry.href} target="_blank" rel="noreferrer" className="hover:underline">
@@ -195,7 +199,15 @@ function SectionView({
         <>
           {section.text && <p className="break-words whitespace-pre-line">{section.text}</p>}
           {section.items.map((item) => (
-            <ItemView key={item.id} item={item} flags={flags} ctx={ctx} ids={order[item.id] ?? []} bullets={bullets} />
+            <ItemView
+              key={item.id}
+              item={item}
+              flags={flags}
+              ctx={ctx}
+              ids={order[item.id] ?? []}
+              bullets={bullets}
+              inline={section.kind === "list"}
+            />
           ))}
         </>
       )}
@@ -209,21 +221,52 @@ function ItemView({
   ctx,
   ids,
   bullets,
+  inline,
 }: {
   item: Item;
   flags: ReadonlyMap<string, Flag>;
   ctx: SheetContext;
   ids: string[];
   bullets: ReadonlyMap<string, Bullet>;
+  /** A list section: a titled item reads as "Title: a, b, c" on one line, as the PDF does. */
+  inline: boolean;
 }) {
   const links = item.links ?? ctx.links?.[item.id] ?? [];
   const heading = [item.title, item.subtitle].filter(Boolean).join(", ");
   const when = [item.period, item.location].filter(Boolean).join(" · ");
+  const titled = inline && !!item.title && ids.length > 0 && !item.hidden;
   // The list itself accepts drops, so a line can be dragged into an item that has no lines yet.
   const { setNodeRef } = useDroppable({ id: item.id });
   return (
     <div className={cn("flex flex-col gap-1", item.hidden && "opacity-60")}>
-      {(heading || when) && (
+      {titled && (
+        <div className="flex flex-wrap items-baseline gap-x-1">
+          <strong className="break-words">{item.title}:</strong>
+          <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+            <ul ref={setNodeRef} className="m-0 flex min-h-3 flex-wrap items-baseline p-0">
+              {ids.map((id, index) => {
+                const bullet = bullets.get(id);
+                return bullet ? (
+                  <BulletLine
+                    key={id}
+                    bullet={bullet}
+                    flag={flags.get(id)}
+                    ctx={ctx}
+                    inline
+                    position={{
+                      itemId: item.id,
+                      itemSlug: item.source ?? slugify(item.title),
+                      index,
+                      count: ids.length,
+                    }}
+                  />
+                ) : null;
+              })}
+            </ul>
+          </SortableContext>
+        </div>
+      )}
+      {!titled && (heading || when) && (
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 font-semibold">
           <span className="break-words">{heading}</span>
           <span className="flex items-center gap-2">
@@ -258,7 +301,7 @@ function ItemView({
           ))}
         </ul>
       )}
-      {!item.hidden && (
+      {!item.hidden && !titled && (
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
           <ul ref={setNodeRef} className="m-0 flex min-h-3 flex-col gap-1 pl-4">
             {ids.map((id, index) => {

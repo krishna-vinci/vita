@@ -3,7 +3,8 @@ import type { ClaimIndex } from "../claims/index.js";
 import type { EvidenceSearch } from "./evidence-search.js";
 
 export interface Selection {
-  items: { itemSlug: string; claimIds: string[]; variantIds: string[] }[];
+  items: { itemSlug: string; claimIds: string[]; variantIds: string[]; relevance?: number; bulletBudget?: number }[];
+  claimScores?: Record<string, number>;
   claimIds: string[];
 }
 
@@ -85,7 +86,20 @@ export function selectEvidence(
     items.get(variant.itemSlug)?.variantIds.push(variant.id);
   }
   for (const item of items.values()) item.variantIds.sort(compareId);
-  return { items: [...items.values()], claimIds };
+  const ranked = [...items.values()]
+    .map((item) => ({
+      ...item,
+      relevance: item.claimIds.reduce((sum, id) => sum + (scores.get(id) ?? 0), 0),
+    }))
+    .sort((a, b) => b.relevance - a.relevance || compareId(a.itemSlug, b.itemSlug));
+  return {
+    items: ranked.map((item, position) => ({
+      ...item,
+      bulletBudget: item.relevance > 0 ? (position === 0 ? 4 : position < 3 ? 3 : 2) : 1,
+    })),
+    claimIds,
+    claimScores: Object.fromEntries(scores),
+  };
 }
 
 function compareId(a: string, b: string): number {

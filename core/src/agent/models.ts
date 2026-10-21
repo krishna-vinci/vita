@@ -16,6 +16,7 @@ export const ModelsConfig: z.ZodType<{ default: string; roles: Partial<Record<Ro
       "source-editor": modelName.optional(),
       researcher: modelName.optional(),
       interviewer: modelName.optional(),
+      "template-designer": modelName.optional(),
       "template-adopter": modelName.optional(),
       onboarder: modelName.optional(),
     })
@@ -29,7 +30,7 @@ export async function loadModelsConfig(root: string): Promise<ModelsConfig> {
 }
 
 export function resolveRoleModel(cfg: ModelsConfig, role: RoleName): string {
-  return cfg.roles[role] ?? cfg.default;
+  return cfg.roles[role] ?? (role === "template-designer" ? cfg.roles["template-adopter"] : undefined) ?? cfg.default;
 }
 
 export function modelWarnings(cfg: ModelsConfig): string[] {

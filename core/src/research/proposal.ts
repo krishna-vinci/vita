@@ -1,5 +1,6 @@
 import { type Evidence, type EvidenceSubmission, SourceProposal, slugify } from "@vita/shared";
 import { isMap, isNode, isSeq, parseDocument, stringify } from "yaml";
+import { actionVoiceProblem } from "../lint/action-voice.js";
 import { type ProjectsItem, parseProjects, serializeProjects, writeAnchor } from "../source/index.js";
 import { fenceEnd, fenceStart, heading, sourceLines, uniqueId } from "../source/markdown.js";
 import { newProjectsItem } from "../source/projects.js";
@@ -136,6 +137,10 @@ export function evidenceProposal(
     )
   )
     throw new Error("Research item has invalid metadata; repair it before adding evidence");
+  for (const entry of [...submission.claims, ...submission.variants]) {
+    const problem = actionVoiceProblem(entry.text, [submission.item.name, existing?.name ?? ""]);
+    if (problem) throw new Error(`Research proposal rejected: ${problem} Offending text: ${entry.text}`);
+  }
   const used = new Set<string>(
     doc.items.flatMap((item) => [
       ...item.claims.map((claim) => claim.id),

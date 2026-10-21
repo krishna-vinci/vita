@@ -15,6 +15,7 @@ import {
   Slug,
   slugify,
   UndoRequest,
+  WriteApplicationRequest,
 } from "@vita/shared";
 import { type Context, Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
@@ -33,6 +34,7 @@ import { prepRoutes } from "./routes/prep.js";
 import { researchRoutes } from "./routes/research.js";
 import { syncRoutes } from "./routes/sync.js";
 import { templateRoutes } from "./routes/templates.js";
+import { texRoutes } from "./routes/tex.js";
 import { trackerRoutes } from "./routes/tracker.js";
 import type { WorkspaceRuntime } from "./runtime.js";
 
@@ -101,6 +103,7 @@ export function createWorkspaceApp(runtime: WorkspaceRuntime, options: { webDist
   });
   app.notFound((c) => c.json({ error: { code: "not-found", message: "Route not found" } }, 404));
   app.get("/api/health", (c) => c.json({ ok: true }));
+  app.route("/api", texRoutes(runtime));
   app.route("/api", memoryRoutes(runtime));
   app.route("/api", trackerRoutes(runtime));
   app.route("/api", researchRoutes(runtime));
@@ -174,6 +177,13 @@ export function createWorkspaceApp(runtime: WorkspaceRuntime, options: { webDist
       throw new ApiFailure(409, "resource-busy", "Generation is already queued for this application");
     return c.json({ job: runtime.enqueue("answers", resourceId, input), sha: null }, 202);
   });
+  app.post("/api/applications/:id/write", async (c) => {
+    const resourceId = id(c);
+    const input = await body(c, WriteApplicationRequest);
+    await runtime.application(resourceId);
+    runtime.assertAvailable("application", resourceId);
+    return c.json({ job: runtime.enqueue("answers", resourceId, input), sha: null }, 202);
+  });
   for (const [plural, scope] of [
     ["resumes", "resume"],
     ["applications", "application"],
@@ -200,6 +210,10 @@ export function createWorkspaceApp(runtime: WorkspaceRuntime, options: { webDist
   app.post("/api/applications/:id/export", async (c) => {
     await body(c, EmptyRequest, true);
     return c.json(await runtime.exportApplication(id(c)));
+  });
+  app.post("/api/resumes/:id/export", async (c) => {
+    await body(c, EmptyRequest, true);
+    return c.json(await runtime.exportResource("resume", id(c)));
   });
   app.get("/api/files/*", async (c) => {
     let rel: string;

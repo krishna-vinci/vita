@@ -52,6 +52,8 @@ export const useApplicationAnswers = (id: string) =>
     (input: Parameters<typeof api.applications.answers>[1]) => api.applications.answers(id, input),
     [queryKeys.jobs, queryKeys.application(id)],
   );
+export const useWriteApplication = (id: string) =>
+  useApiMutation(() => api.applications.write(id, { skip: true }), [queryKeys.jobs, queryKeys.application(id)]);
 export const useResumeOps = (id: string) =>
   useApiMutation(
     (input: Parameters<typeof api.resumes.ops>[1]) => api.resumes.ops(id, input),
@@ -64,6 +66,8 @@ export const useApplicationOps = (id: string) =>
   );
 export const useExportApplication = (id: string) =>
   useApiMutation(() => api.applications.export(id), [queryKeys.application(id), queryKeys.workspace]);
+export const useExportResume = (id: string) =>
+  useApiMutation(() => api.resumes.export(id), [queryKeys.resume(id), queryKeys.workspace]);
 export const useCancelJob = () => useApiMutation(api.jobs.cancel, [queryKeys.jobs]);
 export const useUndo = () =>
   useApiMutation(api.undo, [
@@ -126,6 +130,67 @@ export const useApproveTemplate = () =>
       api.templates.approve(input.id, input.proposal),
     [queryKeys.templates, queryKeys.settings],
   );
+export const useTemplateContract = () =>
+  useQuery({
+    queryKey: queryKeys.templateContract,
+    queryFn: ({ signal }) => api.templates.contract(signal),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+export const useTemplateSource = (id: string) =>
+  useQuery({
+    queryKey: queryKeys.templateSource(id),
+    queryFn: ({ signal }) => api.templates.source(id, signal),
+    enabled: !!id,
+    retry: false,
+    // The editor holds its own copy; a refetch must never replace what is being typed.
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+export const useForkTemplate = () =>
+  useApiMutation(
+    (input: { id: string; name: string }) => api.templates.fork(input.id, input.name),
+    [queryKeys.templates],
+  );
+export const useSaveTemplateSource = (id: string) =>
+  useApiMutation(
+    (input: { source: string; baseHash: string }) => api.templates.saveSource(id, input),
+    [queryKeys.templates],
+  );
+export const usePreviewTemplate = (id: string) =>
+  useMutation({ mutationFn: (resumeId?: string) => api.templates.preview(id, resumeId) });
+export const useDesignTemplate = (id: string) =>
+  useMutation({ mutationFn: (message: string) => api.templates.design(id, message) });
+export const useResumeTex = (scope: "resume" | "application", id: string, enabled: boolean) =>
+  useQuery({
+    queryKey: queryKeys.tex(scope, id),
+    queryFn: ({ signal }) => api.tex.get(scope, id, signal),
+    enabled: enabled && !!id,
+    retry: false,
+    gcTime: 0,
+    // The editor holds its own copy; a refetch must never replace what is being typed.
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+/** After the LaTeX changes, the PDF and the resume's review change too. */
+export function useSaveResumeTex(scope: "resume" | "application", id: string) {
+  const client = useQueryClient();
+  const refresh = async () => {
+    await Promise.all(
+      [
+        scope === "resume" ? queryKeys.resume(id) : queryKeys.application(id),
+        queryKeys.workspace,
+        scope === "resume" ? queryKeys.resumes : queryKeys.applications,
+      ].map((queryKey) => client.invalidateQueries({ queryKey })),
+    );
+  };
+  return {
+    save: useMutation({
+      mutationFn: (body: { tex: string; baseHash: string }) => api.tex.save(scope, id, body),
+      onSuccess: refresh,
+    }),
+    reset: useMutation({ mutationFn: () => api.tex.reset(scope, id), onSuccess: refresh }),
+  };
+}
 export const useDiscardTemplate = () => useApiMutation(api.templates.discard, [queryKeys.templates]);
 export const useSyncSuggestions = () =>
   useQuery({ queryKey: queryKeys.sync, queryFn: ({ signal }) => api.sync.suggestions(signal), retry: false });
@@ -133,7 +198,20 @@ export const useApplySync = () =>
   useApiMutation(api.sync.apply, [queryKeys.sync, queryKeys.resumes, queryKeys.workspace]);
 export const usePromote = () => useApiMutation(api.promote, [queryKeys.sync, queryKeys.projects, queryKeys.resumes]);
 
-export const useStartResearch = () => useApiMutation(api.research, [queryKeys.jobs]);
+export const useStartResearch = () => useApiMutation(api.research.start, [queryKeys.jobs]);
+export const useOwnership = (repo?: string) =>
+  useQuery({
+    queryKey: ["ownership", repo],
+    queryFn: ({ signal }) => api.research.ownership(repo ?? "", signal),
+    enabled: !!repo,
+    retry: false,
+  });
+export const useSetRelationship = () =>
+  useApiMutation(
+    (input: { slug: string; body: Parameters<typeof api.projects.setRelationship>[1] }) =>
+      api.projects.setRelationship(input.slug, input.body),
+    [queryKeys.projects, queryKeys.workspace],
+  );
 export const useMetricQuestions = () =>
   useQuery({ queryKey: queryKeys.metrics, queryFn: ({ signal }) => api.metrics.questions(signal), retry: false });
 export const useAnswerMetric = () => useMutation({ mutationFn: api.metrics.answer });

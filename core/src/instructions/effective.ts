@@ -7,6 +7,7 @@ import {
   type RoleName,
   writerRole,
 } from "../agent/roles.js";
+import { templateDesignerRole } from "../agent/template-designer.js";
 import { resumeEditorRole, sourceEditorRole } from "../chat/roles.js";
 import { onboarderRole } from "../onboarding/roles.js";
 import type { WorkspaceHandle } from "../pipeline/types.js";
@@ -22,6 +23,7 @@ export const promptRoles = {
   "resume-editor": resumeEditorRole,
   "source-editor": sourceEditorRole,
   interviewer: interviewerRole,
+  "template-designer": templateDesignerRole,
   "template-adopter": templateAdopterRole,
   researcher: researcherRole,
 };

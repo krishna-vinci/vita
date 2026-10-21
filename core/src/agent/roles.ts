@@ -19,6 +19,7 @@ export type RoleName =
   | "source-editor"
   | "researcher"
   | "interviewer"
+  | "template-designer"
   | "template-adopter"
   | "onboarder";
 export type ReadToolName =

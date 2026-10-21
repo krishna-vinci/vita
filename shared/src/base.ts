@@ -11,9 +11,10 @@ export const BaseConfig = z.object({
     })
     .default({ lead_items: [], skills_first: [] }),
   rules: z
-    .object({ max_pages: z.number().int().min(1).max(4).optional() })
+    .object({ max_pages: z.number().int().min(1).max(4).optional(), min_fill: z.number().min(0).max(1).optional() })
     .passthrough()
     .default({}),
+  layout: z.record(z.string(), z.union([z.number(), z.string(), z.boolean()])).optional(),
   template: Slug.default("rover-base"),
 });
 export type BaseConfig = z.infer<typeof BaseConfig>;

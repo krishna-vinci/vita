@@ -163,3 +163,59 @@ it("validates research and MCP requests, and reports role failures without chang
   });
   expect(await core.readText(root, "projects.md")).toBe(before);
 });
+
+it("returns advisory ownership from injected fetch and confirms relationships through source editing", async () => {
+  const server = await app();
+  if (!runtime) throw new Error("Missing runtime");
+  runtime.options.githubToken = () => "fake-token";
+  runtime.options.researchFetch = vi.fn<typeof fetch>().mockImplementation(
+    async (url) =>
+      new Response(
+        JSON.stringify(
+          String(url).endsWith("/user")
+            ? { login: "owner" }
+            : String(url).includes("/contributors?")
+              ? [
+                  { login: "owner", contributions: 97 },
+                  { login: "peer", contributions: 3 },
+                ]
+              : { owner: { login: "owner" } },
+        ),
+      ),
+  );
+  const before = await core.readText(root, "projects.md");
+  const profileLookup = vi.spyOn(core, "loadProfile");
+  const ownership = await server.request("/api/research/ownership?repo=owner/archive");
+  expect(profileLookup).not.toHaveBeenCalled();
+  expect(ownership.status).toBe(200);
+  expect(await ownership.json()).toMatchObject({
+    suggestion: "sole",
+    ownerLogin: "owner",
+    userLogin: "owner",
+    commitShare: 0.97,
+    contributors: 2,
+  });
+  expect(await core.readText(root, "projects.md")).toBe(before);
+  const response = await server.request("/api/projects/community-archive/relationship", {
+    ...post({ relationship: "team", contribution: "Added filters" }),
+    method: "PUT",
+  });
+  expect(response.status, await response.clone().text()).toBe(200);
+  const result = await response.json();
+  expect(result.sha).toMatch(/^[a-f0-9]{40}$/);
+  const after = await core.readText(root, "projects.md");
+  expect(core.parseProjects(after).doc.items.find((item) => item.slug === "community-archive")?.meta).toMatchObject({
+    relationship: "team",
+    contribution: "Added filters",
+  });
+  expect(after.replace('relationship: "team"\ncontribution: "Added filters"\n', "")).toBe(before);
+  expect(
+    (
+      await server.request("/api/projects/community-archive/relationship", {
+        ...post({ relationship: "unknown" }),
+        method: "PUT",
+      })
+    ).status,
+  ).toBe(400);
+  expect((await server.request("/api/research/ownership?repo=../archive")).status).toBe(400);
+});

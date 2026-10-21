@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { SourceProposal } from "./api";
-import { EvidenceKind } from "./evidence";
+import { EvidenceKind, Relationship } from "./evidence";
 import { Slug } from "./ids";
 
 const line = z
@@ -94,3 +94,21 @@ export const McpConfig = z
     }
   });
 export type McpConfig = z.infer<typeof McpConfig>;
+
+export const OwnershipQuery = z.strictObject({
+  repo: z.string().regex(/^[A-Za-z0-9_-][A-Za-z0-9_.-]*\/[A-Za-z0-9_-][A-Za-z0-9_.-]*$/),
+});
+export const OwnershipSuggestion = z.object({
+  suggestion: z.enum(["sole", "team", "contributor", "unknown"]),
+  reason: z.string(),
+  ownerLogin: z.string(),
+  userLogin: z.string().nullable(),
+  commitShare: z.number().min(0).max(1).nullable(),
+  contributors: z.number().int().nonnegative(),
+});
+export type OwnershipSuggestion = z.infer<typeof OwnershipSuggestion>;
+export const PutRelationshipRequest = z.strictObject({
+  relationship: Relationship,
+  contribution: z.string().trim().max(20_000).optional(),
+});
+export type PutRelationshipRequest = z.infer<typeof PutRelationshipRequest>;

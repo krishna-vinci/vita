@@ -35,7 +35,7 @@ it("doctor passes a complete setup, checks all roles and treats GitHub failure a
   });
   const result = await runDoctor(options, injected);
   expect(result.filter((check) => check.status === "FAIL")).toEqual([]);
-  expect(result.filter((check) => check.item.startsWith("Model:"))).toHaveLength(11);
+  expect(result.filter((check) => check.item.startsWith("Model:"))).toHaveLength(12);
   expect(result.find((check) => check.item === "GitHub research")?.status).toBe("WARN");
   expect(injected.writable).toHaveBeenCalledWith("/test/data");
   expect(injected.command).toHaveBeenCalledWith("pdftotext", ["-v"]);
