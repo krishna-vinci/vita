@@ -15,3 +15,10 @@ export function errorMessages(message: string): string[] {
     .map((line) => line.trimEnd())
     .filter((line) => line.trim());
 }
+
+/** Line numbers in generated LaTeX (`main.tex:41:`), for errors from a compile of the resume's own tex. */
+export function texLinesOf(message: string): number[] {
+  const lines = new Set<number>(errorLinesOf(message));
+  for (const match of message.matchAll(/\bmain\.tex:(\d+)/g)) lines.add(Number(match[1]));
+  return [...lines].filter((line) => line >= 1).sort((a, b) => a - b);
+}

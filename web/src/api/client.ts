@@ -73,6 +73,8 @@ import {
   type TemplateSourceView,
   type TemplateSummary,
   type TemplateUploadView,
+  type TexMutation,
+  type TexView,
   type Tracker,
   type TrackerEventInput,
   type TrackerFollowUpInput,
@@ -336,6 +338,16 @@ export const api = {
   prep: {
     start: (id: string) => send<JobMutation>(`/applications/${segment(id)}/prep`, {}),
     get: (id: string, signal?: AbortSignal) => get<Prep>(`/applications/${segment(id)}/prep`, signal),
+  },
+  tex: {
+    get: (scope: "resume" | "application", id: string, signal?: AbortSignal) =>
+      get<TexView>(`/${scope === "resume" ? "resumes" : "applications"}/${segment(id)}/tex`, signal),
+    save: (scope: "resume" | "application", id: string, body: { tex: string; baseHash: string }) =>
+      send<TexMutation>(`/${scope === "resume" ? "resumes" : "applications"}/${segment(id)}/tex`, body, "PUT"),
+    reset: (scope: "resume" | "application", id: string) =>
+      request<TexMutation>(`/${scope === "resume" ? "resumes" : "applications"}/${segment(id)}/tex`, {
+        method: "DELETE",
+      }),
   },
   fit: (scope: "resume" | "application", id: string, maxPages?: number) =>
     send<FitResponse>(

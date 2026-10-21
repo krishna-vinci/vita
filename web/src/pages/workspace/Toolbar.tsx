@@ -22,6 +22,7 @@ export function Toolbar({
   overBy,
   onFit,
   onTemplate,
+  onEditLatex,
   onStyle,
   onInstructions,
 }: {
@@ -37,6 +38,8 @@ export function Toolbar({
   overBy?: number;
   onFit: (pages: number) => void;
   onTemplate: () => void;
+  /** Absent for the master resume, which has no LaTeX edits. */
+  onEditLatex?: () => void;
   onStyle: () => void;
   onInstructions: () => void;
 }) {
@@ -76,6 +79,7 @@ export function Toolbar({
             <DropdownMenuItem onSelect={onMarkdown}>Markdown</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={onTemplate}>Change template…</DropdownMenuItem>
+            {onEditLatex && <DropdownMenuItem onSelect={onEditLatex}>Edit LaTeX…</DropdownMenuItem>}
             <DropdownMenuItem onSelect={() => onFit(1)}>Fit to one page first</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => onFit(2)}>Fit to two pages first</DropdownMenuItem>
           </DropdownMenuContent>

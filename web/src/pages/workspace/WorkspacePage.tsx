@@ -45,6 +45,7 @@ import { parseGaps, Questions } from "./Questions";
 import { QuestionsStep } from "./QuestionsStep";
 import { ResumeSheet } from "./ResumeSheet";
 import { StyleDialog } from "./StyleDialog";
+import { TexEditDialog } from "./TexEditDialog";
 import { Toolbar } from "./Toolbar";
 import type { SheetActions } from "./types";
 import { useChatThread } from "./useChatThread";
@@ -176,6 +177,7 @@ function Loaded({
   const promoter = usePromote();
   const [fit, setFit] = useState<FitState | null>(null);
   const [templates, setTemplates] = useState(false);
+  const [texOpen, setTexOpen] = useState(false);
   const [styling, setStyling] = useState(false);
   const [instructionsOpen, setInstructionsOpen] = useState(false);
   const startFit = async (pages: number) => {
@@ -379,6 +381,17 @@ function Loaded({
         )}
       </header>
       {!isJob && <SyncBanner resumeId={id} />}
+      {data.patchConflict && data.resume.kind !== "master" && (
+        <div
+          role="status"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm"
+        >
+          <p>Some of your LaTeX edits didn't fit the regenerated resume.</p>
+          <Button variant="outline" className="h-11" onClick={() => setTexOpen(true)}>
+            Review
+          </Button>
+        </div>
+      )}
       <Toolbar
         details={details}
         onDetails={(on) => {
@@ -410,6 +423,7 @@ function Loaded({
         }
         onFit={(pages) => void startFit(pages)}
         onTemplate={() => setTemplates(true)}
+        onEditLatex={data.resume.kind === "master" ? undefined : () => setTexOpen(true)}
         onStyle={() => setStyling(true)}
         onInstructions={() => setInstructionsOpen(true)}
       />
@@ -453,6 +467,7 @@ function Loaded({
         <MessageSquareText /> Ask for a change
       </Button>
       <ChangeTemplateDialog open={templates} onOpenChange={setTemplates} />
+      <TexEditDialog open={texOpen} onOpenChange={setTexOpen} scope={scope} id={id} />
       <StyleDialog
         open={styling}
         onOpenChange={setStyling}

@@ -158,6 +158,37 @@ export const usePreviewTemplate = (id: string) =>
   useMutation({ mutationFn: (resumeId?: string) => api.templates.preview(id, resumeId) });
 export const useDesignTemplate = (id: string) =>
   useMutation({ mutationFn: (message: string) => api.templates.design(id, message) });
+export const useResumeTex = (scope: "resume" | "application", id: string, enabled: boolean) =>
+  useQuery({
+    queryKey: queryKeys.tex(scope, id),
+    queryFn: ({ signal }) => api.tex.get(scope, id, signal),
+    enabled: enabled && !!id,
+    retry: false,
+    gcTime: 0,
+    // The editor holds its own copy; a refetch must never replace what is being typed.
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+/** After the LaTeX changes, the PDF and the resume's review change too. */
+export function useSaveResumeTex(scope: "resume" | "application", id: string) {
+  const client = useQueryClient();
+  const refresh = async () => {
+    await Promise.all(
+      [
+        scope === "resume" ? queryKeys.resume(id) : queryKeys.application(id),
+        queryKeys.workspace,
+        scope === "resume" ? queryKeys.resumes : queryKeys.applications,
+      ].map((queryKey) => client.invalidateQueries({ queryKey })),
+    );
+  };
+  return {
+    save: useMutation({
+      mutationFn: (body: { tex: string; baseHash: string }) => api.tex.save(scope, id, body),
+      onSuccess: refresh,
+    }),
+    reset: useMutation({ mutationFn: () => api.tex.reset(scope, id), onSuccess: refresh }),
+  };
+}
 export const useDiscardTemplate = () => useApiMutation(api.templates.discard, [queryKeys.templates]);
 export const useSyncSuggestions = () =>
   useQuery({ queryKey: queryKeys.sync, queryFn: ({ signal }) => api.sync.suggestions(signal), retry: false });

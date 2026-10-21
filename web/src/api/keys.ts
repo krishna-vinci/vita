@@ -18,6 +18,7 @@ export const queryKeys = {
   template: (id: string) => ["templates", id] as const,
   templateSource: (id: string) => ["template-source", id] as const,
   templateContract: ["template-contract"] as const,
+  tex: (scope: string, id: string) => ["tex", scope, id] as const,
   prep: (id: string) => ["prep", id] as const,
   metrics: ["metrics"] as const,
   instructions: ["instructions"] as const,
