@@ -41,6 +41,7 @@ import {
   type Prep,
   type PromoteRequest,
   type PutMarkdownRequest,
+  type PutRelationshipRequest,
   type PutResumeInstructionsRequest,
   type PutRulesRequest,
   type PutSettingsRequest,
@@ -72,6 +73,7 @@ import {
   type UndoRequest,
   type UndoResult,
   type WorkspaceView,
+  type WriteApplicationRequest,
 } from "@vita/shared";
 
 export class ApiError extends Error {
@@ -269,6 +271,8 @@ export const api = {
     get: (signal?: AbortSignal) => get<MarkdownResource>("/projects", signal),
     save: (body: PutMarkdownRequest) => send<MarkdownMutation>("/projects", body, "PUT"),
     importLegacy: (body: ImportLegacyRequest) => send<ImportLegacyResult>("/projects/import-legacy", body),
+    setRelationship: (slug: string, body: PutRelationshipRequest) =>
+      send<MarkdownMutation>(`/projects/${segment(slug)}/relationship`, body, "PUT"),
   },
   resumes: {
     list: (signal?: AbortSignal, archived?: "include" | "only") =>
@@ -298,6 +302,7 @@ export const api = {
     get: (id: string, signal?: AbortSignal) => get<ApplicationResource>(`/applications/${segment(id)}`, signal),
     create: (body: CreateApplicationRequest) => send<JobMutation>("/applications", body),
     answers: (id: string, body: AnswersRequest) => send<JobMutation>(`/applications/${segment(id)}/answers`, body),
+    write: (id: string, body: WriteApplicationRequest) => send<JobMutation>(`/applications/${segment(id)}/write`, body),
     ops: (id: string, body: ResumeOpsRequest) => send<ResumeMutation>(`/applications/${segment(id)}/ops`, body),
     export: (id: string) => send<ExportResult>(`/applications/${segment(id)}/export`, {}),
   },

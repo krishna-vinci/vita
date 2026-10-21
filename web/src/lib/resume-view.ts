@@ -12,6 +12,7 @@ export const progressSteps = [
 const stageStep: Record<string, number> = {
   analyse: 0,
   gaps: 0,
+  "needs-answers": 0,
   select: 1,
   write: 2,
   revise: 2,

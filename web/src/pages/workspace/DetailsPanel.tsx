@@ -1,4 +1,5 @@
 import type { ApplicationResource, JobView, Resume, Review } from "@vita/shared";
+import { Link } from "react-router-dom";
 import { Markdown } from "@/components/Markdown";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +38,7 @@ export function DetailsPanel({
   const cost = usage.reduce((sum, entry) => sum + entry.costUsd, 0);
   const lineNotes =
     review?.lint.filter((finding) => finding.severity === "warn").map((finding) => finding.message) ?? [];
+  const suggestions = review?.suggestions ?? [];
   const keywordNotes = review?.ats.map((note) => note.message) ?? [];
   return (
     <Card aria-label="Details" className="font-sans text-sm">
@@ -113,6 +115,25 @@ export function DetailsPanel({
             </p>
           </div>
         </div>
+        {suggestions.length > 0 && (
+          <details className="rounded-lg border bg-muted/30 p-3 md:col-span-2">
+            <summary className="cursor-pointer font-medium">
+              Could strengthen this resume ({suggestions.length})
+            </summary>
+            <p className="mt-2 text-muted-foreground">
+              Nothing here blocks your download. If any of it is true, add it to your notes and the next version can use
+              it.
+            </p>
+            <ul className="mt-2 list-disc pl-5 text-muted-foreground">
+              {suggestions.map((suggestion) => (
+                <li key={suggestion}>{suggestion}</li>
+              ))}
+            </ul>
+            <Button asChild size="sm" variant="outline" className="mt-3">
+              <Link to="/me/projects">Add facts in Projects</Link>
+            </Button>
+          </details>
+        )}
         {skipped > 0 && onAnswerSkipped && (
           <div className="flex flex-col items-start gap-2 md:col-span-2">
             <p className="text-muted-foreground">

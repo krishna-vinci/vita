@@ -1,9 +1,19 @@
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import {
+  emptyOwnership,
+  isOwnership,
+  OwnershipQuestion,
+  type OwnershipValue,
+  ownershipAnswer,
+  projectSlug,
+  type Remembered,
+} from "./OwnershipQuestion";
 
 export interface Gap {
   id: string;
@@ -24,35 +34,89 @@ export function Questions({
   pending,
   onSubmit,
   onSkipAll,
+  onRemember,
+  heading,
+  intro,
+  submitLabel = "Continue",
+  skipLabel = "Skip and show my resume",
+  stickyActions = false,
+  notice,
 }: {
   gaps: Gap[];
   pending: boolean;
   onSubmit: (answers: Record<string, string>) => void;
   onSkipAll: () => void;
+  /** Called with the ownership answers marked "Remember", before `onSubmit`. */
+  onRemember?: (items: Remembered[]) => Promise<void>;
+  heading?: ReactNode;
+  intro?: ReactNode;
+  submitLabel?: string;
+  skipLabel?: string;
+  /** Keep the buttons in view on a phone. */
+  stickyActions?: boolean;
+  notice?: ReactNode;
 }) {
   const [choices, setChoices] = useState<Record<string, Choice>>({});
   const [details, setDetails] = useState<Record<string, string>>({});
-  const submit = () => {
+  const [owners, setOwners] = useState<Record<string, OwnershipValue>>({});
+  const [saving, setSaving] = useState(false);
+  const collect = () => {
     const answers: Record<string, string> = {};
+    const remember: Remembered[] = [];
     for (const gap of gaps) {
+      if (isOwnership(gap.id)) {
+        const value = owners[gap.id] ?? emptyOwnership;
+        const answer = ownershipAnswer(value);
+        if (!answer || !value.role) continue;
+        answers[gap.id] = answer;
+        const contribution = answer.includes(":") ? answer.slice(answer.indexOf(":") + 1).trim() : undefined;
+        if (value.remember) remember.push({ slug: projectSlug(gap.id), relationship: value.role, contribution });
+        continue;
+      }
       if (choices[gap.id] === "yes")
         answers[gap.id] = details[gap.id]?.trim() ? `Yes: ${details[gap.id]?.trim()}` : "yes";
       if (choices[gap.id] === "no") answers[gap.id] = "no";
     }
+    return { answers, remember };
+  };
+  const answered = Object.keys(collect().answers).length;
+  const submit = async () => {
+    const { answers, remember } = collect();
+    if (remember.length && onRemember) {
+      setSaving(true);
+      try {
+        await onRemember(remember);
+      } finally {
+        setSaving(false);
+      }
+    }
     onSubmit(answers);
   };
+  const busy = pending || saving;
   return (
     <section aria-labelledby="questions-title" className="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <div className="flex flex-col gap-2">
         <h2 id="questions-title" className="font-display text-2xl font-bold">
-          {gaps.length === 1 ? "One quick question" : `${gaps.length} quick questions`} before you see it
+          {heading ??
+            `${gaps.length === 1 ? "One quick question" : `${gaps.length} quick questions`} before you see it`}
         </h2>
         <p className="text-muted-foreground">
-          The job asks for things your notes don't mention. Only say yes if it's true. A "no" stays off your resume and
-          is kept for interview prep.
+          {intro ??
+            `The job asks for things your notes don't mention. Only say yes if it's true. A "no" stays off your resume and is kept for interview prep.`}
         </p>
       </div>
+      {notice}
       {gaps.map((gap) => {
+        if (isOwnership(gap.id))
+          return (
+            <OwnershipQuestion
+              key={gap.id}
+              id={gap.id}
+              question={gap.question}
+              value={owners[gap.id] ?? emptyOwnership}
+              onChange={(next) => setOwners((all) => ({ ...all, [gap.id]: next }))}
+            />
+          );
         const choice = choices[gap.id];
         return (
           <Card key={gap.id}>
@@ -74,7 +138,7 @@ export function Questions({
                     key={value}
                     type="button"
                     variant={choice === value ? "default" : "outline"}
-                    className={cn("h-11 min-w-24")}
+                    className={cn("h-11 min-w-20 max-sm:flex-1")}
                     aria-pressed={choice === value}
                     onClick={() => setChoices((all) => ({ ...all, [gap.id]: value }))}
                   >
@@ -98,13 +162,24 @@ export function Questions({
           </Card>
         );
       })}
-      <div className="flex flex-wrap gap-3">
-        <Button className="h-11" onClick={submit} disabled={pending}>
-          {pending ? "Sending…" : "Continue"}
+      <div
+        className={cn(
+          "flex flex-wrap items-center gap-3",
+          stickyActions &&
+            "max-md:sticky max-md:bottom-[calc(57px+env(safe-area-inset-bottom))] max-md:z-20 max-md:-mx-5 max-md:border-t max-md:bg-background/95 max-md:px-5 max-md:py-3 max-md:backdrop-blur",
+        )}
+      >
+        <Button className="h-11 max-sm:flex-1" onClick={() => void submit()} disabled={busy}>
+          {busy ? "Sending…" : submitLabel}
         </Button>
-        <Button variant="ghost" className="h-11" onClick={onSkipAll} disabled={pending}>
-          Skip and show my resume
+        <Button variant="ghost" className="h-11 max-sm:flex-1" onClick={onSkipAll} disabled={busy}>
+          {skipLabel}
         </Button>
+        {stickyActions && (
+          <span className="text-sm text-muted-foreground max-sm:basis-full max-sm:text-center" aria-live="polite">
+            {answered === 0 ? "Nothing answered yet" : `${answered} of ${gaps.length} answered`}
+          </span>
+        )}
       </div>
     </section>
   );
