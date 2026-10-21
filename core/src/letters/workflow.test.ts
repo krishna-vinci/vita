@@ -345,3 +345,14 @@ function at<T>(values: T[], index: number): T {
   if (value === undefined) throw new Error(`Missing test value: ${index}`);
   return value;
 }
+
+it("allows letter export with support warnings in trust mode", async () => {
+  await seed();
+  await writeTextAtomic(root, "config/rules.yaml", "honesty: trust\n");
+  const result = await exportLetter(ws(), id, await deps([{ tool: "submit_checks", arguments: notes("unsupported") }]));
+  expect(result.resource.review).toMatchObject({ done: true, blocking: [] });
+  expect(
+    result.resource.review?.checks.every((note) => note.verdict === "unsupported" && note.severity === "warn"),
+  ).toBe(true);
+  expect(await fileHash(root, `${prefix}/out/letter.pdf`)).not.toBeNull();
+});

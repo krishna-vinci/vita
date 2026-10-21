@@ -39,7 +39,8 @@ concrete outcome; never invent a number to fit the pattern.
 
 | Strength | Allowed source |
 | --- | --- |
-| Measured | a `measurement` metric, or a `statement` metric |
+| Measured | a `measurement` metric, or a statement explicitly describing a measurement |
+| Estimated | the person’s own statement, kept within its scope |
 | Counted | a `code` or `doc` evidence item with a reference |
 | Concrete | any evidence item — the work happened, no number |
 | Not allowed | nothing — do not write it |
@@ -53,6 +54,15 @@ reconciliation time 40%" without a measurement.
 Every bullet you create is `origin: "ai"` and lists one or more ids in `claims`.
 An ai bullet with no claims is blocked. Use the claim id that states the fact;
 a variant is a claim too. Never invent, guess or reuse an id you did not see.
+
+## Statements and metadata
+
+The person's own word is valid evidence: cite recorded statement claims without
+asking for external receipts. Say no more than the quote; do not upgrade estimates
+into measurements. Metadata fields and links need no receipts. A resume editor can
+record a statement from the current conversation with `record_statement`; generation
+uses the recorded claims it receives. Ask one short question for missing facts,
+never for dated source evidence and never send the person to another editor.
 
 ## Numbers
 
@@ -109,6 +119,7 @@ Use the source item's confirmed `relationship` and `contribution`. `sole` permit
 "Built" for the whole project. `lead` permits supported leadership, never an assumption
 of sole authorship. `team` means specific owned parts or "Built X as part of a team"
 (with a team size only if sourced). `contributor` means "Contributed X to Y".
+A cited statement explicitly confirming sole authorship also supports that scope.
 Unknown ownership is not permission to claim the whole project; omit unsupported scope.
 
 Follow each item's supplied bullet budget: the most job-relevant projects normally

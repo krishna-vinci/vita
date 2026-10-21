@@ -39,6 +39,7 @@ import {
   renderStoredTex,
   resolveInWorkspace,
   resolveRoleModel,
+  reviewChecks,
   runRole,
   tailor,
   undoPaths,
@@ -535,7 +536,7 @@ export class WorkspaceRuntime {
               task: "Check changed bullets independently, including locked user bullets.",
             }),
             task: [
-              "Check each supplied visible bullet against its claims and evidence. Return submit_checks. These are the changed bullets only.",
+              "Check each supplied visible bullet against its claims and evidence. Return submit_checks. These are the changed bullets only. Statements are valid evidence (you said) if the bullet says no more than the quote, including ownership; set basis: statement.",
               wrapUntrusted(
                 "visible bullets and complete cited evidence",
                 JSON.stringify(checkerContext(selected, index)),
@@ -561,6 +562,7 @@ export class WorkspaceRuntime {
           search.close();
         }
       }
+      review.checks = reviewChecks(review.checks, result.resume, index, rules.honesty);
       // External edits during a model call must not be overwritten.
       await this.checkHash(`${prefix}/resume.json`, resource.hash);
       if (usage.length)
@@ -700,15 +702,27 @@ export class WorkspaceRuntime {
           if (finding.severity === "block" && finding.bulletId && overridden.has(finding.bulletId))
             allowed.add(`${finding.rule}: ${finding.message}`);
         for (const note of resource.review.checks)
-          if (overridden.has(note.bulletId)) allowed.add(`${note.verdict}: ${note.bulletId}: ${note.reason}`);
+          if (rules.honesty === "trust" || overridden.has(note.bulletId))
+            allowed.add(`${note.verdict}: ${note.bulletId}: ${note.reason}`);
         for (const bulletId of overridden) allowed.add(`Unchecked bullet: ${bulletId}`);
-        if (!resource.review.blocking.length || resource.review.blocking.some((reason) => !allowed.has(reason)))
+        if (rules.honesty === "trust") {
+          for (const finding of resource.review.lint)
+            if (["missing-claims", "unknown-claim", "unsourced-number", "limit-breach"].includes(finding.rule))
+              allowed.add(`${finding.rule}: ${finding.message}`);
+          for (const bullet of visibleBullets(resource.resume)) allowed.add(`Unchecked bullet: ${bullet.id}`);
+        }
+        if (
+          (rules.honesty !== "trust" && !resource.review.blocking.length) ||
+          resource.review.blocking.some((reason) => !allowed.has(reason))
+        )
           throw new ApiFailure(409, "review-blocked", resource.review.blocking.join("; ") || "Review is incomplete");
       }
+      const checks = reviewChecks(resource.review.checks, resource.resume, index, rules.honesty);
       const certification = {
+        honesty: rules.honesty,
         resume: resource.resume,
         lint,
-        checks: resource.review.checks,
+        checks,
         analysis: resource.analysis,
         gaps: resource.gaps,
         overrides,
@@ -731,7 +745,7 @@ export class WorkspaceRuntime {
       const prefix = this.prefix(scope, id);
       // Job resumes keep their output under out/; base and master resumes keep it beside resume.json.
       const out = scope === "application" ? `${prefix}/out` : prefix;
-      const review = Review.parse({ ...resource.review, lint, render, overrides, ...done });
+      const review = Review.parse({ ...resource.review, lint, checks, render, overrides, ...done });
       // Do not replace the last good PDF until compile and extraction both pass.
       await writeFileAtomic(this.ws.root, `${out}/resume.pdf`, compiled.pdf);
       await writeTextAtomic(this.ws.root, `${out}/resume.tex`, tex);

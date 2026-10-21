@@ -15,11 +15,14 @@ export interface LintContext {
   voice?: "block" | "warn";
 }
 
-function supportedNumbers(claims: IndexedClaim[]): Set<string> {
+function supportedNumbers(claims: IndexedClaim[], strict = false): Set<string> {
   const values = new Set<string>();
   for (const claim of claims) {
     for (const metric of claim.metrics) values.add(normalizeNumber(metric.value));
-    const texts = [claim.text];
+    const texts =
+      !strict && claim.evidence.length && claim.evidence.every((receipt) => receipt.kind === "statement")
+        ? []
+        : [claim.text];
     for (const evidence of claim.evidence) {
       if (["statement", "measurement", "doc"].includes(evidence.kind) && evidence.text) texts.push(evidence.text);
     }
@@ -28,6 +31,33 @@ function supportedNumbers(claims: IndexedClaim[]): Set<string> {
     }
   }
   return values;
+}
+
+/** Values whose only matching receipt is the person's own statement. */
+export function statementOnlyNumbers(claims: IndexedClaim[]): Set<string> {
+  const nonStatement = new Set(
+    claims.flatMap((claim) => {
+      const receipts = claim.evidence.filter((receipt) => receipt.kind !== "statement");
+      const hasStatement = claim.evidence.some((receipt) => receipt.kind === "statement");
+      return [
+        ...(!hasStatement ? extractNumbers(claim.text).map((number) => number.norm) : []),
+        ...receipts.flatMap((receipt) => extractNumbers(receipt.text ?? "").map((number) => number.norm)),
+        ...claim.metrics
+          .filter(
+            (metric) => !hasStatement || metric.evidence.some((id) => receipts.some((receipt) => receipt.id === id)),
+          )
+          .map((metric) => normalizeNumber(metric.value)),
+      ];
+    }),
+  );
+  const statements = new Set(
+    claims.flatMap((claim) =>
+      claim.evidence
+        .filter((receipt) => receipt.kind === "statement")
+        .flatMap((receipt) => extractNumbers(receipt.text ?? "").map((number) => number.norm)),
+    ),
+  );
+  return new Set([...statements].filter((number) => !nonStatement.has(number)));
 }
 
 function limitPhrase(limit: string): string {
@@ -76,6 +106,11 @@ export function lintResume(resume: Resume, ctx: LintContext): Finding[] {
   const maxChars = ctx.rules.max_bullet_chars ?? 220;
   for (const bullet of visibleBullets(resume)) {
     const add = (rule: string, severity: Finding["severity"], message: string) => {
+      if (
+        ctx.rules.honesty === "trust" &&
+        ["missing-claims", "unknown-claim", "unsourced-number", "limit-breach"].includes(rule)
+      )
+        severity = "warn";
       findings.push({ rule, severity, message, bulletId: bullet.id });
     };
     const voice = actionVoiceProblem(bullet.text, titles);
@@ -90,8 +125,11 @@ export function lintResume(resume: Resume, ctx: LintContext): Finding[] {
       else add("unknown-claim", "block", `Unknown claim: ${id}.`);
     }
     if (!bullet.override) {
-      const supported = supportedNumbers(claims);
+      const supported = supportedNumbers(claims, ctx.rules.honesty === "strict");
+      const estimates = statementOnlyNumbers(claims);
       for (const number of extractNumbers(bullet.text)) {
+        if ((ctx.rules.honesty ?? "balanced") !== "strict" && estimates.has(number.norm))
+          add("statement-estimate", "warn", `Your estimate: ${number.raw}`);
         if (!supported.has(number.norm)) {
           add(
             "unsourced-number",

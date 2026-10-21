@@ -5,7 +5,15 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { Resume } from "@vita/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { commitPaths, ensureRepo, log, PathEscapeError, readText, writeTextAtomic } from "../workspace/index.js";
+import {
+  commitPaths,
+  ensureRepo,
+  log,
+  PathEscapeError,
+  readText,
+  undoPaths,
+  writeTextAtomic,
+} from "../workspace/index.js";
 import { applyResumeOps } from "./index.js";
 import { context, sampleResume } from "./test-fixtures.js";
 
@@ -53,6 +61,22 @@ describe("applyResumeOps", () => {
     expect(unchanged.sha).toBeNull();
     expect(unchanged.changedBullets).toEqual([]);
     expect(await log(root, 10)).toHaveLength(2);
+  });
+
+  it("undoes entry and header metadata together as one batch", async () => {
+    const before = await readText(root, resumePath);
+    await applyResumeOps(
+      root,
+      resumePath,
+      [
+        { op: "item.set", id: "first", title: "Changed", links: [] },
+        { op: "header.set", headline: "Editor", location: "Remote" },
+      ],
+      context(),
+      "user",
+    );
+    await undoPaths(root, ["resumes/master"], "user");
+    expect(await readText(root, resumePath)).toBe(before);
   });
 
   it("leaves file bytes and history unchanged on invalid batches and final schema failure", async () => {

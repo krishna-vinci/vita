@@ -1,3 +1,5 @@
+import { Evidence } from "@vita/shared";
+import { parse } from "yaml";
 import { readAnchor } from "./anchors";
 import { bulletText, factId, fenceEnd, fenceStart, heading, sourceLines } from "./markdown";
 
@@ -5,6 +7,7 @@ export interface OutlineBullet {
   line: number;
   text: string;
   claimId: string | null;
+  evidence?: Evidence[];
 }
 export interface OutlineEntry {
   title: string;
@@ -64,6 +67,24 @@ export function parseOutline(markdown: string): Outline {
       } else body.push(text);
     }
   });
+  // Statement receipts live in fenced metadata next to the entry, outside user prose.
+  for (const section of outline.sections)
+    for (const entry of [section, ...section.entries]) {
+      const body = entry.body.join("\n");
+      for (const match of body.matchAll(/^```yaml\r?\n([\s\S]*?)^```\s*$/gm)) {
+        try {
+          const receipts = parse(match[1] ?? "")?.statement_claims;
+          if (!Array.isArray(receipts)) continue;
+          for (const receipt of receipts) {
+            const bullet = entry.bullets.find((bullet) => bullet.claimId === receipt?.id);
+            const parsed = Evidence.array().safeParse(receipt?.evidence);
+            if (bullet && parsed.success) bullet.evidence = [...(bullet.evidence ?? []), ...parsed.data];
+          }
+        } catch {
+          /* Unparsed user blocks stay in body. */
+        }
+      }
+    }
   return outline;
 }
 

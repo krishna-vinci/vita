@@ -13,9 +13,12 @@ import { Resume, Review, type SourceProposal, visibleBullets } from "@vita/share
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import * as agent from "../agent/index.js";
 import { ModelsConfig } from "../agent/index.js";
-import { createGenerationRuntime } from "../agent/roles.js";
+import { checkerRole, createGenerationRuntime } from "../agent/roles.js";
 import type { ResumeOp } from "../ops/index.js";
+import { loadContext } from "../pipeline/context.js";
+import { checkerContext, reviewChecks } from "../pipeline/efficient-context.js";
 import type { PipelineDeps, WorkspaceHandle } from "../pipeline/types.js";
+import { renderMarkdown } from "../render/markdown.js";
 import { commitPaths, ensureRepo, fileHash, log, readText, undoPaths, writeTextAtomic } from "../workspace/index.js";
 import { applySourceEdit, ChatConflictError, chatResume, proposeSourceEdit } from "./index.js";
 
@@ -100,6 +103,11 @@ it("applies the smallest AI operations, wraps requests/history/data, and undoes 
       expect(getCurrentTools(context.messages).map((tool) => tool.name)).toEqual([
         "read_resume",
         "search_evidence",
+        "read_outline",
+        "read_projects",
+        "set_project_links",
+        "set_profile",
+        "record_statement",
         "propose_ops",
       ]);
       const task = JSON.stringify(context.messages.findLast((message) => message.role === "user"));
@@ -299,6 +307,9 @@ it.each(["outline", "projects"] as const)(
         expect(getCurrentTools(context.messages).map((tool) => tool.name)).toEqual([
           "read_outline",
           "read_projects",
+          "set_project_links",
+          "set_profile",
+          "record_statement",
           "propose_edit",
         ]);
         return source(edit);
@@ -404,4 +415,191 @@ it.each(["resume", "source"] as const)("returns %s chat memory proposals without
     }),
   ]);
   expect(await fileHash(ws.root, "memory.md")).toBeNull();
+});
+
+it("adds the Studium landing link in one resume-chat turn without asking a question", async () => {
+  await writeTextAtomic(
+    ws.root,
+    "outline.md",
+    `${await readText(ws.root, "outline.md")}\n## Projects\n### Studium\n- Landing: https://studium.example\n`,
+  );
+  await writeTextAtomic(
+    ws.root,
+    "projects.md",
+    `${await readText(ws.root, "projects.md")}\n## Studium\n\`\`\`yaml\nlinks: [https://github.com/example/studium]\n\`\`\`\n`,
+  );
+  faux.setResponses([
+    fauxAssistantMessage(fauxToolCall("read_outline", {})),
+    fauxAssistantMessage(fauxToolCall("set_project_links", { itemSlug: "studium", add: ["https://studium.example"] })),
+    ops([], "Added the Studium landing page link."),
+  ]);
+  const result = await chatResume(ws, { ...input, message: "Add the Studium landing page link" }, deps);
+  expect(result).toMatchObject({ applied: true, reply: "Added the Studium landing page link." });
+  expect(result.reply).not.toContain("?");
+  const projects = await readText(ws.root, "projects.md");
+  expect(projects).toContain("https://studium.example");
+  resume.sections.push({
+    id: "projects-added",
+    title: "Projects",
+    kind: "entries",
+    items: [{ id: "studium", title: "Studium", source: "projects:studium", bullets: [] }],
+  });
+  expect(renderMarkdown(resume, { projects })).toContain("[Website](<https://studium.example>)");
+});
+
+it.each(["current", "saved"])(
+  "records a %s statement and cites it in a bullet in the same turn with a you-said checker basis",
+  async (where) => {
+    await writeTextAtomic(ws.root, "projects.md", `${await readText(ws.root, "projects.md")}\n## Vita\n`);
+    let claimId = "";
+    faux.setResponses([
+      fauxAssistantMessage(
+        fauxToolCall("record_statement", {
+          itemSlug: "vita",
+          quote: "I built Vita entirely myself",
+          claimText: "Built Vita entirely alone.",
+        }),
+      ),
+      (context) => {
+        const last = context.messages.findLast((message) => message.role === "toolResult");
+        const match = /statement-[a-f0-9-]+/.exec(JSON.stringify(last));
+        claimId = match?.[0] ?? "";
+        expect(claimId).not.toBe("");
+        return ops([{ op: "bullet.add", itemId: "work-item", claimId }], "Added your statement.");
+      },
+    ]);
+    const result = await chatResume(
+      ws,
+      {
+        ...input,
+        threadId: "statement-thread",
+        message: where === "current" ? "I built Vita entirely myself, add that" : "Add the fact I stated earlier.",
+        statementMessages: where === "saved" ? ["I built Vita entirely myself"] : [],
+      },
+      { ...deps, now: () => new Date("2026-10-21T12:00:00Z") },
+    );
+    expect(result.applied).toBe(true);
+    const saved = Resume.parse(JSON.parse(await readText(ws.root, "resumes/master/resume.json")));
+    const bullet = visibleBullets(saved).find((bullet) => bullet.claims.includes(claimId));
+    expect(bullet).toBeDefined();
+    const ctx = await loadContext(ws);
+    try {
+      expect(ctx.index.claims.get(claimId)?.evidence[0]).toMatchObject({
+        kind: "statement",
+        at: "2026-10-21",
+        ref: "chat:statement-thread",
+      });
+      faux.setResponses([
+        (context) => {
+          expect(JSON.stringify(context.messages)).toContain("I built Vita entirely myself");
+          return fauxAssistantMessage(
+            fauxToolCall("submit_checks", {
+              checks: [{ bulletId: bullet?.id ?? "", verdict: "supported", reason: "Matches the quoted statement" }],
+            }),
+          );
+        },
+      ]);
+      const selected = structuredClone(saved);
+      for (const section of selected.sections)
+        for (const item of section.items) item.bullets = item.bullets.filter((line) => line.id === bullet?.id);
+      const checked = await agent.runRole({
+        role: checkerRole,
+        root: ws.root,
+        system: await agent.buildSystemPrompt({
+          role: checkerRole,
+          root: ws.root,
+          bundledDir,
+          task: "Check the bullet against the person's statement.",
+        }),
+        task: agent.wrapUntrusted(
+          "visible bullets and complete cited evidence",
+          JSON.stringify(checkerContext(selected, ctx.index)),
+        ),
+        tools: { root: ws.root, index: ctx.index, search: ctx.search, resume: selected },
+        runtime: deps.runtime,
+        models: { ...deps.models, roles: { ...deps.models.roles, checker: "chat-test/source" } },
+        retry: deps.retry,
+      });
+      expect(reviewChecks(checked.checks, selected, ctx.index, "balanced")[0]).toMatchObject({
+        verdict: "supported",
+        basis: "statement",
+      });
+    } finally {
+      ctx.search.close();
+    }
+  },
+);
+
+it("refuses invented quotes, including assistant-only messages, and omits record_statement in strict mode", async () => {
+  const before = await readText(ws.root, "projects.md");
+  faux.setResponses([
+    fauxAssistantMessage(
+      fauxToolCall("record_statement", {
+        itemSlug: "catalogue-service",
+        quote: "Saved 90% of review time",
+        claimText: "Saved 90% of review time.",
+      }),
+    ),
+    (context) => {
+      expect(JSON.stringify(context.messages.findLast((message) => message.role === "toolResult"))).toContain(
+        "own messages",
+      );
+      return ops([], "What did you actually measure?");
+    },
+  ]);
+  await chatResume(ws, { ...input, history: [{ role: "assistant", text: "Saved 90% of review time" }] }, deps);
+  expect(await readText(ws.root, "projects.md")).toBe(before);
+  await writeTextAtomic(ws.root, "config/rules.yaml", "honesty: strict\n");
+  faux.setResponses([
+    (context) => {
+      const names = getCurrentTools(context.messages).map((tool) => tool.name);
+      expect(names).not.toContain("record_statement");
+      expect(names).toContain("set_project_links");
+      return ops([], "What work should this describe?");
+    },
+  ]);
+  await chatResume(ws, input, deps);
+});
+
+it("returns field changes for entry and header metadata", async () => {
+  faux.setResponses([
+    ops([
+      { op: "item.set", id: "skill-1", title: "Workshop", location: "Remote" },
+      { op: "header.set", headline: "Editor" },
+    ]),
+  ]);
+  // Use an unlocked item from the fixture for metadata changes.
+  const item = resume.sections.flatMap((section) => section.items).find((item) => item.id === "skill-1");
+  if (!item) throw new Error("Missing fixture education item");
+  const result = await chatResume(ws, input, deps);
+  expect(result.changes).toContainEqual({
+    kind: "field",
+    id: "header",
+    field: "headline",
+    before: resume.header.headline ?? null,
+    after: "Editor",
+  });
+  expect(result.changes).toContainEqual({
+    kind: "field",
+    id: item.id,
+    field: "title",
+    before: item.title,
+    after: "Workshop",
+  });
+});
+
+it("applies profile metadata from source chat without clearing omitted contacts", async () => {
+  faux.setResponses([
+    fauxAssistantMessage(fauxToolCall("set_profile", { headline: "Editor" })),
+    source(null, "Updated your headline."),
+  ]);
+  const result = await proposeSourceEdit(ws, { message: "Use Editor as my headline.", history: [] }, deps);
+  expect(result).toMatchObject({
+    applied: true,
+    proposal: null,
+    changes: [{ kind: "field", id: "profile", field: "headline", before: "Software developer", after: "Editor" }],
+  });
+  const profile = await readText(ws.root, "profile.yaml");
+  expect(profile).toContain("headline: Editor");
+  expect(profile).toContain("morgan.vale@example.test");
 });

@@ -116,6 +116,25 @@ export function ChatPanel({
   );
 }
 
+const fieldLabel = (field: string) =>
+  ({
+    title: "Title",
+    subtitle: "Subtitle",
+    period: "Dates",
+    location: "Location",
+    links: "Links",
+    headline: "Headline",
+  })[field] ?? field;
+/** A changed field's new value in plain words: links as their labels, cleared values as "Removed". */
+function fieldValue(value: unknown): string {
+  if (value === null || value === undefined || value === "") return "Removed";
+  if (Array.isArray(value))
+    return value
+      .map((entry) => (typeof entry === "object" && entry && "label" in entry ? String(entry.label) : String(entry)))
+      .join(", ");
+  return String(value);
+}
+
 /** The text of one turn, with the lines it changed. */
 export function MessageBody({ message }: { message: Message }) {
   return (
@@ -123,12 +142,19 @@ export function MessageBody({ message }: { message: Message }) {
       {message.role === "assistant" ? <Markdown text={message.text} /> : message.text}
       {message.changes && message.changes.length > 0 && (
         <ul className="mt-2 flex flex-col gap-2 border-t pt-2 text-xs">
-          {message.changes.map((change) => (
-            <li key={change.id} className="flex flex-col gap-0.5">
-              {change.before && <span className="text-muted-foreground line-through">{change.before}</span>}
-              <span>{change.hidden ? "Hidden from the resume" : change.after}</span>
-            </li>
-          ))}
+          {message.changes.map((change) =>
+            change.kind === "field" ? (
+              <li key={`${change.id}:${change.field}`} className="flex flex-col gap-0.5">
+                <span className="text-muted-foreground">{fieldLabel(change.field)}</span>
+                <span>{fieldValue(change.after)}</span>
+              </li>
+            ) : (
+              <li key={change.id} className="flex flex-col gap-0.5">
+                {change.before && <span className="text-muted-foreground line-through">{change.before}</span>}
+                <span>{change.hidden ? "Hidden from the resume" : change.after}</span>
+              </li>
+            ),
+          )}
         </ul>
       )}
       <MemoryProposals proposals={message.memoryProposals} />

@@ -1,7 +1,7 @@
-import { commitPaths, fileHash, readText, writeTextAtomic } from "@vita/core";
+import { fileHash, readText, writeProfile } from "@vita/core";
 import { Profile, PutProfileRequest } from "@vita/shared";
 import { type Context, Hono } from "hono";
-import { parse, stringify } from "yaml";
+import { parse } from "yaml";
 import { ZodError } from "zod";
 import { ApiFailure } from "../errors.js";
 import type { WorkspaceRuntime } from "../runtime.js";
@@ -32,12 +32,7 @@ export function profileRoutes(runtime: WorkspaceRuntime): Hono {
         const current = (await fileHash(runtime.ws.root, "profile.yaml")) ?? "";
         if (input.baseHash !== current)
           throw new ApiFailure(409, "stale-hash", "Your profile changed elsewhere. Reload it and try again.");
-        // Empty optional fields are dropped so the file stays tidy.
-        const profile = Object.fromEntries(
-          Object.entries(input.profile).filter(([, value]) => value !== undefined && value !== ""),
-        );
-        await writeTextAtomic(runtime.ws.root, "profile.yaml", stringify(profile));
-        const sha = await commitPaths(runtime.ws.root, ["profile.yaml"], "Update profile", "user");
+        const { sha } = await writeProfile(runtime.ws.root, input.profile, input.baseHash);
         runtime.changed("settings", sha);
         return { ...(await read()), sha };
       }),

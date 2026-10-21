@@ -1,5 +1,6 @@
 import { join } from "node:path";
-import { type ChatTurn, type Finding, Resume, type ResumeChatReply, Review, Slug } from "@vita/shared";
+import { type Finding, Resume, type ResumeChatReply, Review, Slug } from "@vita/shared";
+import { chatTools, type StatementConversation } from "../agent/chat-tools.js";
 import { buildSystemPrompt, runRole, wrapUntrusted } from "../agent/index.js";
 import { lintResume } from "../lint/index.js";
 import { proposeMemory } from "../memory/index.js";
@@ -8,6 +9,7 @@ import { effectivePack, loadContext, optionalText } from "../pipeline/context.js
 import type { PipelineDeps, WorkspaceHandle } from "../pipeline/types.js";
 import { loadTemplate } from "../render/index.js";
 import { commitPaths, FileLocks, fileHash, readText, resolveInWorkspace, writeTextAtomic } from "../workspace/index.js";
+import { fieldChanges } from "./changes.js";
 import { ChatConflictError, chatTask } from "./context.js";
 import { resumeEditorRole } from "./roles.js";
 
@@ -15,7 +17,7 @@ const edits = new FileLocks();
 
 export async function chatResume(
   ws: WorkspaceHandle,
-  input: { scope: "application" | "resume"; id: string; message: string; history: ChatTurn[] },
+  input: { scope: "application" | "resume"; id: string } & StatementConversation,
   deps: PipelineDeps,
 ): Promise<ResumeChatReply> {
   Slug.parse(input.id);
@@ -30,6 +32,8 @@ export async function chatResume(
     try {
       const base = ctx.bases.find((entry) => entry.id === (resume.kind === "base" ? resume.id : resume.parent));
       const pack = await effectivePack(ctx, base);
+      const tools = { root: ws.root, index: ctx.index, search: ctx.search, resume };
+      const edits = chatTools(ctx, input, deps, tools);
       const output = await runRole({
         role: resumeEditorRole,
         root: ws.root,
@@ -40,15 +44,16 @@ export async function chatResume(
           applicationId: input.scope === "application" ? input.id : undefined,
           chat: input.message,
           onWarning: (message) => deps.onProgress?.({ stage: "warning", message }),
-          task: "Answer the resume chat request with operations or an honest refusal. Never grant user overrides.",
+          task: "Answer the resume chat request with the smallest edits. Metadata needs no evidence. Never grant user overrides.",
         }),
         task: [
           chatTask(input.message, input.history),
-          "Return propose_ops with { ops, summary, memory? }. For a lasting preference or decision explicitly stated by the user, propose a memory entry { text, kind }; these require approval and never become evidence. An explicit chat request authorizes immediate, undoable resume operations. For unsupported skills, numbers or outcomes, return ops: [] and explain an honest alternative or ask for evidence. Do not treat a pending chat answer as approved source evidence. Preserve claim IDs and locked bullets.",
+          `Honesty level: ${ctx.rules.honesty}. Return propose_ops with { ops, summary, memory? }. An explicit chat request authorizes immediate undoable edits. Apply metadata with item.set, header.set, set_project_links or set_profile without receipts. Read outline/projects to find existing URLs; never guess URLs. In balanced/trust, record facts the person actually states with record_statement, then cite the returned claimId in bullet.add in this same turn. In strict, use existing claims. Ask one short question only for a fact the person has not stated (asking to add a skill does not say they used it). Never send the person elsewhere or ask for dated source evidence. Preserve claim IDs and locked bullets. Lasting preferences may be proposed as memory; memory is not evidence.`,
           wrapUntrusted("resume.json", JSON.stringify(resume)),
           wrapUntrusted("claims and evidence", JSON.stringify([...ctx.index.claims.values()])),
         ].join("\n\n"),
-        tools: { root: ws.root, index: ctx.index, search: ctx.search, resume },
+        tools,
+        customTools: edits.customTools,
         runtime: deps.runtime,
         models: deps.models,
         modelOverride: deps.modelOverrides?.[resumeEditorRole.name],
@@ -59,10 +64,11 @@ export async function chatResume(
       const memoryProposals = await Promise.all((output.memory ?? []).map((entry) => proposeMemory(ws, entry, "chat")));
       const refusal = (reply: string, lint: Finding[] = []): ResumeChatReply => ({
         reply,
+        changes: edits.changes,
         memoryProposals,
         ops: [],
-        applied: false,
-        sha: null,
+        applied: edits.shas.length > 0,
+        sha: edits.shas.at(-1) ?? null,
         changedBullets: [],
         metadata: { lint, blocking: lint.filter((finding) => finding.severity === "block") },
       });
@@ -121,13 +127,14 @@ export async function chatResume(
             }
       const unsupported = lintResume(honestDraft, { index: ctx.index, pack, rules: ctx.rules }).filter(
         (finding) =>
+          finding.severity === "block" &&
           finding.bulletId &&
           changed.has(finding.bulletId) &&
           ["unsourced-number", "missing-claims", "unknown-claim"].includes(finding.rule),
       );
       if (unsupported.length)
         return refusal(
-          "I cannot add facts or numbers without supporting evidence. Add a source or an approved dated statement, or ask me to describe the existing work without the number.",
+          "I cannot add facts or numbers without supporting evidence. What did you actually do or measure?",
           unsupported,
         );
       deps.signal?.throwIfAborted();
@@ -160,6 +167,7 @@ export async function chatResume(
           ? `${output.summary} Some changed lines still need supporting evidence.`
           : output.summary,
         memoryProposals,
+        changes: [...edits.changes, ...fieldChanges(resume, result.resume)],
         ops: output.ops,
         applied: true,
         sha,

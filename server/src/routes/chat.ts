@@ -40,10 +40,14 @@ export function chatRoutes(runtime: WorkspaceRuntime): Hono {
       if (runtime.jobs.hasActive(scope, id))
         throw new ApiFailure(409, "resource-busy", "Generation is still running for this resource");
       const before = (await runtime.resource(scope, id)).resume;
-      const result = await runtime.chats.turn(scope, id, input, async (history) => {
-        const reply = await chatResume(runtime.ws, { scope, id, ...input, history }, await deps());
+      const result = await runtime.chats.turn(scope, id, input, async (history, conversation) => {
+        const reply = await chatResume(runtime.ws, { scope, id, ...input, history, ...conversation }, await deps());
         const resource = await runtime.resource(scope, id);
-        return { ...reply, changes: bulletChanges(before, resource.resume, reply.changedBullets), resource };
+        return {
+          ...reply,
+          changes: [...(reply.changes ?? []), ...bulletChanges(before, resource.resume, reply.changedBullets)],
+          resource,
+        };
       });
       if (result.applied) runtime.changed(scope, result.sha, id);
       return c.json(result);
@@ -52,9 +56,10 @@ export function chatRoutes(runtime: WorkspaceRuntime): Hono {
   app.post("/source", async (c) => {
     const input = await body(c, ChatRequest);
     return exclusive(async () => {
-      const result = await runtime.chats.turn("source", "outline-projects", input, async (history) =>
-        proposeSourceEdit(runtime.ws, { ...input, history }, await deps()),
+      const result = await runtime.chats.turn("source", "outline-projects", input, async (history, conversation) =>
+        proposeSourceEdit(runtime.ws, { ...input, history, ...conversation }, await deps()),
       );
+      if (result.applied) runtime.changed("projects", result.sha ?? null);
       return c.json(result);
     });
   });

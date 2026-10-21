@@ -23,7 +23,8 @@ export const Bullet = z.object({
 });
 export type Bullet = z.infer<typeof Bullet>;
 
-export const ItemLink = z.object({ label: z.string(), url: z.string() });
+export const HttpUrl = z.url().refine((url) => /^https?:\/\//i.test(url), "Only http(s) URLs are allowed");
+export const ItemLink = z.object({ label: z.string(), url: HttpUrl });
 export type ItemLink = z.infer<typeof ItemLink>;
 
 export const Item = z.object({

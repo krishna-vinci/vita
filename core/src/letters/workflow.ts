@@ -24,6 +24,7 @@ import { lintResume } from "../lint/index.js";
 import { OpError } from "../ops/index.js";
 import { effectivePack, loadContext, optionalText } from "../pipeline/context.js";
 import { evaluateDone } from "../pipeline/done.js";
+import { reviewChecks } from "../pipeline/efficient-context.js";
 import { data, effectiveModels, roleRunner } from "../pipeline/generate.js";
 import { withGenerationLock } from "../pipeline/lock.js";
 import { loadProfile } from "../pipeline/profile.js";
@@ -244,6 +245,7 @@ async function loadSession(ws: WorkspaceHandle, id: string, deps: PipelineDeps) 
         deps.signal?.throwIfAborted();
         deps.onProgress?.({ stage: "render", round, message: error instanceof Error ? error.message : String(error) });
       }
+      checks = reviewChecks(checks, adapted, ctx.index, ctx.rules.honesty);
       const review = LetterReview.parse({
         round,
         lint: findings,
@@ -256,6 +258,7 @@ async function loadSession(ws: WorkspaceHandle, id: string, deps: PipelineDeps) 
         sourceHash,
         paragraphState,
         ...evaluateDone({
+          honesty: ctx.rules.honesty,
           resume: adapted,
           lint: findings,
           checks,

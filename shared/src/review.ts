@@ -23,6 +23,8 @@ export type RenderCheck = z.infer<typeof RenderCheck>;
 
 export const CheckNote = z.object({
   bulletId: z.string(),
+  basis: z.literal("statement").optional(),
+  severity: z.enum(["block", "warn"]).optional(),
   verdict: z.enum(["supported", "overstated", "unsupported"]),
   reason: z.string(),
 });

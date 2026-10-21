@@ -29,7 +29,7 @@ export function buildClaimIndex(projects: ProjectsDoc, outline: Outline): ClaimI
         source: "outline",
         itemSlug: null,
         itemName: null,
-        evidence: [],
+        evidence: bullet.evidence ?? [],
         metrics: [],
         limits: [],
       });

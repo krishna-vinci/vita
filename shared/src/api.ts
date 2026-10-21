@@ -56,6 +56,16 @@ export const ApiResumeOp = z.discriminatedUnion("op", [
   z.strictObject({ op: z.literal("bullet.lock"), id, locked: z.boolean() }),
   z.strictObject({ op: z.literal("move"), id, toParent: id, index }),
   z.strictObject({ op: z.literal("section.rename"), id, title: z.string() }),
+  z.strictObject({
+    op: z.literal("item.set"),
+    id,
+    title: z.string().optional(),
+    subtitle: z.string().optional(),
+    period: z.string().optional(),
+    location: z.string().optional(),
+    links: z.array(ItemLink).max(4).nullable().optional(),
+  }),
+  z.strictObject({ op: z.literal("header.set"), headline: z.string().optional(), location: z.string().optional() }),
   z.strictObject({ op: z.literal("item.hide"), id, hidden: z.boolean() }),
   z.strictObject({ op: z.literal("section.hide"), id, hidden: z.boolean() }),
   z.strictObject({
@@ -298,12 +308,22 @@ export const SourceApplyRequest = SourceProposal.extend({ messageId: Slug.option
 export type SourceApplyRequest = z.infer<typeof SourceApplyRequest>;
 export const ChatKind = z.enum(["resume", "application", "source", "letter", "onboarding"]);
 export type ChatKind = z.infer<typeof ChatKind>;
-export const ChatChange = z.object({
-  id: z.string(),
-  before: z.string().max(2_000_000),
-  after: z.string().max(2_000_000),
-  hidden: z.boolean(),
-});
+export const ChatChange = z.union([
+  z.object({
+    id: z.string(),
+    before: z.string().max(2_000_000),
+    after: z.string().max(2_000_000),
+    hidden: z.boolean(),
+    kind: z.literal("bullet").optional(),
+  }),
+  z.object({
+    kind: z.literal("field"),
+    id: z.string(),
+    field: z.string(),
+    before: z.unknown(),
+    after: z.unknown(),
+  }),
+]);
 export type ChatChange = z.infer<typeof ChatChange>;
 export const ChatMessage = z.object({
   id: Slug,
@@ -335,6 +355,9 @@ export type ChatThreadSummary = z.infer<typeof ChatThreadSummary>;
 export const ChatReplyIds = z.object({ threadId: Slug, messageId: Slug });
 export type ChatReplyIds = z.infer<typeof ChatReplyIds>;
 export const SourceChatReply = z.object({
+  changes: z.array(ChatChange).optional(),
+  applied: z.boolean().optional(),
+  sha: CommitSha.optional(),
   ...ChatReplyIds.partial().shape,
   memoryProposals: z.array(MemoryProposal).optional(),
   reply: z.string(),

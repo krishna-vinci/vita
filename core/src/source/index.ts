@@ -1,4 +1,5 @@
 export { type Anchor, readAnchor, writeAnchor } from "./anchors";
+export { writeProfile } from "./chat-edits.js";
 export { importLegacyProjects } from "./import-legacy";
 export {
   assignOutlineAnchors,

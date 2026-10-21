@@ -31,6 +31,7 @@ function Form({
 }) {
   const save = useSaveRules();
   const [pages, setPages] = useState(String(initial.max_pages));
+  const [honesty, setHonesty] = useState<Rules["honesty"]>(initial.honesty ?? "balanced");
   const [fill, setFill] = useState(String(Math.round(initial.min_fill * 100)));
   const [chars, setChars] = useState(initial.max_bullet_chars ? String(initial.max_bullet_chars) : "");
   const [banned, setBanned] = useState((initial.banned_phrases ?? []).join("\n"));
@@ -40,6 +41,7 @@ function Form({
   const [locale, setLocale] = useState<string>(initial.locale ?? none);
   const submit = () => {
     const rules = {
+      honesty,
       max_pages: Number(pages) || 1,
       min_fill: (Number(fill) || 85) / 100,
       ...(Number(chars) > 0 ? { max_bullet_chars: Number(chars) } : {}),
@@ -87,6 +89,22 @@ function Form({
             value={pages}
             onChange={(event) => setPages(event.target.value)}
           />
+        </div>
+        <div className="flex flex-col gap-2 sm:col-span-2">
+          <Label htmlFor="rule-honesty">How strict</Label>
+          <Select value={honesty} onValueChange={(value) => setHonesty(value as Rules["honesty"])}>
+            <SelectTrigger id="rule-honesty" className="w-full sm:w-80">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="balanced">Balanced: your word counts, links and details need no proof</SelectItem>
+              <SelectItem value="strict">Strict: every claim needs a source receipt</SelectItem>
+              <SelectItem value="trust">Trust me: checks only warn, never block</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-muted-foreground">
+            Nothing is ever invented. Balanced records what you tell Vita as &ldquo;you said&rdquo;.
+          </p>
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="rule-fill">Fill at least (% of page)</Label>

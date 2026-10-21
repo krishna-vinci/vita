@@ -39,7 +39,7 @@ import type { Selection } from "../search/index.js";
 import { resolveInWorkspace } from "../workspace/index.js";
 import type { Context } from "./context.js";
 import { evaluateDone } from "./done.js";
-import { checkerContext, VerdictCache, writerEvidence } from "./efficient-context.js";
+import { checkerContext, reviewChecks, VerdictCache, writerEvidence } from "./efficient-context.js";
 import { deepenClaims } from "./fill.js";
 import type { PipelineDeps, RoleUsage } from "./types.js";
 
@@ -342,7 +342,7 @@ export async function generate(
         const { checks } = await run(
           checkerRole,
           [
-            "Check every supplied visible bullet, including locked user bullets, against its complete claims and evidence. Return { checks: CheckNote[] } through submit_checks. Missing claims are explicitly marked; never assume support.",
+            "Check every supplied visible bullet, including locked user bullets, against its complete claims and evidence. Return { checks: CheckNote[] } through submit_checks. A statement is valid evidence (you said) when the bullet says no more than its quote, including ownership; mark basis: statement. Missing claims are explicitly marked; never assume support.",
             data("visible bullets and complete cited evidence", checkerContext(selected, ctx.index)),
           ].join("\n\n"),
           selected,
@@ -419,7 +419,12 @@ export async function generate(
       const stages = await Promise.allSettled([checksPromise, renderPromise, atsTask()]);
       const failure = stages.find((stage) => stage.status === "rejected");
       if (failure?.status === "rejected") throw failure.reason;
-      const checks = (stages[0] as PromiseFulfilledResult<CheckNote[]>).value;
+      const checks = reviewChecks(
+        (stages[0] as PromiseFulfilledResult<CheckNote[]>).value,
+        current,
+        ctx.index,
+        ctx.rules.honesty,
+      );
       const render = (stages[1] as PromiseFulfilledResult<Review["render"]>).value;
       const ats = (stages[2] as PromiseFulfilledResult<AtsNote[]>).value;
       deps.signal?.throwIfAborted();
@@ -436,7 +441,16 @@ export async function generate(
         render,
         gaps: input.gaps,
         overrides,
-        ...evaluateDone({ resume, lint, checks, analysis: input.analysis, gaps: input.gaps, render, overrides }),
+        ...evaluateDone({
+          honesty: ctx.rules.honesty,
+          resume,
+          lint,
+          checks,
+          analysis: input.analysis,
+          gaps: input.gaps,
+          render,
+          overrides,
+        }),
       });
       if (
         review.done &&

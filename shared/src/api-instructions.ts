@@ -2,6 +2,7 @@ import { z } from "zod";
 import { CommitSha, MarkdownResource, PutMarkdownRequest } from "./api";
 
 export const Rules = z.strictObject({
+  honesty: z.enum(["strict", "balanced", "trust"]).default("balanced"),
   min_fill: z.number().min(0).max(1).default(0.85),
   max_pages: z.number().int().min(1).max(4).default(1),
   max_bullet_chars: z.number().int().positive().optional(),

@@ -1,5 +1,7 @@
-import { type CheckNote, type Resume, visibleBullets } from "@vita/shared";
+import { type CheckNote, type Resume, type Rules, visibleBullets } from "@vita/shared";
 import type { ClaimIndex } from "../claims/index.js";
+import { extractNumbers } from "../lint/numbers.js";
+import { statementOnlyNumbers } from "../lint/rules.js";
 import { assignOutlineAnchors, parseOutline } from "../source/index.js";
 import type { Base, Context } from "./context.js";
 import type { GenerationInput } from "./generate.js";
@@ -139,4 +141,35 @@ export class VerdictCache {
       else this.#supported.delete(key);
     }
   }
+}
+
+/** Attach receipt labels and effective warning severity without changing the checker verdict. */
+export function reviewChecks(
+  checks: CheckNote[],
+  resume: Resume,
+  index: ClaimIndex,
+  honesty: Rules["honesty"],
+): CheckNote[] {
+  const bullets = new Map(visibleBullets(resume).map((bullet) => [bullet.id, bullet]));
+  return checks.map((note) => {
+    const ids = bullets.get(note.bulletId)?.claims ?? [];
+    const claims = ids.flatMap((id) => index.claims.get(id) ?? []);
+    const estimates = statementOnlyNumbers(claims);
+    const estimatedNumber = extractNumbers(bullets.get(note.bulletId)?.text ?? "").some((number) =>
+      estimates.has(number.norm),
+    );
+    const statement =
+      claims.length === ids.length &&
+      claims.length > 0 &&
+      claims.every(
+        (claim) => claim.evidence.length > 0 && claim.evidence.every((receipt) => receipt.kind === "statement"),
+      );
+    return {
+      ...note,
+      ...(statement || estimatedNumber ? { basis: "statement" as const } : {}),
+      ...(note.verdict !== "supported" && (honesty === "trust" || note.severity !== undefined)
+        ? { severity: honesty === "trust" ? ("warn" as const) : ("block" as const) }
+        : {}),
+    };
+  });
 }

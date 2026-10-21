@@ -73,9 +73,10 @@ export function onboardingRoutes(runtime: WorkspaceRuntime): Hono {
   app.post("/chat", async (c) => {
     const input = await body(c, ChatRequest);
     return runtime.exclusive(async () => {
-      const result = await runtime.chats.turn("onboarding", "interview", input, async (history) =>
-        chatOnboarding(runtime.ws, { ...input, history }, await deps()),
+      const result = await runtime.chats.turn("onboarding", "interview", input, async (history, conversation) =>
+        chatOnboarding(runtime.ws, { ...input, history, ...conversation }, await deps()),
       );
+      if (result.applied) runtime.changed("projects", result.sha ?? null);
       return c.json(result);
     });
   });

@@ -10,7 +10,24 @@ export function relationshipProposal(
   slug: string,
   input: PutRelationshipRequest,
 ): SourceProposal {
-  input = PutRelationshipRequest.parse(input);
+  const name = parseProjects(markdown).doc.items.find((item) => item.slug === slug)?.name ?? slug;
+  return projectMetadataProposal(
+    markdown,
+    baseHash,
+    slug,
+    PutRelationshipRequest.parse(input),
+    `Set relationship: ${name}`,
+  );
+}
+
+/** Shared surgical metadata writer for explicit chat metadata and statement receipts. */
+export function projectMetadataProposal(
+  markdown: string,
+  baseHash: string,
+  slug: string,
+  input: Record<string, unknown>,
+  summary: string,
+): SourceProposal {
   const { doc, issues } = parseProjects(markdown);
   const matches = doc.items.filter((item) => item.slug === slug);
   if (matches.length !== 1)
@@ -93,6 +110,6 @@ export function relationshipProposal(
     before: markdown,
     after: markdown.slice(0, start) + updated + markdown.slice(end),
     baseHash,
-    summary: `Set relationship: ${item.name}`,
+    summary,
   };
 }

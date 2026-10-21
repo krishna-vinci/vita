@@ -18,7 +18,7 @@ const sourceOutput = z.strictObject({
 export const resumeEditorRole: RoleSpec<z.infer<typeof resumeOutput>> = {
   name: "resume-editor",
   skills: ["edit-resume"],
-  readTools: ["read_resume", "search_evidence"],
+  readTools: ["read_resume", "search_evidence", "read_outline", "read_projects"],
   submitTool: {
     name: "propose_ops",
     description: "Submit the smallest supported operations and summary, or no operations and an honest alternative.",

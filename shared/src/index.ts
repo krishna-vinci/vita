@@ -23,6 +23,7 @@ export { Profile, ProfileMutation, ProfileView, PutProfileRequest } from "./prof
 export {
   Bullet,
   Contact,
+  HttpUrl,
   Item,
   ItemLink,
   OverrideRecord,
