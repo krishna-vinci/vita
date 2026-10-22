@@ -10,6 +10,7 @@ export * from "./api-metrics";
 export * from "./api-onboarding";
 export * from "./api-packs";
 export * from "./api-prep";
+export * from "./api-quality";
 export * from "./api-research";
 export * from "./api-sync";
 export * from "./api-templates";
@@ -33,5 +34,14 @@ export {
   SectionKind,
   visibleBullets,
 } from "./resume";
-export { AtsNote, CheckNote, Finding, RenderCheck, Review } from "./review";
+export {
+  AtsNote,
+  CheckNote,
+  FactQuestion,
+  Finding,
+  RecruiterFinding,
+  RecruiterReview,
+  RenderCheck,
+  Review,
+} from "./review";
 export { Knob, TemplateMeta } from "./template";

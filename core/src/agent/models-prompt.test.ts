@@ -44,6 +44,9 @@ it("loads models.yaml, resolves overrides/defaults and warns on the same checker
   expect(modelWarnings(config)).toEqual([expect.stringMatching(/same model.*principle 6/)]);
   config.roles.checker = "other/checker";
   expect(modelWarnings(config)).toEqual([]);
+  expect(resolveRoleModel(config, "reviewer")).toBe("other/checker");
+  config.roles.reviewer = "other/reviewer";
+  expect(resolveRoleModel(config, "reviewer")).toBe("other/reviewer");
   expect(modelWarnings(ModelsConfig.parse({ default: "example/model" }))).toHaveLength(1);
 });
 

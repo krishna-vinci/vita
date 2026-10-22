@@ -187,6 +187,7 @@ it("lints first, starts checker/ATS/render concurrently, then joins unchanged do
       .join("\n"),
   });
   vi.spyOn(agent, "runRole").mockImplementation(async (opts) => {
+    if (opts.role.name === "reviewer") return { score: 8, summary: "Clear", findings: [] } as never;
     if (opts.role.name === "writer") return resume as never;
     started.push(opts.role.name);
     if (opts.role.name === "checker") {
@@ -210,7 +211,6 @@ it("lints first, starts checker/ATS/render concurrently, then joins unchanged do
   expect(result.review).toMatchObject({
     round: 1,
     done: true,
-    lint: [],
     checks: notes(resume),
     ats: [],
     render: { ok: true },
@@ -231,6 +231,7 @@ it("revises in the same writer session with review notes and rechecks only non-s
   });
   vi.spyOn(agent, "runRole").mockImplementation(async (opts) => {
     calls.push(opts);
+    if (opts.role.name === "reviewer") return { score: 8, summary: "Clear", findings: [] } as never;
     if (opts.role.name === "writer") return resume as never;
     if (opts.role.name === "checker") return { checks: ++checks === 1 ? first : [notes(resume)[0]] } as never;
     return { ats: [] } as never;
@@ -273,6 +274,7 @@ it("drains concurrent render and ATS work before surfacing a checker failure", a
       .join("\n"),
   });
   vi.spyOn(agent, "runRole").mockImplementation(async (opts) => {
+    if (opts.role.name === "reviewer") return { score: 8, summary: "Clear", findings: [] } as never;
     if (opts.role.name === "writer") return resume as never;
     if (opts.role.name === "checker") throw new Error("Checker unavailable");
     await opts.tools.render;

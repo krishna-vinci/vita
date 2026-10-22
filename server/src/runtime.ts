@@ -240,7 +240,8 @@ export class WorkspaceRuntime {
       : await this.resource("application", id);
     return {
       ...resource,
-      status: pending ? "needs-answers" : resource.review?.done ? "done" : "draft",
+      status:
+        pending || metadata.status === "needs-answers" ? "needs-answers" : resource.review?.done ? "done" : "draft",
       jobText: await readText(this.ws.root, `${prefix}/job.md`),
       notes: resource.instructions ?? "",
       analysis: JobAnalysis.parse(JSON.parse(await readText(this.ws.root, `${prefix}/analysis.json`))),

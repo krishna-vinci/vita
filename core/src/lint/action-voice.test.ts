@@ -62,7 +62,7 @@ it("blocks writer descriptions across profession fixtures and warns only for a l
     kind: "master",
     parent: null,
     template: "rover-base",
-    header: { name: "Example" },
+    header: { name: "Example", headline: "Coordinator" },
     sections: [
       {
         id: "skills",

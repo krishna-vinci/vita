@@ -18,6 +18,8 @@ const preambles: Record<RoleName, string> = {
   analyst:
     "Analyse the supplied job data: separate must-have and nice-to-have requirements and identify keyword synonyms.",
   writer: "Draft a resume grounded in the supplied claims and evidence. Preserve locked user bullets.",
+  reviewer:
+    "Grade the checked resume as a hiring reviewer. Suggest only honest wording and ordering fixes, or ask for missing facts.",
   checker: "Independently check every resume bullet against claims, evidence and limits. Give no benefit of the doubt.",
   "ats-reviewer": "Review requirement coverage, section naming and machine-readable resume content.",
   "resume-editor": "Make the smallest evidence-backed resume edits through operations. Never change locked bullets.",

@@ -22,7 +22,7 @@ import {
   runRole,
   wrapUntrusted,
 } from "../agent/index.js";
-import { atsReviewerRole, checkerRole, writerRole } from "../agent/roles.js";
+import { atsReviewerRole, checkerRole, reviewerRole, writerRole } from "../agent/roles.js";
 import { enforcePageLimit } from "../instructions/rules.js";
 import { lintResume } from "../lint/index.js";
 import {
@@ -234,10 +234,17 @@ export async function generate(
     skills: input.kind === "base" ? [...writerRole.skills, "build-base"] : writerRole.skills,
     submitTool: {
       ...writerRole.submitTool,
-      parameters: Type.Unsafe(z.toJSONSchema(z.object(Resume.shape).omit({ header: true }), { io: "input" })),
+      parameters: Type.Unsafe(
+        z.toJSONSchema(
+          z.object(Resume.shape).extend({ header: z.object({ headline: z.string().optional() }).optional() }),
+          { io: "input" },
+        ),
+      ),
       output: z.preprocess(
         (value) =>
-          typeof value === "object" && value !== null && !Array.isArray(value) ? { ...value, header } : value,
+          typeof value === "object" && value !== null && !Array.isArray(value)
+            ? { ...value, header: { ...header, headline: (value as Resume).header?.headline ?? header.headline } }
+            : value,
         Resume,
       ),
     },
@@ -301,6 +308,8 @@ export async function generate(
   let deepen: string[] = [];
   let deepened = false;
   let revisions = 0;
+  let recruiterRevised = false;
+  let recruiterRevisionPending = false;
   const renderSources: RenderSources = { projects: ctx.projectsText, outline: ctx.outlineText };
   const evidence = writerEvidence(ctx, input);
   const writerSession = new RoleSession();
@@ -337,9 +346,9 @@ export async function generate(
     data("must-haves to cover", input.mustCover ?? []),
     data("user notes", input.notes ?? ""),
   ].join("\n\n");
-  // One correction revision and at most one additional depth pass; every pass is checked and metered.
+  // One correction, one depth pass and one recruiter revision at most; every pass is checked and metered.
   try {
-    for (let round = 1; round <= 3; round++) {
+    for (let round = 1; round <= 4; round++) {
       deps.onProgress?.({ stage: deepen.length ? "deepen" : round === 1 ? "write" : "revise", round });
       const draft = await run(
         writer,
@@ -368,8 +377,8 @@ export async function generate(
                       data("direction", input.direction),
                     ]
                   : []),
-                `Use action voice and confirmed relationship/contribution for scope: sole permits Built for the whole project; team needs owned parts or explicit team scope; contributor needs Contributed X to Y. Never assume sole ownership. Put experience roles in Item.subtitle. Skills must use list sections with labelled category items. Follow per-item bullet budgets, aiming for ${Math.round((input.minFill ?? ctx.rules.min_fill) * 100)}–100% fill with supported relevant content only.`,
-                "The engine supplies the header from profile.yaml. Return the resume content without a header through submit_resume.",
+                `Use action voice and confirmed relationship/contribution for scope: sole permits Built for the whole project; team needs owned parts or explicit team scope; contributor needs Contributed X to Y. Never assume sole ownership. Every project and role needs its known period and a one-line purpose (what it is and who it serves) in Item.subtitle, followed by 2–4 bullets within its budget. Lead with value or result, then engineering. Order projects by fit to the target. Skills must cover every technology named in the summary. Never copy an eight-word span of evidence or statements. No third-person, internal machinery or filler bullets. Skills must use list sections with labelled category items. Follow per-item bullet budgets, aiming for ${Math.round((input.minFill ?? ctx.rules.min_fill) * 100)}–100% fill with supported relevant content only.`,
+                "The engine supplies identity and contacts from profile.yaml. Supply only header.headline, tailored to the job or base direction, through submit_resume.",
                 "When outline.summary exists, include a summary section whose bullets cite outline.summary and use only that person's summary. You may shorten it or reorder emphasis for a job; never substitute experience claims or other text. Preserve a protected local summary override verbatim.",
                 context,
                 data("previous resume", resume ?? null),
@@ -379,10 +388,18 @@ export async function generate(
         input.analysis,
         writerSession,
       );
-      if (round > 1 && !deepen.length) revisions++;
+      if (round > 1 && !deepen.length && !recruiterRevisionPending) revisions++;
+      recruiterRevisionPending = false;
       deepen = [];
       resume = carryUserState(
-        { ...draft, header, id: input.id, kind: input.kind, parent: input.parent, template: input.template },
+        {
+          ...draft,
+          header: { ...header, headline: draft.header?.headline ?? header.headline },
+          id: input.id,
+          kind: input.kind,
+          parent: input.parent,
+          template: input.template,
+        },
         input.seed,
       );
       const summary = ctx.index.claims.get("outline.summary");
@@ -425,7 +442,12 @@ export async function generate(
               };
           }
       deps.onProgress?.({ stage: "lint", round });
-      const lint: Finding[] = lintResume(resume, { index: ctx.index, pack: input.pack, rules: ctx.rules });
+      const lint: Finding[] = lintResume(resume, {
+        index: ctx.index,
+        pack: input.pack,
+        rules: ctx.rules,
+        relevanceOrder: input.selection?.items.map((item) => item.itemSlug),
+      });
       if (lint.length)
         deps.onProgress?.({
           stage: "lint",
@@ -565,7 +587,34 @@ export async function generate(
           continue;
         }
       }
-      if (review.done || revisions >= 1 || round === 3) break;
+      if (!recruiterRevised && revisions < 1 && round < 4 && !review.done) continue;
+      // Recruiter runs only after this draft's checks, ATS and render have all settled.
+      deps.onProgress?.({ stage: "review", round });
+      review.recruiter = await run(
+        reviewerRole,
+        [
+          "Grade this checked and rendered resume as a hiring reviewer. Return score, summary and findings through submit_review. Fixes may only reword/reorder existing claims or set supported metadata; ask a missing-facts question for unknown facts. Use stable dates.<slug>, graduation.<slug>, results.<slug> question ids and target the source item slug. Never invent results. All honesty levels receive the same review.",
+          data("resume", resume),
+          data("target", input.analysis),
+          data("checks and render", review),
+          data("source facts", evidence),
+        ].join("\n\n"),
+        resume,
+        input.analysis,
+        undefined,
+        Promise.resolve(review.render),
+      );
+      const actionable = review.recruiter.findings.some(
+        (finding) =>
+          finding.severity !== "low" && (finding.area === "wording" || (finding.fix && "ops" in finding.fix)),
+      );
+      if (actionable && !recruiterRevised && round < 4) {
+        recruiterRevised = true;
+        recruiterRevisionPending = true;
+        continue;
+      }
+
+      if (review.done || revisions >= 1 || round >= 3) break;
     }
   } finally {
     writerSession.dispose();

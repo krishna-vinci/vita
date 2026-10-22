@@ -33,6 +33,7 @@ import { onboardingRoutes } from "./routes/onboarding.js";
 import { packRoutes } from "./routes/packs.js";
 import { prepRoutes } from "./routes/prep.js";
 import { profileRoutes } from "./routes/profile.js";
+import { qualityRoutes } from "./routes/quality.js";
 import { researchRoutes } from "./routes/research.js";
 import { syncRoutes } from "./routes/sync.js";
 import { templateRoutes } from "./routes/templates.js";
@@ -106,6 +107,7 @@ export function createWorkspaceApp(runtime: WorkspaceRuntime, options: { webDist
   });
   app.notFound((c) => c.json({ error: { code: "not-found", message: "Route not found" } }, 404));
   app.get("/api/health", (c) => c.json({ ok: true }));
+  app.route("/api", qualityRoutes(runtime));
   app.route("/api", texRoutes(runtime));
   app.route("/api", memoryRoutes(runtime));
   app.route("/api", profileRoutes(runtime));

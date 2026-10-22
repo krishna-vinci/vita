@@ -2,6 +2,7 @@ import { type Finding, type Pack, type Resume, type Rules, visibleBullets } from
 import type { ClaimIndex, IndexedClaim } from "../claims/index.js";
 import { actionVoiceProblem } from "./action-voice.js";
 import { extractNumbers, normalizeNumber } from "./numbers.js";
+import { lintQuality } from "./quality.js";
 import { lintExtraRules } from "./rules-extra.js";
 
 export interface LintContext {
@@ -13,6 +14,9 @@ export interface LintContext {
    * editing a resume the person already approved, and on bullets the person wrote.
    */
   voice?: "block" | "warn";
+  relevanceOrder?: string[];
+  /** Cover-letter adapters retain honesty lint without resume positioning rules. */
+  quality?: boolean;
 }
 
 function supportedNumbers(claims: IndexedClaim[], strict = false): Set<string> {
@@ -166,5 +170,5 @@ export function lintResume(resume: Resume, ctx: LintContext): Finding[] {
       add("bullet-length", "warn", `Bullet has ${bullet.text.length} characters; maximum is ${maxChars}.`);
     }
   }
-  return findings;
+  return [...findings, ...(ctx.quality === false ? [] : lintQuality(resume, ctx.index, ctx.relevanceOrder))];
 }

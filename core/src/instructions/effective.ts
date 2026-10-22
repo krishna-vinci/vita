@@ -5,6 +5,7 @@ import {
   checkerRole,
   interviewerRole,
   type RoleName,
+  reviewerRole,
   writerRole,
 } from "../agent/roles.js";
 import { templateDesignerRole } from "../agent/template-designer.js";
@@ -19,6 +20,7 @@ export const promptRoles = {
   analyst: analystRole,
   writer: writerRole,
   checker: checkerRole,
+  reviewer: reviewerRole,
   "ats-reviewer": atsReviewerRole,
   "resume-editor": resumeEditorRole,
   "source-editor": sourceEditorRole,

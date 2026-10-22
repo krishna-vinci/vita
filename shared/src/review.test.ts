@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { JobAnalysis, Requirement } from "./analysis";
-import { AtsNote, CheckNote, Review } from "./review";
+import { AtsNote, CheckNote, RecruiterReview, Review } from "./review";
 
 describe("pipeline schemas", () => {
   it("validates requirement groups and bounded base scores", () => {
@@ -49,4 +49,44 @@ describe("pipeline schemas", () => {
     expect(review.overrides[0]?.reason).toBe("User attested");
     expect(Review.safeParse({ ...review, round: 1.5 }).success).toBe(false);
   });
+});
+
+it("validates optional recruiter scores, safe wording fixes and question findings", () => {
+  const review = {
+    score: 8,
+    summary: "Clear",
+    findings: [
+      {
+        id: "wording",
+        area: "wording",
+        severity: "medium",
+        message: "Rewrite",
+        fix: { ops: [{ op: "bullet.edit", id: "bullet", text: "Clarified the service purpose." }] },
+      },
+    ],
+  };
+  expect(RecruiterReview.parse(review).score).toBe(8);
+  expect(RecruiterReview.safeParse({ ...review, score: 11 }).success).toBe(false);
+  expect(
+    RecruiterReview.safeParse({
+      ...review,
+      findings: [
+        { ...review.findings[0], fix: { ops: [{ op: "bullet.override", id: "bullet", reason: "user-attested" }] } },
+      ],
+    }).success,
+  ).toBe(false);
+  expect(
+    RecruiterReview.parse({
+      ...review,
+      findings: [
+        {
+          id: "dates",
+          area: "timeline",
+          severity: "high",
+          message: "Ask dates",
+          fix: { question: { id: "dates.example", kind: "dates", text: "When did you work on Example?" } },
+        },
+      ],
+    }).findings[0]?.fix,
+  ).toHaveProperty("question");
 });

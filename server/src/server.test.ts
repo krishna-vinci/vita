@@ -20,7 +20,7 @@ import {
   WorkspaceView,
 } from "@vita/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { citeFixtureSummary } from "../../core/src/pipeline/test-fixtures.js";
+import { citeFixtureSummary, skipFixtureResults } from "../../core/src/pipeline/test-fixtures.js";
 import * as engineRender from "../../core/src/render/index.js";
 import { WorkspaceRuntime } from "./runtime.js";
 import { createWorkspaceApp as createServer } from "./server.js";
@@ -38,6 +38,7 @@ beforeEach(async () => {
   vi.stubEnv("GIT_CONFIG_NOSYSTEM", "1");
   const root = join(dir, "workspace");
   await cp(join(bundledDir, "fixtures/developer"), root, { recursive: true });
+  await skipFixtureResults(root);
   await core.ensureRepo(root);
   resume = citeFixtureSummary(Resume.parse(JSON.parse(await core.readText(root, "resumes/master/resume.json"))));
   await core.writeTextAtomic(root, "resumes/master/resume.json", JSON.stringify(resume));
@@ -336,7 +337,9 @@ describe("generation API", () => {
       const job = runtime.jobs.get(queued.job.id);
       expect(job?.status, job?.error).toBe("done");
       // The base repeats the master's lines with the same claims, so supported verdicts are reused from the cache.
-      expect(job?.usage.map((usage) => usage.role)).toEqual(queued === master ? ["writer", "checker"] : ["writer"]);
+      expect(job?.usage.map((usage) => usage.role)).toEqual(
+        queued === master ? ["writer", "checker", "reviewer"] : ["writer", "reviewer"],
+      );
       expect(job?.result?.sha).toMatch(/^[a-f0-9]{40}$/);
       expect((await server.request(`/api/jobs/${queued.job.id}`)).status).toBe(200);
     }
