@@ -25,6 +25,7 @@ import { chatRoutes } from "./routes/chat.js";
 import { chatsRoutes } from "./routes/chats.js";
 import { eventsRoutes } from "./routes/events.js";
 import { fitRoutes } from "./routes/fit.js";
+import { infoRoutes } from "./routes/info.js";
 import { instructionsRoutes } from "./routes/instructions.js";
 import { letterRoutes } from "./routes/letters.js";
 import { memoryRoutes } from "./routes/memory.js";
@@ -109,6 +110,7 @@ export function createWorkspaceApp(runtime: WorkspaceRuntime, options: { webDist
   app.route("/api", texRoutes(runtime));
   app.route("/api", memoryRoutes(runtime));
   app.route("/api", profileRoutes(runtime));
+  app.route("/api", infoRoutes(runtime));
   app.route("/api", trackerRoutes(runtime));
   app.route("/api", researchRoutes(runtime));
   app.route("/api", packRoutes(runtime));

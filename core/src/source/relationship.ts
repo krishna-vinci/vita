@@ -27,6 +27,7 @@ export function projectMetadataProposal(
   slug: string,
   input: Record<string, unknown>,
   summary: string,
+  options: { blockStyle?: boolean } = {},
 ): SourceProposal {
   const { doc, issues } = parseProjects(markdown);
   const matches = doc.items.filter((item) => item.slug === slug);
@@ -96,10 +97,17 @@ export function projectMetadataProposal(
         const lineStart = yaml.lastIndexOf("\n", node.range[0] - 1) + 1;
         const indent = /^\s*/.exec(yaml.slice(lineStart, node.range[0]))?.[0] ?? "";
         const block = Array.isArray(value) && value.length > 0 && isSeq(node) && !node.flow;
+        const expand =
+          options.blockStyle && !document.contents.flow && Array.isArray(value) && value.length > 0 && !block;
         changes.push({
           start: node.range[0],
           end: node.range[1],
-          text: (block ? blockList(value, indent) : JSON.stringify(value)) + ending,
+          text:
+            (block
+              ? blockList(value, indent)
+              : expand
+                ? `${eol}  ${blockList(value as unknown[], "  ")}`
+                : JSON.stringify(value)) + ending,
         });
       } else additions.push(document.contents.flow ? `${key}: ${JSON.stringify(value)}` : entry(key, value));
     }

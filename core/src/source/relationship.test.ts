@@ -50,3 +50,24 @@ it("replaces a multiline contribution without consuming the next metadata key", 
   expect(parseProjects(after).issues).toEqual([]);
   expect(parseProjects(after).doc.items[0]?.meta.contribution).toBe("Added search");
 });
+
+it("can expand edited flow lists into block lists without touching neighbouring bytes", async () => {
+  const { projectMetadataProposal } = await import("./relationship.js");
+  const before =
+    "## Archive\r\n```yaml\r\nkind: project # keep\r\nlinks: [] # links\r\nstack: [SQL]\r\ncustom: keep\r\n```\r\n";
+  const result = projectMetadataProposal(
+    before,
+    "a".repeat(64),
+    "archive",
+    { links: ["https://archive.example"], stack: ["SQL", "TypeScript"] },
+    "Update project",
+    { blockStyle: true },
+  );
+  expect(result.after).toBe(
+    before
+      .replace("links: []", "links: \r\n  - https://archive.example")
+      .replace("stack: [SQL]", "stack: \r\n  - SQL\r\n  - TypeScript"),
+  );
+  expect(parseProjects(result.after).issues).toEqual([]);
+  expect(parseProjects(result.after).doc.items[0]?.meta.links).toEqual(["https://archive.example"]);
+});

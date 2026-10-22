@@ -3,6 +3,7 @@ export * from "./api";
 export * from "./api-auth";
 export * from "./api-fit";
 export * from "./api-github";
+export * from "./api-info";
 export * from "./api-instructions";
 export * from "./api-letters";
 export * from "./api-memory";
