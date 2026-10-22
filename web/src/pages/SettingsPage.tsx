@@ -78,6 +78,23 @@ function SettingsForm({ settings }: { settings: SettingsView }) {
             onChange={(value) => change({ ...draft, models: { ...draft.models, default: value ?? "" } })}
           />
           <FieldDescription>Used for every step unless you choose a different model below.</FieldDescription>
+          {Object.keys(draft.models.roles).length > 0 && (
+            <div className="rounded-md border bg-muted/40 p-3 text-sm">
+              <p className="font-medium">Steps with their own model</p>
+              <ul className="mt-1 flex flex-col gap-0.5 text-muted-foreground">
+                {roles
+                  .filter(({ id }) => draft.models.roles[id])
+                  .map(({ id, label }) => (
+                    <li key={id}>
+                      {label}: <span className="font-mono text-xs text-foreground">{draft.models.roles[id]}</span>
+                    </li>
+                  ))}
+              </ul>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Everything else uses the default model. Change these under &ldquo;models for each step&rdquo;.
+              </p>
+            </div>
+          )}
         </Field>
         <Field>
           <FieldLabel htmlFor="template">Default template</FieldLabel>
