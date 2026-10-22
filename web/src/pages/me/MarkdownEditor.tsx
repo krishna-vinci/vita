@@ -50,6 +50,9 @@ function viewOf(markdown: string, hide: boolean) {
 }
 
 /** A plain Markdown editor: save needs the hash it was opened with, and a clash offers two clear ways out. */
+// "You said" receipts in the outline are Vita's bookkeeping; the preview shows only your words.
+const withoutReceipts = (text: string) => text.replace(/^```yaml\r?\nstatement_claims:[\s\S]*?^```[ \t]*\r?\n?/gm, "");
+
 export function MarkdownEditor({
   resource,
   label,
@@ -162,7 +165,7 @@ export function MarkdownEditor({
       </fieldset>
       {preview ? (
         <Markdown
-          text={draft || "_Nothing written yet._"}
+          text={withoutReceipts(draft) || "_Nothing written yet._"}
           className={cn(
             "overflow-auto rounded-md border bg-card p-4 text-base",
             compact ? "min-h-48" : "min-h-[55dvh]",

@@ -126,3 +126,22 @@ it("adds/removes project links surgically, validates URLs, renders Website/GitHu
   expect(await readText(root, "profile.yaml")).toContain("headline: Editor");
   expect(await readText(root, "profile.yaml")).toContain("location: Pune");
 });
+
+it("refuses to record a request or a description of the person as a statement", async () => {
+  const conversation = {
+    messages: ["we forgot to highlight python/fastapi totally and also our data capabilities"],
+    threadId: "t",
+    now: new Date("2026-10-22T10:00:00Z"),
+  };
+  await expect(
+    recordStatement(
+      root,
+      {
+        itemSlug: "archive",
+        quote: "we forgot to highlight python/fastapi",
+        claimText: "The user identifies Python/FastAPI as strengths they want highlighted.",
+      },
+      conversation,
+    ),
+  ).rejects.toThrow("request to change the resume");
+});

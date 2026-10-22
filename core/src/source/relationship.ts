@@ -1,5 +1,5 @@
 import { PutRelationshipRequest, type SourceProposal } from "@vita/shared";
-import { isMap, isNode, parseDocument } from "yaml";
+import { isMap, isNode, isSeq, parseDocument, stringify } from "yaml";
 import { fenceEnd, fenceStart, sourceLines } from "./markdown.js";
 import { parseProjects } from "./projects.js";
 
@@ -64,12 +64,22 @@ export function projectMetadataProposal(
     }
     offset += line.text.length + line.ending.length;
   }
+  // Lists stay in block style ("- item" lines) and scalars stay plain, like hand-written metadata.
+  const scalar = (value: unknown) => stringify(value, { lineWidth: 0 }).trimEnd();
+  const blockList = (values: unknown[], indent: string) =>
+    values.map((value, index) => `${index ? indent : ""}- ${scalar(value)}`).join(eol);
+  const entry = (key: string, value: unknown) =>
+    Array.isArray(value)
+      ? value.length
+        ? `${key}:${eol}  ${blockList(value, "  ")}`
+        : `${key}: []`
+      : `${key}: ${scalar(value)}`;
   let updated: string;
   if (yamlStart === undefined) {
     const first = sourceLines(section)[0];
     const at = (first?.text.length ?? 0) + (first?.ending.length ?? 0);
     const yaml = Object.entries(input)
-      .map(([key, value]) => `${key}: ${JSON.stringify(value)}${eol}`)
+      .map(([key, value]) => `${entry(key, value)}${eol}`)
       .join("");
     updated = `${section.slice(0, at)}${first?.ending ? "" : eol}\`\`\`yaml${eol}${yaml}\`\`\`${eol}${section.slice(at)}`;
   } else {
@@ -81,13 +91,17 @@ export function projectMetadataProposal(
     const additions: string[] = [];
     for (const [key, value] of Object.entries(input)) {
       const node = document.get(key, true);
-      if (isNode(node) && node.range)
+      if (isNode(node) && node.range) {
+        const ending = /\r?\n$/.exec(yaml.slice(node.range[0], node.range[1]))?.[0] ?? "";
+        const lineStart = yaml.lastIndexOf("\n", node.range[0] - 1) + 1;
+        const indent = /^\s*/.exec(yaml.slice(lineStart, node.range[0]))?.[0] ?? "";
+        const block = Array.isArray(value) && value.length > 0 && isSeq(node) && !node.flow;
         changes.push({
           start: node.range[0],
           end: node.range[1],
-          text: JSON.stringify(value) + (/\r?\n$/.exec(yaml.slice(node.range[0], node.range[1]))?.[0] ?? ""),
+          text: (block ? blockList(value, indent) : JSON.stringify(value)) + ending,
         });
-      else additions.push(`${key}: ${JSON.stringify(value)}`);
+      } else additions.push(document.contents.flow ? `${key}: ${JSON.stringify(value)}` : entry(key, value));
     }
     if (additions.length) {
       const flow = document.contents.flow;

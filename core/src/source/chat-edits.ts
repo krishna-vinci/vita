@@ -53,6 +53,52 @@ function insertAtLine(text: string, line: number, addition: string) {
 }
 
 /** Only actual user messages are supplied by the server, independently of model context. */
+/**
+ * Add one evidence entry to an item's YAML block in the same block style as the entries already
+ * there. Only the inserted lines change; the rest of the file stays byte for byte.
+ */
+export function appendEvidence(text: string, itemSlug: string, evidence: Evidence): string {
+  const eol = text.includes("\r\n") ? "\r\n" : "\n";
+  const lines = text.split(/\r?\n/);
+  const items = parseProjects(text).doc.items;
+  const position = items.findIndex((item) => item.slug === itemSlug);
+  const start = items[position]?.line;
+  if (start === undefined) throw new Error(`Project not found: ${itemSlug}`);
+  const end = (items[position + 1]?.line ?? lines.length + 1) - 1;
+  const open = lines.findIndex((line, index) => index >= start - 1 && index < end && /^```yaml\s*$/.test(line));
+  const close = open < 0 ? -1 : lines.findIndex((line, index) => index > open && /^```\s*$/.test(line));
+  const entry = stringify([evidence], { lineWidth: 0 })
+    .trimEnd()
+    .split("\n")
+    .map((line) => `  ${line}`);
+  if (open < 0 || close < 0) {
+    // No metadata block yet: add one after the heading.
+    lines.splice(start, 0, "```yaml", "evidence:", ...entry, "```");
+    return lines.join(eol);
+  }
+  const key = lines.findIndex((line, index) => index > open && index < close && /^evidence:/.test(line));
+  if (key < 0) {
+    lines.splice(close, 0, "evidence:", ...entry);
+  } else if (/^evidence:\s*\[\s*\]\s*$/.test(lines[key] ?? "")) {
+    lines.splice(key, 1, "evidence:", ...entry);
+  } else {
+    let last = key;
+    for (let index = key + 1; index < close; index++) {
+      const line = lines[index] ?? "";
+      if (line.trim() && !/^\s/.test(line)) break;
+      if (line.trim()) last = index;
+    }
+    lines.splice(last + 1, 0, ...entry);
+  }
+  return lines.join(eol);
+}
+
+// Requests ("highlight Python", "we forgot to add…") and descriptions of the person are not facts
+// about their work; recording them as evidence pollutes the outline.
+const REQUEST =
+  /^(?:please\b|can you\b|could you\b|we forgot\b|i forgot\b|highlight\b|add\b|make\b|change\b|update\b|remove\b|mention\b|include\b|emphasi[sz]e\b)/i;
+const META = /\b(?:the user|the person|wants? (?:it|them|this)? ?highlighted|wants? to highlight|would like)\b/i;
+
 export async function recordStatement(
   root: string,
   input: { itemSlug: string; quote: string; claimText: string },
@@ -67,6 +113,10 @@ export async function recordStatement(
     throw new Error("Statement quote must appear in your own messages in this conversation");
   const claimText = input.claimText.replace(/\s+/gu, " ").trim();
   if (!claimText) throw new Error("Statement claim must not be empty");
+  if (REQUEST.test(input.quote.trim()) || META.test(claimText))
+    throw new Error(
+      "That is a request to change the resume, not a fact about your work. Make the edit instead (a source proposal or resume operation); record statements only for facts the person states about what they did.",
+    );
   const id = `statement-${randomUUID()}`;
   const evidence: Evidence = {
     id: `ev-${randomUUID()}`,
@@ -88,13 +138,7 @@ export async function recordStatement(
     before = projects;
     hash = await fileHash(root, "projects.md");
     if (!hash) throw new Error("Projects file is missing");
-    after = projectMetadataProposal(
-      before,
-      hash,
-      input.itemSlug,
-      { evidence: [...item.meta.evidence, evidence] },
-      summary,
-    ).after;
+    after = appendEvidence(before, input.itemSlug, evidence);
     const updated = parseProjects(after).doc.items;
     const position = updated.findIndex((entry) => entry.slug === input.itemSlug);
     const start = updated[position]?.line ?? 1;

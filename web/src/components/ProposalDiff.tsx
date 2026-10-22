@@ -9,8 +9,11 @@ import { changedLines } from "@/lib/diff";
 const fileName = { outline: "your outline", projects: "your projects" } as const;
 
 /** Before and after as plain text: removed lines struck through, added lines marked. */
+// Claim and evidence markers are for Vita, not for reading; the diff shows the words.
+const readable = (text: string) => text.replace(/[ \t]*<!--[\s\S]*?-->/g, "");
+
 export function Diff(props: { before: string; after: string }) {
-  const { before, after } = changedLines(props.before, props.after);
+  const { before, after } = changedLines(readable(props.before), readable(props.after));
   return (
     <div className="flex max-h-72 flex-col gap-1 overflow-auto rounded-md border bg-background p-2 font-mono text-xs break-words whitespace-pre-wrap">
       {before && (
