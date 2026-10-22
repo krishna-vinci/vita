@@ -208,7 +208,7 @@ it("returns advisory ownership from injected fetch and confirms relationships th
     relationship: "team",
     contribution: "Added filters",
   });
-  expect(after.replace('relationship: "team"\ncontribution: "Added filters"\n', "")).toBe(before);
+  expect(after.replace("relationship: team\ncontribution: Added filters\n", "")).toBe(before);
   expect(
     (
       await server.request("/api/projects/community-archive/relationship", {
