@@ -1,3 +1,5 @@
+// M11-S6
+import type { FactsAnswerRequest, FactsAnswerResult, MissingFactsView, PreviewResult } from "@vita/shared";
 import {
   type AccountUser,
   type AdoptionProposal,
@@ -451,4 +453,21 @@ export const api = {
   packs: (signal?: AbortSignal) => get<PackSummary[]>("/packs", signal),
   promote: (body: PromoteRequest) => send<SyncMutation>("/promote", body),
   undo: (body: UndoRequest) => send<UndoResult>("/undo", body),
+};
+
+// --- M11-S6: facts, preview and recruiter-review endpoints (kept apart from `api`) ---
+export const qualityApi = {
+  facts: {
+    missing: (signal?: AbortSignal) => get<MissingFactsView>("/facts/missing", signal),
+    answer: (body: FactsAnswerRequest) => send<FactsAnswerResult>("/facts/answer", body),
+  },
+  /** Renders the current resume to a cached, uncommitted PDF. Returns its URL. */
+  preview: (scope: "application" | "resume", id: string) =>
+    send<PreviewResult>(`/${scope === "resume" ? "resumes" : "applications"}/${segment(id)}/preview`, {}),
+  /** Applies one recruiter finding's ops. A question finding answers 409 `answer-required`. */
+  applyFinding: (scope: "application" | "resume", id: string, findingId: string) =>
+    send<ResumeMutation>(
+      `/${scope === "resume" ? "resumes" : "applications"}/${segment(id)}/review/${segment(findingId)}/apply`,
+      {},
+    ),
 };

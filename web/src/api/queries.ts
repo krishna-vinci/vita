@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SourceProposal } from "@vita/shared";
-import { api, type ChatApplyIds } from "./client";
+import { api, type ChatApplyIds, qualityApi } from "./client";
 import { queryKeys } from "./keys";
 
 export { queryKeys } from "./keys";
@@ -359,3 +359,27 @@ export const useResumeInstructions = (scope: "application" | "resume", id: strin
     onSuccess: refresh,
   });
 };
+
+// --- M11-S6: facts, preview and recruiter review ---
+export const useMissingFacts = (enabled = true) =>
+  useQuery({
+    queryKey: queryKeys.factsMissing,
+    queryFn: ({ signal }) => qualityApi.facts.missing(signal),
+    enabled,
+    retry: false,
+  });
+/** Saves fact answers to the source, so they are never asked again. */
+export const useAnswerFacts = () =>
+  useApiMutation(qualityApi.facts.answer, [
+    queryKeys.factsMissing,
+    queryKeys.projects,
+    queryKeys.outline,
+    queryKeys.workspace,
+  ]);
+export const usePreview = (scope: "application" | "resume", id: string) =>
+  useMutation({ mutationFn: () => qualityApi.preview(scope, id) });
+export const useApplyFinding = (scope: "application" | "resume", id: string) =>
+  useApiMutation(
+    (findingId: string) => qualityApi.applyFinding(scope, id, findingId),
+    [scope === "resume" ? queryKeys.resume(id) : queryKeys.application(id), queryKeys.workspace],
+  );

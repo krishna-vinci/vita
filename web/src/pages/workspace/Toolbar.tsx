@@ -1,14 +1,13 @@
-import { ChevronDown, Download, Palette, ScrollText, Undo2 } from "lucide-react";
+import { ChevronDown, Download, Eye, MoreHorizontal, Palette, ScrollText, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 
 export function Toolbar({
   details,
@@ -25,6 +24,7 @@ export function Toolbar({
   onEditLatex,
   onStyle,
   onInstructions,
+  onPreview,
 }: {
   details: boolean;
   onDetails: (on: boolean) => void;
@@ -42,25 +42,37 @@ export function Toolbar({
   onEditLatex?: () => void;
   onStyle: () => void;
   onInstructions: () => void;
+  /** Only below the width where the preview sits beside the resume. */
+  onPreview?: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex min-h-11 items-center gap-2">
-        <Switch id="show-details" checked={details} onCheckedChange={onDetails} />
-        <Label htmlFor="show-details" className="cursor-pointer text-muted-foreground">
-          Show details
-        </Label>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="ghost" className="h-11" onClick={onInstructions}>
-          <ScrollText /> Instructions
+    <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-2">
+      <div className="flex items-center gap-1 sm:gap-2">
+        <Button
+          variant="ghost"
+          className="h-11 max-sm:w-11 max-sm:px-0"
+          onClick={onInstructions}
+          aria-label="Instructions"
+        >
+          <ScrollText /> <span className="max-sm:hidden">Instructions</span>
         </Button>
-        <Button variant="ghost" className="h-11" onClick={onStyle}>
-          <Palette /> Style
+        <Button variant="ghost" className="h-11 max-sm:w-11 max-sm:px-0" onClick={onStyle} aria-label="Style">
+          <Palette /> <span className="max-sm:hidden">Style</span>
         </Button>
-        <Button variant="ghost" className="h-11" onClick={onUndo} disabled={undoing}>
-          <Undo2 /> Undo
+        <Button
+          variant="ghost"
+          className="h-11 max-sm:w-11 max-sm:px-0"
+          onClick={onUndo}
+          disabled={undoing}
+          aria-label="Undo"
+        >
+          <Undo2 /> <span className="max-sm:hidden">Undo</span>
         </Button>
+        {onPreview && (
+          <Button variant="ghost" className="h-11 max-sm:w-11 max-sm:px-0" onClick={onPreview} aria-label="Preview">
+            <Eye /> <span className="max-sm:hidden">Preview</span>
+          </Button>
+        )}
         {overBy ? (
           <Button variant="outline" className="h-11" onClick={() => onFit(overBy)}>
             Fit to {overBy === 1 ? "one page" : `${overBy} pages`}
@@ -68,8 +80,16 @@ export function Toolbar({
         ) : null}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button className="h-11" disabled={exporting}>
-              <Download /> {exporting ? "Getting it ready…" : "Download"} <ChevronDown />
+            <Button
+              className="h-11 max-sm:w-11 max-sm:px-0"
+              variant="default"
+              disabled={exporting}
+              aria-label={exporting ? "Getting it ready…" : "Download"}
+            >
+              <MoreHorizontal className="sm:hidden" />
+              <span className="flex items-center gap-2 max-sm:hidden">
+                <Download /> {exporting ? "Getting it ready…" : "Download"} <ChevronDown />
+              </span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -82,6 +102,10 @@ export function Toolbar({
             {onEditLatex && <DropdownMenuItem onSelect={onEditLatex}>Edit LaTeX…</DropdownMenuItem>}
             <DropdownMenuItem onSelect={() => onFit(1)}>Fit to one page first</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => onFit(2)}>Fit to two pages first</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuCheckboxItem checked={details} onCheckedChange={onDetails}>
+              Show sources and checks
+            </DropdownMenuCheckboxItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

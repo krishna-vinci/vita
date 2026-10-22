@@ -14,6 +14,7 @@ import {
   useWorkspace,
 } from "@/api/queries";
 import { DeleteDialog } from "@/components/DeleteDialog";
+import { useFactsGate } from "@/components/FactsGate";
 import { PageError, PageLoading } from "@/components/PageState";
 import { StaleBanner } from "@/components/StaleBanner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -38,6 +39,7 @@ export default function ResumesTab() {
   const jobs = useJobs();
   const workspace = useWorkspace();
   const generate = useGenerateMaster();
+  const facts = useFactsGate();
   if (resumes.isPending) return <PageLoading />;
   if (resumes.isError) return <PageError error={resumes.error} retry={() => void resumes.refetch()} />;
   const all = jobs.data ?? [];
@@ -51,11 +53,14 @@ export default function ResumesTab() {
       job.status === "failed" && (job.kind === "master" || job.kind === "base") && !known.has(job.resourceId ?? ""),
   );
   const startMaster = () =>
-    generate.mutate(undefined, {
-      onError: (error) => toast.error(error.message),
-    });
+    void facts.run(() =>
+      generate.mutate(undefined, {
+        onError: (error) => toast.error(error.message),
+      }),
+    );
   return (
     <div className="flex flex-col gap-6">
+      {facts.dialog}
       <p className="max-w-2xl text-muted-foreground">
         Your master resume holds your best of everything. Base resumes lead with one kind of work, ready to start a job
         resume from.

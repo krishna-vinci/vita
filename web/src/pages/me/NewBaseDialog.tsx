@@ -2,6 +2,7 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useCreateBase, usePacks } from "@/api/queries";
+import { useFactsGate } from "@/components/FactsGate";
 import { instructionExamples } from "@/components/InstructionsDialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -28,10 +29,12 @@ export function NewBaseDialog({ disabled }: { disabled?: boolean }) {
   const [error, setError] = useState("");
   const create = useCreateBase();
   const packs = usePacks();
+  const facts = useFactsGate();
   const [chosenText, setChosenText, clearChosen] = useDraft("new-base:packs");
   const chosen = chosenText ? chosenText.split(",") : [];
   const setChosen = (next: (all: string[]) => string[]) => setChosenText(next(chosen).join(","));
-  const submit = async () => {
+  const submit = () => facts.run(start);
+  const start = async () => {
     setError("");
     try {
       await create.mutateAsync({
@@ -50,6 +53,7 @@ export function NewBaseDialog({ disabled }: { disabled?: boolean }) {
   };
   return (
     <Dialog open={open} onOpenChange={setOpen}>
+      {facts.dialog}
       <DialogTrigger asChild>
         <Button variant="outline" className="h-full min-h-40 w-full flex-col gap-1 border-dashed" disabled={disabled}>
           <span className="flex items-center gap-2 font-medium">

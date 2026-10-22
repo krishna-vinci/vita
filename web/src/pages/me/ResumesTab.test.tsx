@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
-import { ApiError, api } from "@/api/client";
+import { ApiError, api, qualityApi } from "@/api/client";
 import ResumesTab from "./ResumesTab";
 
 beforeAll(() => {
@@ -12,7 +12,11 @@ beforeAll(() => {
     disconnect() {}
   };
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+  sessionStorage.clear();
+});
 
 const master = { id: "master", name: "Master", kind: "master", done: true, pdfUrl: null } as const;
 const base = { id: "ai-backend", name: "AI backend", kind: "base", done: true, pdfUrl: null } as const;
@@ -74,4 +78,69 @@ it("names the jobs that still use a base and keeps the dialog open", async () =>
   fireEvent.click(within(dialog).getByRole("button", { name: "Delete permanently" }));
   const link = await within(dialog).findByRole("link", { name: "SRE at Acme" });
   expect(link.getAttribute("href")).toBe("/jobs/acme-sre");
+});
+
+const dates = { id: "dates.vita", text: "When did you work on Vita?", kind: "dates", target: "vita" } as const;
+
+it("asks for missing facts before a Rewrite; Continue saves the answers, then generates", async () => {
+  stubLists([]);
+  vi.spyOn(qualityApi.facts, "missing").mockResolvedValue({ questions: [dates] });
+  const answer = vi.spyOn(qualityApi.facts, "answer").mockResolvedValue({ questions: [], shas: [] });
+  const generate = vi.spyOn(api.resumes, "generateMaster").mockResolvedValue({ job: { id: "j1" } } as never);
+  mount();
+  await screen.findByText("AI backend");
+  fireEvent.click(screen.getByRole("button", { name: /Rewrite/ }));
+  const dialog = await screen.findByRole("dialog");
+  expect(within(dialog).getByText("A few details make this stronger")).toBeTruthy();
+  expect(generate).not.toHaveBeenCalled();
+  fireEvent.change(within(dialog).getByLabelText("From year"), { target: { value: "2024" } });
+  fireEvent.click(within(dialog).getByLabelText("Ongoing"));
+  fireEvent.click(within(dialog).getByRole("button", { name: "Continue" }));
+  await waitFor(() => expect(generate).toHaveBeenCalled());
+  expect(answer).toHaveBeenCalledWith({ answers: { "dates.vita": "2024 – Present" } }, expect.anything());
+  expect(answer.mock.invocationCallOrder[0] ?? 0).toBeLessThan(generate.mock.invocationCallOrder[0] ?? 0);
+});
+
+it("Skip for now generates without answers and is remembered for the session", async () => {
+  stubLists([]);
+  const missing = vi.spyOn(qualityApi.facts, "missing").mockResolvedValue({ questions: [dates] });
+  const answer = vi.spyOn(qualityApi.facts, "answer").mockResolvedValue({ questions: [], shas: [] });
+  const generate = vi.spyOn(api.resumes, "generateMaster").mockResolvedValue({ job: { id: "j1" } } as never);
+  mount();
+  await screen.findByText("AI backend");
+  fireEvent.click(screen.getByRole("button", { name: /Rewrite/ }));
+  fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Skip for now" }));
+  await waitFor(() => expect(generate).toHaveBeenCalledTimes(1));
+  expect(answer).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: /Rewrite/ }));
+  await waitFor(() => expect(generate).toHaveBeenCalledTimes(2));
+  expect(missing).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+it("generates straight away when nothing is missing", async () => {
+  stubLists([]);
+  vi.spyOn(qualityApi.facts, "missing").mockResolvedValue({ questions: [] });
+  const generate = vi.spyOn(api.resumes, "generateMaster").mockResolvedValue({ job: { id: "j1" } } as never);
+  mount();
+  await screen.findByText("AI backend");
+  fireEvent.click(screen.getByRole("button", { name: /Rewrite/ }));
+  await waitFor(() => expect(generate).toHaveBeenCalled());
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+it("a new base asks for missing facts first too", async () => {
+  stubLists([]);
+  vi.spyOn(qualityApi.facts, "missing").mockResolvedValue({ questions: [dates] });
+  vi.spyOn(api, "packs").mockResolvedValue([]);
+  const create = vi.spyOn(api.resumes, "create").mockResolvedValue({ job: { id: "j2" } } as never);
+  mount();
+  fireEvent.click(await screen.findByRole("button", { name: /New base resume/ }));
+  fireEvent.change(await screen.findByLabelText("What direction is it for?"), { target: { value: "AI backend 2" } });
+  fireEvent.click(screen.getByRole("button", { name: "Write it" }));
+  const facts = (await screen.findByText("A few details make this stronger")).closest("[role=dialog]");
+  expect(facts).toBeTruthy();
+  expect(create).not.toHaveBeenCalled();
+  fireEvent.click(within(facts as HTMLElement).getByRole("button", { name: "Skip for now" }));
+  await waitFor(() => expect(create).toHaveBeenCalled());
 });
