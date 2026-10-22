@@ -57,7 +57,7 @@ export function NewBaseDialog({ disabled }: { disabled?: boolean }) {
       <DialogTrigger asChild>
         <Button variant="outline" className="h-full min-h-40 w-full flex-col gap-1 border-dashed" disabled={disabled}>
           <span className="flex items-center gap-2 font-medium">
-            <Plus /> New base resume
+            <Plus /> New version
           </span>
           <span className="max-w-56 text-wrap text-sm font-normal text-muted-foreground">
             Name a direction, like "AI backend". Vita drafts it from your master.
@@ -73,9 +73,9 @@ export function NewBaseDialog({ disabled }: { disabled?: boolean }) {
           }}
         >
           <DialogHeader>
-            <DialogTitle>New base resume</DialogTitle>
+            <DialogTitle>New version</DialogTitle>
             <DialogDescription>
-              A base resume leads with one kind of work. You can start job resumes from it later.
+              A version leads with one kind of work. You can start job resumes from it later.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-2">
@@ -90,7 +90,7 @@ export function NewBaseDialog({ disabled }: { disabled?: boolean }) {
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="base-instructions">Instructions for this base (optional)</Label>
+            <Label htmlFor="base-instructions">Instructions for this version (optional)</Label>
             <Textarea
               id="base-instructions"
               value={instructions}

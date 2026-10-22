@@ -13,10 +13,10 @@ import {
   useUnarchiveResume,
   useWorkspace,
 } from "@/api/queries";
+import { ChangesBanner } from "@/components/ChangesBanner";
 import { DeleteDialog } from "@/components/DeleteDialog";
 import { useFactsGate } from "@/components/FactsGate";
 import { PageError, PageLoading } from "@/components/PageState";
-import { StaleBanner } from "@/components/StaleBanner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,6 @@ import {
 import { progressStep, progressSteps } from "@/lib/resume-view";
 import { useUrlFlag } from "@/lib/use-url-state";
 import { NewBaseDialog } from "./NewBaseDialog";
-import { SyncBanner } from "./SyncBanner";
 
 const busy = (job: JobView) => job.status === "queued" || job.status === "running";
 
@@ -62,11 +61,10 @@ export default function ResumesTab() {
     <div className="flex flex-col gap-6">
       {facts.dialog}
       <p className="max-w-2xl text-muted-foreground">
-        Your master resume holds your best of everything. Base resumes lead with one kind of work, ready to start a job
+        Your master resume holds your best of everything. Versions lead with one kind of work, ready to start a job
         resume from.
       </p>
-      <StaleBanner />
-      <SyncBanner />
+      <ChangesBanner />
       {!workspace.data?.hasOutline && (
         <Alert>
           <AlertDescription>
@@ -158,7 +156,7 @@ function ArchivedBases() {
   const list = archived.data?.filter((resume) => resume.kind === "base") ?? [];
   if (list.length === 0) return null;
   return (
-    <section aria-label="Archived base resumes" className="flex flex-col gap-3">
+    <section aria-label="Archived versions" className="flex flex-col gap-3">
       <Button
         variant="ghost"
         className="h-11 w-fit px-2 text-muted-foreground"

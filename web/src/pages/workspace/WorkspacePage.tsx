@@ -21,9 +21,9 @@ import {
   useResumes,
   useUndo,
 } from "@/api/queries";
+import { ChangesBanner } from "@/components/ChangesBanner";
 import { InstructionsDialog } from "@/components/InstructionsDialog";
 import { PageError, PageLoading } from "@/components/PageState";
-import { StaleBanner } from "@/components/StaleBanner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,6 @@ import { download, flagsFor, parseClaims, resumeToMarkdown } from "@/lib/resume-
 import { useMinWidth } from "@/lib/use-media";
 import { useUrlFlag, useUrlParam } from "@/lib/use-url-state";
 import { JobProgress } from "../jobs/JobProgress";
-import { SyncBanner } from "../me/SyncBanner";
 import { ChangeTemplateDialog } from "./ChangeTemplateDialog";
 import { ChatPanel } from "./ChatPanel";
 import { DetailsPanel } from "./DetailsPanel";
@@ -90,7 +89,7 @@ export default function WorkspacePage({ scope }: { scope: "application" | "resum
   );
   const cancel = useCancelJob();
   const writing = isJob && (query.data as ApplicationResource | undefined)?.status === "needs-answers";
-  const back = isJob ? { to: "/jobs", label: "All jobs" } : { to: "/me/resumes", label: "Base resumes" };
+  const back = isJob ? { to: "/jobs", label: "All jobs" } : { to: "/me/resumes", label: "Versions" };
   if (active)
     return (
       <div className="flex flex-col gap-4">
@@ -267,7 +266,7 @@ function Loaded({
               to: to === "parent" ? { kind: "parent" } : { kind: "variant", itemSlug },
             },
             {
-              onSuccess: () => toast.success(to === "parent" ? "Added to your base resume." : "Saved in Projects."),
+              onSuccess: () => toast.success(to === "parent" ? "Added to your version." : "Saved in Projects."),
               onError: (error) => toast.error(error.message),
             },
           )
@@ -426,8 +425,7 @@ function Loaded({
           </p>
         )}
       </header>
-      {!isJob && <SyncBanner resumeId={id} />}
-      <StaleBanner resumeId={id} />
+      <ChangesBanner resumeId={id} showLines={!isJob} />
       {data.patchConflict && data.resume.kind !== "master" && (
         <div
           role="status"

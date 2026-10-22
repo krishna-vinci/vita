@@ -197,7 +197,7 @@ export function BulletLine({
                       disabled={!ctx.canPromoteParent}
                       onSelect={() => actions.promote?.(bullet.id, "parent", position.itemSlug)}
                     >
-                      Use this wording in my base resume
+                      Use this wording in my version
                     </DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => actions.promote?.(bullet.id, "variant", position.itemSlug)}>
                       Save as a wording option in Projects
