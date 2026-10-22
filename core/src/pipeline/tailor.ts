@@ -243,7 +243,7 @@ export async function tailor(
           kind: "job",
           id,
           parent: existing?.parent ?? base?.id ?? (seed ? "master" : null),
-          template: existing?.template ?? base?.config.template ?? seed?.template ?? input.template ?? "rover-base",
+          template: existing?.template ?? base?.config.template ?? input.template ?? seed?.template ?? "rover-base",
           maxPages: base?.config.rules.max_pages ?? ctx.rules.max_pages,
           seed,
           userState: existing,

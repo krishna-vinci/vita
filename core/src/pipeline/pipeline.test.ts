@@ -758,6 +758,24 @@ it("stops before drafting for missing or weak must-haves, then answers or skips 
   }
 });
 
+it("gives a new job from the master the default template from settings", async () => {
+  const { ws, resume } = await profile();
+  vi.spyOn(render, "compileTex").mockResolvedValue({ pdf: Buffer.from("stub-pdf"), log: "" });
+  vi.spyOn(render, "pdfText").mockResolvedValue({
+    text: visibleBullets(resume)
+      .map((bullet) => bullet.text)
+      .join("\n"),
+    pages: 1,
+    fill: 1,
+  });
+  const result = await tailorJob(
+    ws,
+    { jobText: "Catalogue role", template: "rover-star" },
+    await deps([{ tool: "submit_analysis", arguments: { ...analysis, requirements: [] } }, ...draft(resume)]),
+  );
+  expect(result.resume?.template).toBe("rover-star");
+});
+
 it("uses the profile's default relationship instead of asking about each repository", async () => {
   const { ws, resume } = await profile();
   const projects = await readText(ws.root, "projects.md");
