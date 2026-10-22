@@ -145,3 +145,41 @@ it("refuses to record a request or a description of the person as a statement", 
     ),
   ).rejects.toThrow("request to change the resume");
 });
+
+it("appends evidence without normalising mixed line endings outside the inserted block", async () => {
+  const { appendEvidence } = await import("./chat-edits.js");
+  const before = "# Inventory\n## Archive\r\n```yaml\r\nkind: project\n```\r\nUnparsed text.\n";
+  const evidence = { id: "ev-info", kind: "statement" as const, text: "Built a useful archive.", at: "2026-10-22" };
+  const after = appendEvidence(before, "archive", evidence);
+  expect(after).toBe(
+    before.replace(
+      "```\r\nUnparsed",
+      "evidence:\r\n  - id: ev-info\r\n    kind: statement\r\n    text: Built a useful archive.\r\n    at: 2026-10-22\r\n```\r\nUnparsed",
+    ),
+  );
+  expect(parseProjects(after).issues).toEqual([]);
+});
+
+it("appends receipts to flow metadata and alternate fences while preserving existing evidence bytes", async () => {
+  const { appendEvidence } = await import("./chat-edits.js");
+  const evidence = { id: "ev-new", kind: "statement" as const, text: "Kept careful records." };
+  for (const meta of [
+    'evidence: [{id: ev-old, kind: doc, ref: "keep exactly"}] # comment',
+    "{kind: project, evidence: []}",
+    "{kind: project}",
+    "evidence: [] # keep comment",
+    "kind: project",
+  ]) {
+    const before = `## Archive\n~~~~yaml\n${meta}\n~~~~\nUnparsed prose.\r\n`;
+    const after = appendEvidence(before, "archive", evidence);
+    const parsed = parseProjects(after);
+    expect(parsed.issues).toEqual([]);
+    expect(parsed.doc.items[0]?.meta.evidence).toContainEqual(evidence);
+    expect(after).toContain("Unparsed prose.\r\n");
+    if (meta.includes("ev-old")) {
+      expect(after).toContain('{id: ev-old, kind: doc, ref: "keep exactly"}');
+      expect(parsed.doc.items[0]?.meta.evidence).toHaveLength(2);
+    }
+    if (meta.includes("# keep comment")) expect(after).toContain("# keep comment");
+  }
+});

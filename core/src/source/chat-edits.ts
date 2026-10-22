@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { type Evidence, HttpUrl, PutProfileRequest, slugify } from "@vita/shared";
-import { parse, stringify } from "yaml";
+import { isMap, isSeq, parse, parseDocument, stringify } from "yaml";
 import { localDate } from "../pipeline/date.js";
 import { commitPaths, FileLocks, fileHash, readText, resolveInWorkspace, writeTextAtomic } from "../workspace/index.js";
 import { applySourceEdit } from "./edit.js";
-import { sourceLines } from "./markdown.js";
+import { fenceEnd, fenceStart, sourceLines } from "./markdown.js";
 import { parseOutline } from "./outline.js";
 import { parseProjects } from "./projects.js";
 import { projectMetadataProposal } from "./relationship.js";
@@ -59,28 +59,89 @@ function insertAtLine(text: string, line: number, addition: string) {
  */
 export function appendEvidence(text: string, itemSlug: string, evidence: Evidence): string {
   const eol = text.includes("\r\n") ? "\r\n" : "\n";
-  const lines = text.split(/\r?\n/);
+  const originalLines = sourceLines(text);
+  const lines = originalLines.map((line) => line.text);
+  const splice = (at: number, count: number, ...addition: string[]) => {
+    const start = originalLines.slice(0, at).reduce((sum, line) => sum + line.text.length + line.ending.length, 0);
+    const end = originalLines
+      .slice(0, at + count)
+      .reduce((sum, line) => sum + line.text.length + line.ending.length, 0);
+    const prefix = text.slice(0, start);
+    return (
+      prefix +
+      (prefix && !prefix.endsWith("\n") ? eol : "") +
+      addition.map((line) => line + eol).join("") +
+      text.slice(end)
+    );
+  };
   const items = parseProjects(text).doc.items;
   const position = items.findIndex((item) => item.slug === itemSlug);
   const start = items[position]?.line;
   if (start === undefined) throw new Error(`Project not found: ${itemSlug}`);
   const end = (items[position + 1]?.line ?? lines.length + 1) - 1;
-  const open = lines.findIndex((line, index) => index >= start - 1 && index < end && /^```yaml\s*$/.test(line));
-  const close = open < 0 ? -1 : lines.findIndex((line, index) => index > open && /^```\s*$/.test(line));
+  let marker: string | undefined;
+  let open = -1;
+  let close = -1;
+  for (let index = start; index < end; index++) {
+    const line = lines[index] ?? "";
+    if (marker) {
+      if (fenceEnd(line, marker)) {
+        if (open >= 0) {
+          close = index;
+          break;
+        }
+        marker = undefined;
+      }
+    } else {
+      const fence = fenceStart(line);
+      if (fence) {
+        marker = fence.marker;
+        if (fence.info === "yaml") open = index;
+      }
+    }
+  }
   const entry = stringify([evidence], { lineWidth: 0 })
     .trimEnd()
     .split("\n")
     .map((line) => `  ${line}`);
   if (open < 0 || close < 0) {
     // No metadata block yet: add one after the heading.
-    lines.splice(start, 0, "```yaml", "evidence:", ...entry, "```");
-    return lines.join(eol);
+    return splice(start, 0, "```yaml", "evidence:", ...entry, "```");
+  }
+  const yaml = originalLines
+    .slice(open + 1, close)
+    .map((line) => line.text + line.ending)
+    .join("");
+  const document = parseDocument(yaml);
+  if (document.errors.length || !isMap(document.contents)) throw new Error("Project metadata must be a YAML mapping");
+  const node = document.get("evidence", true);
+  if (isSeq(node) && node.flow && node.range && (node.items.length || node.comment)) {
+    const yamlOffset = originalLines
+      .slice(0, open + 1)
+      .reduce((sum, line) => sum + line.text.length + line.ending.length, 0);
+    const at = yamlOffset + node.range[1] - 1;
+    return `${text.slice(0, at)}${node.items.length ? ", " : ""}${JSON.stringify(evidence)}${text.slice(at)}`;
+  }
+  if (document.contents.flow && document.contents.range) {
+    const yamlOffset = originalLines
+      .slice(0, open + 1)
+      .reduce((sum, line) => sum + line.text.length + line.ending.length, 0);
+    const at = yamlOffset + document.contents.range[1] - 1;
+    if (isSeq(node) && node.range) {
+      const position = yamlOffset + node.range[1] - 1;
+      return text.slice(0, position) + JSON.stringify(evidence) + text.slice(position);
+    }
+    return (
+      text.slice(0, at) +
+      `${document.contents.items.length ? ", " : ""}evidence: [${JSON.stringify(evidence)}]` +
+      text.slice(at)
+    );
   }
   const key = lines.findIndex((line, index) => index > open && index < close && /^evidence:/.test(line));
   if (key < 0) {
-    lines.splice(close, 0, "evidence:", ...entry);
+    return splice(close, 0, "evidence:", ...entry);
   } else if (/^evidence:\s*\[\s*\]\s*$/.test(lines[key] ?? "")) {
-    lines.splice(key, 1, "evidence:", ...entry);
+    return splice(key, 1, "evidence:", ...entry);
   } else {
     let last = key;
     for (let index = key + 1; index < close; index++) {
@@ -88,9 +149,8 @@ export function appendEvidence(text: string, itemSlug: string, evidence: Evidenc
       if (line.trim() && !/^\s/.test(line)) break;
       if (line.trim()) last = index;
     }
-    lines.splice(last + 1, 0, ...entry);
+    return splice(last + 1, 0, ...entry);
   }
-  return lines.join(eol);
 }
 
 // Requests ("highlight Python", "we forgot to add…") and descriptions of the person are not facts
