@@ -49,3 +49,48 @@ it("keeps the draft when sending fails", async () => {
   await waitFor(() => expect(screen.getByRole("button", { name: "Continue" })).toBeTruthy());
   expect(sessionStorage.getItem("vita:draft:questions:j2")).toContain("no");
 });
+
+it("renders the fact input for dates.* ids and sends the date string, 'skip' and yes/no together", async () => {
+  const onSubmit = vi.fn();
+  const gaps = parseGaps([
+    "dates.vita: When did you work on Vita?",
+    "graduation.bsc: What is your graduation year for BSc?",
+    "results.vita: What real results can you share for Vita?",
+    "req-a: Have you used Go?",
+  ]);
+  render(<Questions gaps={gaps} pending={false} onSubmit={onSubmit} draftKey="questions:facts" onSkipAll={() => {}} />);
+  // The yes/no card is only for the requirement, not the fact questions.
+  expect(screen.getAllByRole("button", { name: "Yes, I have" })).toHaveLength(1);
+  fireEvent.change(screen.getByLabelText("From year"), { target: { value: "2024" } });
+  fireEvent.click(screen.getByLabelText("Ongoing"));
+  fireEvent.change(screen.getByLabelText("Graduation year"), { target: { value: "2027" } });
+  fireEvent.click(screen.getByLabelText("Expected"));
+  fireEvent.click(screen.getByRole("button", { name: "No" }));
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await waitFor(() =>
+    expect(onSubmit).toHaveBeenCalledWith({
+      "dates.vita": "2024 – Present",
+      "graduation.bsc": "Expected 2027",
+      // Moving on leaves it skipped, so the job doesn't ask it again.
+      "results.vita": "skip",
+      "req-a": "no",
+    }),
+  );
+});
+
+it("does not send a half-filled date, and says what is missing", () => {
+  const onSubmit = vi.fn();
+  render(
+    <Questions
+      gaps={parseGaps(["dates.vita: When did you work on Vita?"])}
+      pending={false}
+      onSubmit={onSubmit}
+      draftKey="questions:half"
+      onSkipAll={() => {}}
+    />,
+  );
+  fireEvent.change(screen.getByLabelText("From year"), { target: { value: "2024" } });
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  expect(onSubmit).not.toHaveBeenCalled();
+  expect(screen.getByRole("alert").textContent).toMatch(/Ongoing/);
+});

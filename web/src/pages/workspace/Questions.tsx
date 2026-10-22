@@ -1,5 +1,14 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
+import {
+  emptyFact,
+  type FactDraft,
+  FactQuestion,
+  factAnswer,
+  factKindOf,
+  factTouched,
+  isFactId,
+} from "@/components/FactQuestion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -32,6 +41,7 @@ interface Saved {
   choices?: Record<string, Choice>;
   details?: Record<string, string>;
   owners?: Record<string, OwnershipValue>;
+  facts?: Record<string, FactDraft>;
 }
 
 /** One card per thing the job asks for that the user's notes do not yet show. */
@@ -76,11 +86,21 @@ export function Questions({
     setSaved((all) => ({ ...all, details: next(all.details ?? {}) }));
   const setOwners = (next: (all: Record<string, OwnershipValue>) => Record<string, OwnershipValue>) =>
     setSaved((all) => ({ ...all, owners: next(all.owners ?? {}) }));
+  const facts = saved.facts ?? {};
+  const setFacts = (next: (all: Record<string, FactDraft>) => Record<string, FactDraft>) =>
+    setSaved((all) => ({ ...all, facts: next(all.facts ?? {}) }));
   const [saving, setSaving] = useState(false);
+  const [attempted, setAttempted] = useState(false);
   const collect = () => {
     const answers: Record<string, string> = {};
     const remember: Remembered[] = [];
     for (const gap of gaps) {
+      if (isFactId(gap.id)) {
+        const answer = factAnswer(factKindOf(gap.id), facts[gap.id] ?? emptyFact);
+        // Moving on without answering skips it, so the backend doesn't ask the same question again.
+        answers[gap.id] = answer ?? "skip";
+        continue;
+      }
       if (isOwnership(gap.id)) {
         const value = owners[gap.id] ?? emptyOwnership;
         const answer = ownershipAnswer(value);
@@ -96,9 +116,19 @@ export function Questions({
     }
     return { answers, remember };
   };
-  const answered = Object.keys(collect().answers).length;
+  const answered = Object.entries(collect().answers).filter(
+    ([id, answer]) => !(isFactId(id) && answer === "skip" && !facts[id]?.skipped),
+  ).length;
   const submit = async () => {
+    // A half-filled date or result is flagged, not silently dropped.
     const { answers, remember } = collect();
+    const unfinished = gaps.some(
+      (gap) =>
+        isFactId(gap.id) &&
+        factTouched(facts[gap.id] ?? emptyFact) &&
+        !factAnswer(factKindOf(gap.id), facts[gap.id] ?? emptyFact),
+    );
+    if (unfinished) return void setAttempted(true);
     if (remember.length && onRemember) {
       setSaving(true);
       try {
@@ -124,6 +154,20 @@ export function Questions({
       </div>
       {notice}
       {gaps.map((gap) => {
+        if (isFactId(gap.id)) {
+          const value = facts[gap.id] ?? emptyFact;
+          return (
+            <FactQuestion
+              key={gap.id}
+              id={gap.id}
+              text={gap.question}
+              kind={factKindOf(gap.id)}
+              value={value}
+              onChange={(next) => setFacts((all) => ({ ...all, [gap.id]: next }))}
+              showProblem={attempted && factTouched(value)}
+            />
+          );
+        }
         if (isOwnership(gap.id))
           return (
             <OwnershipQuestion

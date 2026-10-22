@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
-import { api } from "@/api/client";
+import { api, qualityApi } from "@/api/client";
 import WorkspacePage from "./WorkspacePage";
 
 beforeAll(() => {
@@ -92,6 +92,10 @@ function mount() {
     </QueryClientProvider>,
   );
 }
+const withDates = {
+  ...(asking as object),
+  gaps: ["dates.vita: When did you work on Vita?", "req-k8s: Have you used Kubernetes?"],
+} as never;
 const queued = { job: { id: "j1" }, sha: null } as never;
 
 it("shows the questions step, not the editor or a PDF button, while answers are missing", async () => {
@@ -209,4 +213,61 @@ it("shows suggestions on a drafted resume without blocking Download", async () =
   expect(summary.closest("details")?.textContent).toContain("Add a number for the uptime work.");
   expect((screen.getByRole("button", { name: /Download/ }) as HTMLButtonElement).disabled).toBe(false);
   expect(screen.queryByText("A few questions before I write")).toBeNull();
+});
+
+it("asks the dates question with the From/To input in the questions step and posts the string", async () => {
+  vi.spyOn(api.applications, "get").mockResolvedValue(withDates);
+  const send = vi.spyOn(api.applications, "answers").mockResolvedValue(queued);
+  mount();
+  await screen.findByText("A few questions before I write");
+  expect(screen.getByLabelText("From year")).toBeTruthy();
+  expect(screen.getAllByRole("button", { name: "Yes, I have" })).toHaveLength(1);
+  fireEvent.change(screen.getByLabelText("From month"), { target: { value: "Mar" } });
+  fireEvent.change(screen.getByLabelText("From year"), { target: { value: "2024" } });
+  fireEvent.click(screen.getByLabelText("Ongoing"));
+  fireEvent.click(screen.getByRole("button", { name: "Write my resume" }));
+  await waitFor(() => expect(send).toHaveBeenCalled());
+  expect(send).toHaveBeenCalledWith("acme", { answers: { "dates.vita": "Mar 2024 – Present" } });
+});
+
+it("refreshes the preview after an edit changes the resume, keeping the old PDF until then", async () => {
+  const withBullet = (hash: string, text: string) =>
+    ({
+      ...(drafted as object),
+      hash,
+      resume: {
+        ...(drafted as { resume: object }).resume,
+        sections: [
+          {
+            id: "work",
+            title: "Work",
+            kind: "entries",
+            items: [{ id: "i1", title: "Vita", links: [], bullets: [{ id: "b1", text, claims: [], origin: "ai" }] }],
+          },
+        ],
+      },
+    }) as never;
+  const get = vi
+    .spyOn(api.applications, "get")
+    .mockResolvedValueOnce(withBullet("h1", "Built the importer."))
+    .mockResolvedValue(withBullet("h2", "Built the importer, hidden."));
+  const preview = vi
+    .spyOn(qualityApi, "preview")
+    .mockResolvedValueOnce({ url: "/api/preview/one.pdf" })
+    .mockResolvedValueOnce({ url: "/api/preview/two.pdf" });
+  vi.spyOn(api, "undo").mockResolvedValue({ sha: "abc" } as never);
+  mount();
+  await waitFor(() => expect(preview).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(document.querySelector("iframe")?.getAttribute("src")).toContain("one.pdf"));
+  fireEvent.load(document.querySelector("iframe") as Element);
+  // Undo changes the resume (a new hash). The render is debounced, and the old PDF stays until the new one loads.
+  fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+  expect(preview).toHaveBeenCalledTimes(1);
+  expect(await screen.findByText("Updating preview…")).toBeTruthy();
+  await waitFor(() => expect(preview).toHaveBeenCalledTimes(2), { timeout: 3000 });
+  await waitFor(() => expect(document.querySelectorAll("iframe")).toHaveLength(2));
+  expect(document.querySelectorAll("iframe")[0]?.getAttribute("src")).toContain("one.pdf");
+  fireEvent.load(document.querySelectorAll("iframe")[1] as Element);
+  await waitFor(() => expect(document.querySelector("iframe")?.getAttribute("src")).toContain("two.pdf"));
 });

@@ -34,8 +34,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { download, flagsFor, parseClaims, resumeToMarkdown } from "@/lib/resume-view";
-import { useUrlFlag } from "@/lib/use-url-state";
+import { useMinWidth } from "@/lib/use-media";
+import { useUrlFlag, useUrlParam } from "@/lib/use-url-state";
 import { JobProgress } from "../jobs/JobProgress";
 import { SyncBanner } from "../me/SyncBanner";
 import { ChangeTemplateDialog } from "./ChangeTemplateDialog";
@@ -44,8 +46,10 @@ import { DetailsPanel } from "./DetailsPanel";
 import { FitDialog, type FitState } from "./FitDialog";
 import { JobTabs } from "./JobTabs";
 import { useRememberOwnership } from "./OwnershipQuestion";
+import { PreviewPane } from "./PreviewPane";
 import { parseGaps, Questions } from "./Questions";
 import { QuestionsStep } from "./QuestionsStep";
+import { RecruiterCard } from "./RecruiterCard";
 import { ResumeSheet } from "./ResumeSheet";
 import { StyleDialog } from "./StyleDialog";
 import { TexEditDialog } from "./TexEditDialog";
@@ -146,6 +150,10 @@ function Loaded({
   const [details, setDetails] = useState(() => store.get("vita:details") === "1");
   const [changed, setChanged] = useState<ReadonlySet<string>>(new Set());
   const [chatOpen, setChatOpen] = useUrlFlag("chat");
+  // From 1280px the PDF sits beside the resume, with chat one tab away. Below that it opens as a full sheet.
+  const wide = useMinWidth(1280);
+  const [side, setSide] = useUrlParam<"preview" | "chat">("side", "preview", ["preview", "chat"]);
+  const [previewOpen, setPreviewOpen] = useUrlFlag("preview");
   // Skipped questions are remembered for this tab only. Answers live on the server (`app.answers`).
   const skipKey = `vita:skipped:${id}`;
   const [skipped, setSkipped] = useState<string[]>(() => {
@@ -225,7 +233,8 @@ function Loaded({
     }
   };
   const ask = (message: string) => {
-    if (!matchMedia("(min-width: 1024px)").matches) setChatOpen(true);
+    if (wide) setSide("chat");
+    else if (!matchMedia("(min-width: 1024px)").matches) setChatOpen(true);
     void thread.send(message);
   };
   const undoLast = () =>
@@ -452,6 +461,7 @@ function Loaded({
         onEditLatex={data.resume.kind === "master" ? undefined : () => setTexOpen(true)}
         onStyle={() => setStyling(true)}
         onInstructions={() => setInstructionsOpen(true)}
+        onPreview={wide ? undefined : () => setPreviewOpen(true)}
       />
       {details && (
         <DetailsPanel
@@ -467,24 +477,57 @@ function Loaded({
           applicationId={isJob ? id : undefined}
         />
       )}
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <ResumeSheet
-          resume={data.resume}
-          flags={flags}
-          ctx={{
-            actions,
-            details,
-            busy: ops.isPending,
-            canPromoteParent: !!data.resume.parent,
-            changed: new Set([...changed, ...thread.changed]),
-            claims,
-            checks,
-            estimates,
-            links: data.links,
-          }}
-        />
+      <div
+        className={
+          wide
+            ? "grid items-start gap-6 grid-cols-[minmax(0,1fr)_minmax(440px,560px)]"
+            : "grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]"
+        }
+      >
+        <div className="flex min-w-0 flex-col gap-4">
+          <RecruiterCard
+            scope={scope}
+            id={id}
+            review={data.review?.recruiter}
+            instructions={data.instructions ?? app?.notes ?? ""}
+            onUndo={undoLast}
+          />
+          <ResumeSheet
+            resume={data.resume}
+            flags={flags}
+            ctx={{
+              actions,
+              details,
+              busy: ops.isPending,
+              canPromoteParent: !!data.resume.parent,
+              changed: new Set([...changed, ...thread.changed]),
+              claims,
+              checks,
+              estimates,
+              links: data.links,
+            }}
+          />
+        </div>
         <aside className="sticky top-6 hidden h-[calc(100dvh-6rem)] rounded-xl border bg-card p-4 lg:flex lg:flex-col">
-          {chat}
+          {wide ? (
+            <Tabs
+              value={side}
+              onValueChange={(next) => setSide(next as "preview" | "chat")}
+              className="min-h-0 flex-1 gap-3"
+            >
+              <TabsList className="w-full">
+                <TabsTrigger value="preview">Preview</TabsTrigger>
+                <TabsTrigger value="chat">Chat</TabsTrigger>
+              </TabsList>
+              {side === "preview" ? (
+                <PreviewPane scope={scope} id={id} version={data.hash ?? ""} className="flex min-h-0 flex-1 flex-col" />
+              ) : (
+                <div className="min-h-0 flex-1">{chat}</div>
+              )}
+            </Tabs>
+          ) : (
+            chat
+          )}
         </aside>
       </div>
       <Button
@@ -525,6 +568,15 @@ function Loaded({
           }
         }}
       />
+      <Sheet open={previewOpen && !wide} onOpenChange={setPreviewOpen}>
+        <SheetContent side="bottom" className="h-dvh gap-2 p-4">
+          <SheetHeader className="p-0">
+            <SheetTitle>Preview</SheetTitle>
+            <SheetDescription className="sr-only">The PDF as it will look.</SheetDescription>
+          </SheetHeader>
+          <PreviewPane scope={scope} id={id} version={data.hash ?? ""} className="flex min-h-0 flex-1 flex-col" />
+        </SheetContent>
+      </Sheet>
       <Sheet open={chatOpen} onOpenChange={setChatOpen}>
         <SheetContent side="bottom" className="h-[80dvh] gap-2 p-4">
           <SheetHeader className="p-0">

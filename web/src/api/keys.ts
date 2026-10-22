@@ -34,4 +34,6 @@ export const queryKeys = {
   settings: ["settings"] as const,
   jobs: ["jobs"] as const,
   job: (id: string) => ["jobs", id] as const,
+  // M11-S6
+  factsMissing: ["facts", "missing"] as const,
 };
