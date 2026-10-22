@@ -58,7 +58,7 @@ export function StudioPreview({
               <SelectItem value={MASTER_CHOICE}>Master resume</SelectItem>
               {bases.length > 0 && (
                 <SelectGroup>
-                  <SelectLabel>Base resumes</SelectLabel>
+                  <SelectLabel>Versions</SelectLabel>
                   {bases.map((resume) => (
                     <SelectItem key={resume.id} value={resume.id}>
                       {resume.name}

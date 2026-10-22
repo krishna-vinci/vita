@@ -1,5 +1,5 @@
 import type { Rules } from "@vita/shared";
-import { Lock } from "lucide-react";
+import { ChevronDown, Lock } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useRules, useSaveRules } from "@/api/queries";
@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useUrlFlag } from "@/lib/use-url-state";
+import { cn } from "@/lib/utils";
 
 const lines = (text: string) =>
   text
@@ -30,6 +32,8 @@ function Form({
   hash: string | null;
 }) {
   const save = useSaveRules();
+  // Open state is in the URL (?rules-advanced=1), so a reload or Back keeps it.
+  const [advanced, setAdvanced] = useUrlFlag("rules-advanced");
   const [pages, setPages] = useState(String(initial.max_pages));
   const [honesty, setHonesty] = useState<Rules["honesty"]>(initial.honesty ?? "balanced");
   const [fill, setFill] = useState(String(Math.round(initial.min_fill * 100)));
@@ -89,22 +93,6 @@ function Form({
             value={pages}
             onChange={(event) => setPages(event.target.value)}
           />
-        </div>
-        <div className="flex flex-col gap-2 sm:col-span-2">
-          <Label htmlFor="rule-honesty">How strict</Label>
-          <Select value={honesty} onValueChange={(value) => setHonesty(value as Rules["honesty"])}>
-            <SelectTrigger id="rule-honesty" className="w-full sm:w-80">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="balanced">Balanced: your word counts, links and details need no proof</SelectItem>
-              <SelectItem value="strict">Strict: every claim needs a source receipt</SelectItem>
-              <SelectItem value="trust">Trust me: checks only warn, never block</SelectItem>
-            </SelectContent>
-          </Select>
-          <p className="text-sm text-muted-foreground">
-            Nothing is ever invented. Balanced records what you tell Vita as &ldquo;you said&rdquo;.
-          </p>
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="rule-fill">Fill at least (% of page)</Label>
@@ -174,6 +162,38 @@ function Form({
           />
         </div>
       ))}
+      <div className="flex flex-col gap-3">
+        <Button
+          type="button"
+          variant="ghost"
+          className="-ml-3 h-11 w-fit gap-2"
+          aria-expanded={advanced}
+          aria-controls="rules-advanced-body"
+          onClick={() => setAdvanced(!advanced)}
+        >
+          Advanced
+          <ChevronDown
+            className={cn("transition-transform motion-reduce:transition-none", advanced && "rotate-180")}
+            aria-hidden="true"
+          />
+        </Button>
+        <div id="rules-advanced-body" hidden={!advanced} className="flex flex-col gap-2">
+          <Label htmlFor="rule-honesty">How strict</Label>
+          <Select value={honesty} onValueChange={(value) => setHonesty(value as Rules["honesty"])}>
+            <SelectTrigger id="rule-honesty" className="w-full sm:w-80">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="balanced">Balanced: your word counts, links and details need no proof</SelectItem>
+              <SelectItem value="strict">Strict: every claim needs a source receipt</SelectItem>
+              <SelectItem value="trust">Trust me: checks only warn, never block</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-muted-foreground">
+            Nothing is ever invented. Balanced records what you tell Vita as &ldquo;you said&rdquo;.
+          </p>
+        </div>
+      </div>
       <Button type="submit" className="h-11 w-fit" disabled={save.isPending}>
         {save.isPending ? "Saving…" : "Save rules"}
       </Button>

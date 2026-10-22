@@ -1,36 +1,97 @@
 import type { SyncSuggestion } from "@vita/shared";
+import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useApplySync, useResumes, useSyncSuggestions } from "@/api/queries";
+import { ApiError } from "@/api/client";
+import {
+  useApplications,
+  useApplySync,
+  useCascade,
+  useResumes,
+  useSyncStatus,
+  useSyncSuggestions,
+} from "@/api/queries";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
+const plural = (count: number, one: string, many: string) => (count === 1 ? one : many);
 const key = (s: SyncSuggestion) => `${s.resumeId}|${s.kind}|${s.bulletId ?? ""}|${s.claimId}`;
 
-/** "Your outline changed": a calm banner that opens a sheet of before/after lines to accept. */
-export function SyncBanner({ resumeId }: { resumeId?: string }) {
-  const query = useSyncSuggestions();
+/**
+ * One banner for everything an outline edit left behind.
+ * Stale resumes get one Update (the cascade re-runs them in order). Line suggestions open a review sheet.
+ * Hidden when neither has anything. With `resumeId`, it shows only that resume, as a workspace banner.
+ * `showLines={false}` leaves out line suggestions (job resumes have none to review).
+ */
+export function ChangesBanner({ resumeId, showLines = true }: { resumeId?: string; showLines?: boolean }) {
+  const status = useSyncStatus();
+  const suggestions = useSyncSuggestions();
   const resumes = useResumes();
+  const applications = useApplications();
+  const cascade = useCascade();
   const apply = useApplySync();
   const [open, setOpen] = useState(false);
   const [chosen, setChosen] = useState<Record<string, boolean>>({});
-  const all = (query.data ?? []).filter((item) => !resumeId || item.resumeId === resumeId);
-  if (!all.length) return null;
+  const stale = (status.data?.stale ?? []).filter((item) => !resumeId || item.id === resumeId);
+  const lines = showLines ? (suggestions.data ?? []).filter((item) => !resumeId || item.resumeId === resumeId) : [];
+  if (!stale.length && !lines.length) return null;
+
+  const reason = stale[0]?.reason;
+  const count = stale.length;
+  const update = () =>
+    cascade.mutate(undefined, {
+      onSuccess: (result) => {
+        const jobs = result.jobIds.length;
+        toast.success(`Updating ${jobs} ${plural(jobs, "resume", "resumes")}…`);
+      },
+      onError: (error) => {
+        if (error instanceof ApiError && error.status === 409)
+          toast.error("Vita is busy. Try again when the current job finishes.");
+        else toast.error(error instanceof Error ? error.message : "Could not update your resumes.");
+      },
+    });
+
   const isOn = (item: SyncSuggestion) => chosen[key(item)] ?? !item.locked;
   const toggle = (item: SyncSuggestion) => setChosen((all) => ({ ...all, [key(item)]: !isOn(item) }));
-  const picks = all.filter(isOn);
-  const name = (id: string) => resumes.data?.find((resume) => resume.id === id)?.name ?? id;
-  const groups = [...new Set(all.map((item) => item.resumeId))];
+  const picks = lines.filter(isOn);
+  const name = (id: string) =>
+    resumes.data?.find((resume) => resume.id === id)?.name ??
+    applications.data?.find((app) => app.id === id)?.title ??
+    id;
+  const groups = [...new Set(lines.map((item) => item.resumeId))];
+
   return (
     <>
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-secondary p-4 text-secondary-foreground">
-        <p className="min-w-0 flex-1 text-sm">
-          <strong>Your outline changed.</strong> {all.length} {all.length === 1 ? "line can" : "lines can"} be updated.
+        <p className="min-w-0 flex-1 text-sm break-words">
+          {resumeId && count > 0 ? (
+            <>
+              <strong>This resume is out of date</strong>
+              {reason && <> ({reason})</>}
+            </>
+          ) : (
+            <strong>Your information changed.</strong>
+          )}
+          {!resumeId && count > 0 && (
+            <>
+              {" "}
+              {count} {plural(count, "resume is", "resumes are")} out of date.
+            </>
+          )}
         </p>
-        <Button variant="outline" className="h-11 bg-background" onClick={() => setOpen(true)}>
-          Review changes
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {lines.length > 0 && (
+            <Button variant="link" className="h-11 px-0" onClick={() => setOpen(true)}>
+              Review line changes ({lines.length})
+            </Button>
+          )}
+          {count > 0 && (
+            <Button className="h-11" onClick={update} disabled={cascade.isPending}>
+              <RefreshCw /> {resumeId ? "Update" : "Update resumes"}
+            </Button>
+          )}
+        </div>
       </div>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
@@ -45,7 +106,7 @@ export function SyncBanner({ resumeId }: { resumeId?: string }) {
               <section key={id} className="flex flex-col gap-2" aria-label={name(id)}>
                 <h3 className="font-medium">{name(id)}</h3>
                 <ul className="flex flex-col gap-2">
-                  {all
+                  {lines
                     .filter((item) => item.resumeId === id)
                     .map((item) => (
                       <li key={key(item)} className="flex gap-3 rounded-lg border p-3 text-sm">

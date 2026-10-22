@@ -135,7 +135,7 @@ it("a new base asks for missing facts first too", async () => {
   vi.spyOn(api, "packs").mockResolvedValue([]);
   const create = vi.spyOn(api.resumes, "create").mockResolvedValue({ job: { id: "j2" } } as never);
   mount();
-  fireEvent.click(await screen.findByRole("button", { name: /New base resume/ }));
+  fireEvent.click(await screen.findByRole("button", { name: /New version/ }));
   fireEvent.change(await screen.findByLabelText("What direction is it for?"), { target: { value: "AI backend 2" } });
   fireEvent.click(screen.getByRole("button", { name: "Write it" }));
   const facts = (await screen.findByText("A few details make this stronger")).closest("[role=dialog]");
