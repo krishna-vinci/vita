@@ -13,6 +13,7 @@ import { parse as parseYaml, stringify } from "yaml";
 import { z } from "zod";
 import { analystRole } from "../agent/roles.js";
 import { selectEvidence } from "../search/index.js";
+import { answerMissingFacts, missingFacts } from "../source/missing-facts.js";
 import { generationHead } from "../sync/history.js";
 import { commitPaths, fileHash, readText, resolveInWorkspace, writeTextAtomic } from "../workspace/index.js";
 import { answerClaimId, effectivePack, findGaps, loadContext, mergeKeywords, optionalText } from "./context.js";
@@ -42,7 +43,6 @@ export async function tailor(
   return withGenerationLock(ws.root, async () => {
     deps.signal?.throwIfAborted();
     const profile = await loadProfile(ws.root);
-    const generationSourceSha = await generationHead(ws.root);
     const date = localDate((deps.now ?? (() => new Date()))());
     if (input.slug !== undefined) Slug.parse(input.slug);
     if (input.baseId !== undefined) Slug.parse(input.baseId);
@@ -58,6 +58,12 @@ export async function tailor(
     const requestedBaseId =
       input.baseId ?? existing?.parent ?? z.string().nullable().optional().parse(metadata.baseId) ?? undefined;
     const answers = { ...z.record(z.string(), z.string()).parse(metadata.answers ?? {}), ...input.answers };
+    const pendingFacts = await missingFacts(ws.root);
+    const factAnswers = Object.fromEntries(
+      Object.entries(input.answers ?? {}).filter(([id]) => pendingFacts.some((question) => question.id === id)),
+    );
+    if (Object.keys(factAnswers).length)
+      await answerMissingFacts(ws.root, factAnswers, (deps.now ?? (() => new Date()))());
     const ctx = await loadContext(
       ws,
       input.applicationId ? { answers: { applicationId: input.applicationId, answers } } : {},
@@ -70,6 +76,7 @@ export async function tailor(
               "analyst",
               "writer",
               "checker",
+              "reviewer",
               "ats-reviewer",
               "resume-editor",
               "source-editor",
@@ -178,6 +185,12 @@ export async function tailor(
           if (relationship[2]) item.meta.contribution = relationship[2];
         } else gaps.push(`${key}: What was your role in ${item.name}?`);
       }
+      const facts = await missingFacts(
+        ws.root,
+        selection.items.map((item) => item.itemSlug),
+      );
+      const factIds = new Set(facts.map((question) => question.id));
+      gaps.unshift(...facts.map((question) => `${question.id}: ${question.text}`));
       const slug = Slug.parse(input.slug ?? slugify([analysis.company, analysis.title].filter(Boolean).join("-")));
       const id = input.applicationId ?? `${date}-${slug}`;
       const applicationDir = `applications/${id}`;
@@ -189,18 +202,35 @@ export async function tailor(
           if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
         }
       const expected = existingDir ? expectedExisting : await fileHash(ws.root, `${applicationDir}/resume.json`);
-      const unanswered = gaps.filter((gap) => !answers[gap.slice(0, gap.indexOf(":"))]?.trim());
-      // Submitting answers continues this application; remaining questions are explicitly skipped.
-      const writeNow = input.skip || (input.answers !== undefined && existingDir !== undefined);
+      let unanswered = gaps.filter((gap) => !answers[gap.slice(0, gap.indexOf(":"))]?.trim());
+      // Facts continue in batches until answered or skipped; existing requirement-answer behavior stays intact.
+      const writeNow =
+        input.skip ||
+        (input.answers !== undefined &&
+          existingDir !== undefined &&
+          !unanswered.some((gap) => factIds.has(gap.slice(0, gap.indexOf(":")))));
       if (writeNow) for (const gap of unanswered) answers[gap.slice(0, gap.indexOf(":"))] = "skip";
-      if (unanswered.length && !writeNow && !existing) {
+      if (writeNow) {
+        const skips = Object.fromEntries(
+          unanswered
+            .filter((gap) => factIds.has(gap.slice(0, gap.indexOf(":"))))
+            .map((gap) => [gap.slice(0, gap.indexOf(":")), "skip"]),
+        );
+        if (Object.keys(skips).length) await answerMissingFacts(ws.root, skips);
+      }
+      unanswered = unanswered.slice(0, 6);
+      if (
+        unanswered.length &&
+        !writeNow &&
+        (!existing || unanswered.some((gap) => factIds.has(gap.slice(0, gap.indexOf(":")))))
+      ) {
         const review = Review.parse({
           round: 0,
           lint: [],
           checks: [],
           ats: [],
           render: null,
-          gaps,
+          gaps: unanswered,
           overrides: [],
           done: false,
           blocking: [],
@@ -237,6 +267,7 @@ export async function tailor(
         locked: [],
         maxClaims: Number.MAX_SAFE_INTEGER,
       });
+      const generationSourceSha = await generationHead(ws.root);
       const result = await generate(
         ctx,
         {

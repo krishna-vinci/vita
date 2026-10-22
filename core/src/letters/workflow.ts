@@ -158,6 +158,7 @@ async function loadSession(ws: WorkspaceHandle, id: string, deps: PipelineDeps) 
         index: ctx.index,
         pack,
         rules: { ...ctx.rules, max_bullet_chars: maxChars },
+        quality: false,
       }).filter((finding) => finding.bulletId !== undefined);
     const certify = async (
       value: Letter,

@@ -54,7 +54,7 @@ function resume(text: string, claims = ["workshop-time"], extra: Partial<Bullet>
     kind: "master",
     parent: null,
     template: "rover-base",
-    header: { name: "Fictional Person" },
+    header: { name: "Fictional Person", headline: "Coordinator" },
     sections: [
       {
         id: "experience",

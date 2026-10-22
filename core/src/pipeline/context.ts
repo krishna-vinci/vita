@@ -127,6 +127,7 @@ async function addAnswerClaims(
     const analysisText = await optionalText(ws.root, `applications/${app}/analysis.json`);
     const analysis = analysisText ? JobAnalysis.safeParse(JSON.parse(analysisText)) : undefined;
     for (const [requirementId, raw] of Object.entries(parsed.answers)) {
+      if (/^(?:dates|graduation|results)\./.test(requirementId)) continue;
       if (requirementId.startsWith("ownership.")) {
         const item = index.items.get(requirementId.slice("ownership.".length));
         const match = /^(sole|lead|team|contributor)(?:\s*:\s*([\s\S]*))?$/i.exec(String(raw).trim());

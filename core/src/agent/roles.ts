@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { getCurrentTools } from "@earendil-works/pi-ai";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai/providers/faux";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
-import { AtsNote, CheckNote, JobAnalysis, Prep, Resume } from "@vita/shared";
+import { AtsNote, CheckNote, JobAnalysis, Prep, RecruiterReview, Resume } from "@vita/shared";
 import { Type } from "typebox";
 import { z } from "zod";
 import { ModelsConfig } from "./models.js";
@@ -14,6 +14,7 @@ export type RoleName =
   | "analyst"
   | "writer"
   | "checker"
+  | "reviewer"
   | "ats-reviewer"
   | "resume-editor"
   | "source-editor"
@@ -67,6 +68,13 @@ export const checkerRole: RoleSpec<{ checks: CheckNote[] }> = {
   submitTool: submit("submit_checks", z.object({ checks: z.array(CheckNote) })),
 };
 
+export const reviewerRole: RoleSpec<RecruiterReview> = {
+  name: "reviewer",
+  skills: ["review-resume"],
+  readTools: ["read_resume", "read_analysis", "read_projects", "search_evidence", "read_render"],
+  submitTool: submit("submit_review", RecruiterReview),
+};
+
 export const atsReviewerRole: RoleSpec<{ ats: AtsNote[] }> = {
   name: "ats-reviewer",
   skills: ["ats-review"],
@@ -111,7 +119,10 @@ export async function createGenerationRuntime(script?: FauxScript) {
         return fauxAssistantMessage(fauxToolCall("read_render", {}));
       }
       const position = pending.findIndex((step) => tools.has(step.tool));
-      const step = pending.splice(position < 0 ? 0 : position, 1)[0];
+      const step =
+        position < 0 && tools.has("submit_review")
+          ? { tool: "submit_review", arguments: { score: 8, summary: "Clear and supported.", findings: [] } }
+          : pending.splice(position < 0 ? 0 : position, 1)[0];
       if (!step) throw new Error("Faux script exhausted");
       faux.appendResponses([respond]);
       return fauxAssistantMessage(fauxToolCall(step.tool, step.arguments));

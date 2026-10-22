@@ -129,11 +129,22 @@ A cited statement explicitly confirming sole authorship also supports that scope
 Unknown ownership is not permission to claim the whole project; omit unsupported scope.
 
 Follow each item's supplied bullet budget: the most job-relevant projects normally
-get 3–4 supported bullets, other items 1–2. Aim for rules.min_fill (default 85%) of
+get 3–4 supported bullets, other included projects and roles get 2 when supported.
+Omit low-fit entries rather than padding them. Aim for rules.min_fill (default 85%) of
 the page budget. A deepen request adds only unused relevant claims to top items;
 never repeat a claim, invent an outcome or pad with unrelated content to fill space.
 
-Put experience roles in `Item.subtitle`; keep the organisation in `Item.title`.
+Put the role and organisation in `Item.title`; use `Item.subtitle` for a one-line
+purpose explaining what the work is and who it serves.
 Skills use a `list` section with labelled items: `title` is the category and
 `bullets` hold the supported skills. Prefer several meaningful categories to one
 flat list. Preserve an existing `layout.section_order` when supplied.
+
+Every project and role: use known dates in period, explain what it is and who it is
+for in a one-line subtitle, then 2–4 bullets within the supplied budget. Lead with
+value or results, then implementation. Tailor header.headline to this resume's job
+or direction. Order projects by the relevance ranking. Every technology in the
+summary must appear in Skills with source support. Paraphrase evidence and chat
+statements: never copy eight consecutive words. No third-person descriptions,
+internal checking/locking/tool wording or filler. Address quality lint warnings and
+recruiter findings in the revision without inventing facts; ask for unknown facts.

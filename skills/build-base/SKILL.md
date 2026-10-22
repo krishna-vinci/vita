@@ -29,7 +29,13 @@ page budget to choose relevant items and order them for that direction.
 The result is a base with parent master. A separate checker reviews every visible
 bullet; the writer does not approve its own work.
 
-Use `Item.subtitle` for experience role lines. Categorise skills in a `list`
+Use `Item.subtitle` for a one-line purpose; keep role and organisation in the
+entry title. Categorise skills in a `list`
 section: each item's `title` names a category and its bullets list supported
 skills. Avoid a single uncategorised list. Follow confirmed ownership and action
 voice from write-bullets, and preserve the requested layout.section_order.
+
+Tailor header.headline and project order to this direction. Use known periods and
+one-line purpose subtitles for projects and roles. Lead 2–4 supported bullets with
+value or results before engineering. Skills cover technologies in the summary.
+Paraphrase evidence and statements; no eight-word copies or internal/meta bullets.

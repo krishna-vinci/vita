@@ -4,7 +4,14 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { compileTex, createGenerationRuntime, loadModelsConfig, loadTemplate, renderTex } from "@vita/core";
+import {
+  compileTex,
+  createGenerationRuntime,
+  loadModelsConfig,
+  loadTemplate,
+  renderTex,
+  resolveRoleModel,
+} from "@vita/core";
 import { ApiModelsConfig, providerSetupHints, Resume } from "@vita/shared";
 import { bundledTemplatesDir } from "../paths";
 import { listModels, type RuntimeFactory } from "./models";
@@ -147,8 +154,7 @@ export async function runDoctor(
         const config = await probes.loadConfig(options.dir);
         const roles = Object.keys(ApiModelsConfig.shape.roles.unwrap().shape);
         for (const role of ["default", ...roles]) {
-          const id =
-            role === "default" ? config.default : (config.roles[role as keyof typeof config.roles] ?? config.default);
+          const id = role === "default" ? config.default : resolveRoleModel(config, role as keyof typeof config.roles);
           const known = models.some((model) => model.id === id);
           add(
             `Model: ${role}`,

@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { ensureRepo, readText, tectonicAvailable } from "@vita/core";
 import { Resume, visibleBullets } from "@vita/shared";
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
+import { citeFixtureSummary, skipFixtureResults } from "../../core/src/pipeline/test-fixtures.js";
 import { createProgram } from "./index";
 
 const repo = fileURLToPath(new URL("../../", import.meta.url));
@@ -29,8 +30,10 @@ afterEach(async () => {
 async function fixture(profile: string) {
   const root = join(dir, "workspace");
   await cp(join(repo, "fixtures", profile), root, { recursive: true });
+  await skipFixtureResults(root);
   await ensureRepo(root);
-  const resume = Resume.parse(JSON.parse(await readText(root, "resumes/master/resume.json")));
+  const resume = citeFixtureSummary(Resume.parse(JSON.parse(await readText(root, "resumes/master/resume.json"))));
+  await writeFile(join(root, "resumes/master/resume.json"), JSON.stringify(resume));
   return { root, resume };
 }
 
@@ -86,7 +89,7 @@ it("runs pnpm vita master with a hidden faux script and prints the successful re
   if (!available) return test.skip();
   const { root, resume } = await fixture("teacher");
   const result = await cli(["master", root, "--faux", await scriptFile(draft(resume))]);
-  expect(result.code).toBe(0);
+  expect(result.code, result.output).toBe(0);
   expect(result.output).toContain("write [1]");
   expect(result.output).toContain("Review: done (round 1)");
   expect((await readFile(join(root, "resumes/master/resume.pdf"))).subarray(0, 5).toString()).toBe("%PDF-");
@@ -117,7 +120,7 @@ for (const source of ["file", "stdin"]) {
       ["tailor", root, "--job", source === "stdin" ? "-" : file, "--slug", "cli-test", "--faux", script],
       source === "stdin" ? job : "",
     );
-    expect(result.code).toBe(0);
+    expect(result.code, result.output).toBe(0);
     expect(result.output).toContain("Review: done");
     const relative = /Application: (applications\/\d{4}-\d{2}-\d{2}-cli-test)/.exec(result.output)?.[1];
     expect(relative).toBeDefined();

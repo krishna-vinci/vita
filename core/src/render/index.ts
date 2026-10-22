@@ -1,6 +1,7 @@
 export { CompileError, compileTex, tectonicAvailable } from "./compile";
 export { latexEscape } from "./escape";
 export { contactView, linkedResume, loadRenderSources, type RenderSources } from "./links";
+export { previewPdf, renderResumePreview } from "./live-preview.js";
 export { renderMarkdown } from "./markdown";
 export { createTexEnv } from "./nunjucks";
 export {

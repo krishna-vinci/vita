@@ -36,6 +36,7 @@ export async function createEvaluationRuntime(resume: Resume, analysis: JobAnaly
           })),
         },
         submit_ats: { ats: [] },
+        submit_review: { score: 8, summary: "Scripted fixture review", findings: [] },
       };
       const output = outputs[tool];
       if (!output) throw new Error(`Unexpected evaluation tool: ${tool}`);

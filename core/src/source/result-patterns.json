@@ -1,0 +1,7 @@
+{
+  "results": [
+    "\\b(?:users?|usage|used by|active|people served|workloads?|requests?|records?|volume|scale|throughput|latency|performance|response time|faster|time saved|reliability|uptime|availability|failures?|incidents?|tests?|testing|coverage|checks passed)\\b"
+  ],
+  "educationSections": ["education", "qualifications", "academic background"],
+  "roleSections": ["experience", "work experience", "employment", "professional experience", "roles", "projects"]
+}

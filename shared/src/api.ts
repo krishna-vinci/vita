@@ -2,7 +2,8 @@ import { z } from "zod";
 import { JobAnalysis } from "./analysis";
 import { MemoryProposal } from "./api-memory";
 import { Slug } from "./ids";
-import { ItemLink, Resume, SectionKind } from "./resume";
+import { ItemLink, Resume } from "./resume";
+import { ApiResumeOp } from "./resume-op";
 import { Finding, Review } from "./review";
 
 export const ApiError = z.object({
@@ -37,51 +38,9 @@ export const ImportLegacyResult = z.object({
 });
 export type ImportLegacyResult = z.infer<typeof ImportLegacyResult>;
 
+export { ApiResumeOp } from "./resume-op";
+
 const id = z.string().min(1).max(200);
-const index = z.number().int().nonnegative();
-export const ApiResumeOp = z.discriminatedUnion("op", [
-  z.strictObject({ op: z.literal("bullet.edit"), id, text: z.string() }),
-  z.strictObject({
-    op: z.literal("bullet.add"),
-    itemId: id,
-    index: index.optional(),
-    text: z.string().optional(),
-    claimId: id.optional(),
-    claimIds: z.array(id).optional(),
-    variantId: id.optional(),
-  }),
-  z.strictObject({ op: z.literal("section.add"), id, title: z.string(), kind: SectionKind }),
-  z.strictObject({ op: z.literal("item.add"), sectionId: id, id, title: z.string(), source: z.string().optional() }),
-  z.strictObject({ op: z.literal("bullet.hide"), id, hidden: z.boolean() }),
-  z.strictObject({ op: z.literal("bullet.lock"), id, locked: z.boolean() }),
-  z.strictObject({ op: z.literal("move"), id, toParent: id, index }),
-  z.strictObject({ op: z.literal("section.rename"), id, title: z.string() }),
-  z.strictObject({
-    op: z.literal("item.set"),
-    id,
-    title: z.string().optional(),
-    subtitle: z.string().optional(),
-    period: z.string().optional(),
-    location: z.string().optional(),
-    links: z.array(ItemLink).max(4).nullable().optional(),
-  }),
-  z.strictObject({ op: z.literal("header.set"), headline: z.string().optional(), location: z.string().optional() }),
-  z.strictObject({ op: z.literal("item.hide"), id, hidden: z.boolean() }),
-  z.strictObject({ op: z.literal("section.hide"), id, hidden: z.boolean() }),
-  z.strictObject({
-    op: z.literal("layout.set"),
-    key: id,
-    value: z.union([z.number(), z.string(), z.boolean(), z.array(z.string()).max(50)]),
-  }),
-  z.strictObject({ op: z.literal("variant.swap"), bulletId: id, variantId: id }),
-  z.strictObject({
-    op: z.literal("bullet.override"),
-    id,
-    reason: z.enum(["user-attested", "this-resume-only"]),
-    note: z.string().optional(),
-  }),
-]);
-export type ApiResumeOp = z.infer<typeof ApiResumeOp>;
 export const ResumeOpsRequest = z.strictObject({
   ops: z.array(ApiResumeOp).min(1).max(100),
   baseHash: z.string().nullable().optional(),
@@ -198,6 +157,7 @@ export const ApiModelsConfig = z.strictObject({
       analyst: model.optional(),
       writer: model.optional(),
       checker: model.optional(),
+      reviewer: model.optional(),
       "ats-reviewer": model.optional(),
       "resume-editor": model.optional(),
       "source-editor": model.optional(),
