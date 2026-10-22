@@ -345,6 +345,31 @@ it("tells the source chat today's date so it never asks the person to date their
   expect(task).toContain("never ask for it");
 });
 
+it("lets the model fix a bad anchor in the same turn and tolerates whitespace differences", async () => {
+  const text = await readText(ws.root, "outline.md");
+  const line = text.split("\n").find((entry) => entry.includes("Built a catalogue service")) ?? "";
+  const reflowed = line.replace(/ /g, "  ");
+  let attempts = 0;
+  faux.setResponses([
+    () => {
+      attempts++;
+      return source({ file: "outline", before: "Text that is not in the outline.", after: "x", summary: "Bad" });
+    },
+    (context) => {
+      attempts++;
+      expect(JSON.stringify(context.messages)).toContain("was not found in outline.md");
+      return source({ file: "outline", before: reflowed, after: `${line} Extra.`, summary: "Fixed" });
+    },
+  ]);
+  const result = await proposeSourceEdit(ws, { message: "Clarify the service work.", history: [] }, deps);
+  expect(attempts).toBe(2);
+  // The stored anchor is the exact source text, so applying it is byte-for-byte.
+  expect(result.proposal?.before).toBe(line);
+  if (!result.proposal) throw new Error("Expected a proposal");
+  await applySourceEdit(ws, result.proposal);
+  expect(await readText(ws.root, "outline.md")).toContain(`${line} Extra.`);
+});
+
 it("asks for a missing metric with no proposal and no source write", async () => {
   const before = await fileHash(ws.root, "projects.md");
   faux.setResponses([source(null, "What did you measure, over what period, and where is it recorded?")]);
@@ -602,4 +627,12 @@ it("applies profile metadata from source chat without clearing omitted contacts"
   const profile = await readText(ws.root, "profile.yaml");
   expect(profile).toContain("headline: Editor");
   expect(profile).toContain("morgan.vale@example.test");
+});
+
+it("locates anchors exactly or across whitespace, and reports missing or repeated ones", async () => {
+  const { locate } = await import("./context.js");
+  expect(locate("a b\nc  d", "b c d")).toEqual({ ok: true, start: 2, end: 8 });
+  expect(locate("x y x y", "x y")).toEqual({ ok: false, reason: "repeated" });
+  expect(locate("x y", "z")).toEqual({ ok: false, reason: "missing" });
+  expect(locate("x y", "  ")).toEqual({ ok: false, reason: "empty" });
 });

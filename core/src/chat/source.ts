@@ -6,7 +6,7 @@ import { loadContext } from "../pipeline/context.js";
 import { localDate } from "../pipeline/date.js";
 import type { PipelineDeps, WorkspaceHandle } from "../pipeline/types.js";
 import { fileHash, readText } from "../workspace/index.js";
-import { ChatConflictError, chatTask, replacement } from "./context.js";
+import { ChatConflictError, chatTask, locate, replacement } from "./context.js";
 import { sourceEditorRole } from "./roles.js";
 
 export async function proposeSourceEdit(
@@ -24,8 +24,29 @@ export async function proposeSourceEdit(
         throw new ChatConflictError("stale-hash", "Source changed while loading. Request a fresh edit.");
     const tools = { root: ws.root, index: ctx.index, search: ctx.search };
     const edits = chatTools(ctx, input, deps, tools);
+    // Check the anchor while the model can still fix it: a missing or repeated "before" goes back to
+    // it as an invalid submission (up to three tries) instead of failing the person's chat turn.
+    const checked: typeof role = {
+      ...role,
+      submitTool: {
+        ...role.submitTool,
+        output: role.submitTool.output.superRefine((value, issue) => {
+          if (!value.proposal) return;
+          const found = locate(snapshots[value.proposal.file], value.proposal.before);
+          if (found.ok) return;
+          issue.addIssue({
+            code: "custom",
+            path: ["proposal", "before"],
+            message:
+              found.reason === "repeated"
+                ? `"before" appears more than once in ${value.proposal.file}.md. Include more surrounding text so it is unique.`
+                : `"before" was not found in ${value.proposal.file}.md. Copy it character for character from the snapshot or read_${value.proposal.file}, including any <!-- ... --> markers, or choose a shorter exact span.`,
+          });
+        }),
+      },
+    };
     const result = await runRole({
-      role,
+      role: checked,
       root: ws.root,
       system: await buildSystemPrompt({
         role,
@@ -70,6 +91,9 @@ export async function proposeSourceEdit(
         hashes[file] = await fileHash(ws.root, `${file}.md`);
       }
     replacement(snapshots[edit.file], edit.before, edit.after);
+    // Store the exact source span, so applying the proposal later matches byte for byte.
+    const span = locate(snapshots[edit.file], edit.before);
+    if (span.ok) edit.before = snapshots[edit.file].slice(span.start, span.end);
     const baseHash = hashes[edit.file];
     if (!baseHash) throw new ChatConflictError("stale-hash", "Source file is missing. Request a fresh edit.");
     return {
