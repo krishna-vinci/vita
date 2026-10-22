@@ -72,6 +72,7 @@ describe("shared SSE", () => {
         ...(scope === "settings"
           ? [queryKeys.instructions, queryKeys.rules, queryKeys.mcp, queryKeys.metrics, queryKeys.memory]
           : []),
+        ...(scope === "outline" || scope === "projects" || scope === "settings" ? [queryKeys.info] : []),
         ...(scope === "projects" ? [queryKeys.metrics] : []),
         queryKeys.syncStatus,
         queryKeys.workspace,

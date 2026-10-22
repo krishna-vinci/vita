@@ -13,6 +13,11 @@ import {
   type ChatThreadSummary,
   type CreateApplicationRequest,
   type CreateBaseRequest,
+  type CreateInfoCertificationRequest,
+  type CreateInfoEducationRequest,
+  type CreateInfoProjectRequest,
+  type CreateInfoRoleRequest,
+  type DeleteInfoRequest,
   type DeleteResourceResult,
   type EffectivePromptView,
   type ExportResult,
@@ -21,6 +26,7 @@ import {
   type HealthView,
   type ImportLegacyRequest,
   type ImportLegacyResult,
+  type InfoView,
   type InstructionsMutation,
   type InstructionsView,
   type JobMutation,
@@ -46,6 +52,11 @@ import {
   type ProfileMutation,
   type ProfileView,
   type PromoteRequest,
+  type PutInfoCertificationRequest,
+  type PutInfoEducationRequest,
+  type PutInfoProjectRequest,
+  type PutInfoRoleRequest,
+  type PutInfoSummaryRequest,
   type PutMarkdownRequest,
   type PutProfileRequest,
   type PutRelationshipRequest,
@@ -169,6 +180,13 @@ export interface ChatApplyIds {
   messageId?: string;
   threadId?: string;
 }
+
+/** Create, patch and delete for one "My information" list. Every write returns the fresh view. */
+const infoList = <Create, Patch>(collection: string) => ({
+  create: (body: Create) => send<InfoView>(`/info/${collection}`, body),
+  update: (id: string, body: Patch) => send<InfoView>(`/info/${collection}/${segment(id)}`, body, "PUT"),
+  remove: (id: string, body: DeleteInfoRequest) => send<InfoView>(`/info/${collection}/${segment(id)}`, body, "DELETE"),
+});
 
 const archivedQuery = (archived?: "include" | "only") => (archived ? `?archived=${archived}` : "");
 
@@ -298,6 +316,15 @@ export const api = {
   profile: {
     get: (signal?: AbortSignal) => get<ProfileView>("/profile", signal),
     save: (body: PutProfileRequest) => send<ProfileMutation>("/profile", body, "PUT"),
+  },
+  info: {
+    get: (signal?: AbortSignal) => get<InfoView>("/info", signal),
+    saveProfile: (body: PutProfileRequest) => send<InfoView>("/info/profile", body, "PUT"),
+    saveSummary: (body: PutInfoSummaryRequest) => send<InfoView>("/info/summary", body, "PUT"),
+    roles: infoList<CreateInfoRoleRequest, PutInfoRoleRequest>("roles"),
+    projects: infoList<CreateInfoProjectRequest, PutInfoProjectRequest>("projects"),
+    education: infoList<CreateInfoEducationRequest, PutInfoEducationRequest>("education"),
+    certifications: infoList<CreateInfoCertificationRequest, PutInfoCertificationRequest>("certifications"),
   },
   outline: {
     get: (signal?: AbortSignal) => get<MarkdownResource>("/outline", signal),
