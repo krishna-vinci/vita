@@ -4,17 +4,17 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const tabs = [
-  { value: "profile", label: "Profile" },
-  { value: "outline", label: "Outline" },
-  { value: "projects", label: "Projects" },
+  { value: "info", label: "My information" },
   { value: "resumes", label: "Base resumes" },
   { value: "memory", label: "Memory" },
+  { value: "outline", label: "Outline (text)" },
+  { value: "projects", label: "Projects (text)" },
 ] as const;
 
 export default function MeLayout() {
   const { pathname } = useLocation();
   const questions = useMetricQuestions().data?.length ?? 0;
-  const current = tabs.find((tab) => pathname.startsWith(`/me/${tab.value}`))?.value ?? "outline";
+  const current = tabs.find((tab) => pathname.startsWith(`/me/${tab.value}`))?.value ?? "info";
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-3">

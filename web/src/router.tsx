@@ -32,8 +32,9 @@ export const routes = [
             path: "/me",
             ...page(() => import("@/pages/me/MeLayout")),
             children: [
-              { index: true, element: <Navigate to="/me/outline" replace /> },
-              { path: "profile", ...page(() => import("@/pages/me/ProfileTab")) },
+              { index: true, element: <Navigate to="/me/info" replace /> },
+              { path: "info", ...page(() => import("@/pages/me/info/InfoTab")) },
+              { path: "profile", element: <Navigate to="/me/info" replace /> },
               { path: "outline", ...page(() => import("@/pages/me/OutlineTab")) },
               { path: "projects", ...page(() => import("@/pages/me/ProjectsTab")) },
               { path: "resumes", ...page(() => import("@/pages/me/ResumesTab")) },

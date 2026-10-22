@@ -221,7 +221,7 @@ export const useSetRelationship = () =>
   useApiMutation(
     (input: { slug: string; body: Parameters<typeof api.projects.setRelationship>[1] }) =>
       api.projects.setRelationship(input.slug, input.body),
-    [queryKeys.projects, queryKeys.workspace],
+    [queryKeys.projects, queryKeys.info, queryKeys.workspace],
   );
 export const useMetricQuestions = () =>
   useQuery({ queryKey: queryKeys.metrics, queryFn: ({ signal }) => api.metrics.questions(signal), retry: false });
@@ -245,28 +245,9 @@ export const useSaveMcp = () => useApiMutation(api.mcp.save, [queryKeys.mcp]);
 export const usePacks = () =>
   useQuery({ queryKey: queryKeys.packs, queryFn: ({ signal }) => api.packs(signal), retry: false });
 
-/** The form keeps its own copy, so a focus refetch must not replace what is being typed. */
-export const useProfile = () =>
-  useQuery({
-    queryKey: queryKeys.profile,
-    queryFn: ({ signal }) => api.profile.get(signal),
-    refetchOnWindowFocus: false,
-  });
-/** The header facts appear in every resume and letter, so those lists change too. */
-export function useSaveProfile() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: api.profile.save,
-    onSuccess: async (data) => {
-      client.setQueryData(queryKeys.profile, data);
-      await Promise.all(
-        [queryKeys.profile, queryKeys.resumes, queryKeys.workspace, queryKeys.applications].map((queryKey) =>
-          client.invalidateQueries({ queryKey }),
-        ),
-      );
-    },
-  });
-}
+/** Cards keep their own drafts, so a focus refetch must not swap the data under them. */
+export const useInfo = () =>
+  useQuery({ queryKey: queryKeys.info, queryFn: ({ signal }) => api.info.get(signal), refetchOnWindowFocus: false });
 
 export const useAuthState = () =>
   useQuery({ queryKey: queryKeys.auth, queryFn: ({ signal }) => api.auth.state(signal), staleTime: 60_000 });

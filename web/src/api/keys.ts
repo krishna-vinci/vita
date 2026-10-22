@@ -8,6 +8,7 @@ export const queryKeys = {
   chatThreads: (kind: string, key: string) => ["chats", kind, key] as const,
   chatThread: (kind: string, key: string, id: string) => ["chats", kind, key, id] as const,
   workspace: ["workspace"] as const,
+  info: ["info"] as const,
   outline: ["outline"] as const,
   profile: ["profile"] as const,
   projects: ["projects"] as const,

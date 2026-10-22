@@ -21,11 +21,13 @@ export function ProjectRole({
   repoUrl,
   value,
   contribution,
+  saveLabel = "Save",
 }: {
   slug: string;
   repoUrl?: string;
   value?: Relationship;
   contribution?: string;
+  saveLabel?: string;
 }) {
   const textId = useId();
   const ownership = useOwnership(repoUrl ? githubRepo(repoUrl) : undefined);
@@ -76,7 +78,7 @@ export function ProjectRole({
         </div>
       )}
       <Button type="button" className="h-11 w-fit" onClick={submit} disabled={!role || save.isPending}>
-        {save.isPending ? "Saving…" : "Save"}
+        {save.isPending ? "Saving…" : saveLabel}
       </Button>
     </div>
   );
