@@ -141,6 +141,12 @@ skipped: [results]
   expect(next.review.gaps).toHaveLength(2);
   expect(next.review.gaps.some((gap) => result.review.gaps.includes(gap))).toBe(false);
   expect(spy.mock.calls.some(([opts]) => opts.role.name === "writer")).toBe(false);
+  // Skipping inside a job is for that job only: the source still lacks the dates and remembers no skip.
+  const source = await readText(root, "projects.md");
+  expect(source).not.toMatch(/skipped:.*dates/);
+  const { missingFacts } = await import("../source/missing-facts.js");
+  const skippedIds = result.review.gaps.map((gap) => gap.slice(0, gap.indexOf(":")));
+  expect((await missingFacts(root)).map((question) => question.id)).toEqual(expect.arrayContaining(skippedIds));
 });
 it("asks new missing facts before regenerating an existing job and preserves its saved resume", async () => {
   const projects = await readText(root, "projects.md");

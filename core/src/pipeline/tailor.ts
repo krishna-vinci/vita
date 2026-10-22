@@ -59,8 +59,12 @@ export async function tailor(
       input.baseId ?? existing?.parent ?? z.string().nullable().optional().parse(metadata.baseId) ?? undefined;
     const answers = { ...z.record(z.string(), z.string()).parse(metadata.answers ?? {}), ...input.answers };
     const pendingFacts = await missingFacts(ws.root);
+    // Real answers are saved to the source for good. A "skip" here only skips for this job;
+    // a lasting skip is a deliberate choice made from the review card or the facts step.
     const factAnswers = Object.fromEntries(
-      Object.entries(input.answers ?? {}).filter(([id]) => pendingFacts.some((question) => question.id === id)),
+      Object.entries(input.answers ?? {}).filter(
+        ([id, value]) => value.trim().toLowerCase() !== "skip" && pendingFacts.some((question) => question.id === id),
+      ),
     );
     if (Object.keys(factAnswers).length)
       await answerMissingFacts(ws.root, factAnswers, (deps.now ?? (() => new Date()))());
@@ -185,10 +189,12 @@ export async function tailor(
           if (relationship[2]) item.meta.contribution = relationship[2];
         } else gaps.push(`${key}: What was your role in ${item.name}?`);
       }
-      const facts = await missingFacts(
-        ws.root,
-        selection.items.map((item) => item.itemSlug),
-      );
+      const facts = (
+        await missingFacts(
+          ws.root,
+          selection.items.map((item) => item.itemSlug),
+        )
+      ).filter((question) => answers[question.id] === undefined);
       const factIds = new Set(facts.map((question) => question.id));
       gaps.unshift(...facts.map((question) => `${question.id}: ${question.text}`));
       const slug = Slug.parse(input.slug ?? slugify([analysis.company, analysis.title].filter(Boolean).join("-")));
